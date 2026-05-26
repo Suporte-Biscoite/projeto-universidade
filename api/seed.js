@@ -1,12 +1,15 @@
 // api/seed.js — popula usuários iniciais no banco
 // ATENÇÃO: deletar este arquivo após rodar uma vez!
 
-import pool from './db.js';
+import { createPool } from '@vercel/postgres';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST')
     return res.status(405).json({ error: 'Use POST' });
+
+  const pool = createPool();
 
   try {
     const users = [
