@@ -42,7 +42,7 @@ export default function Navbar() {
   const fileInputRef = useRef(null);
   const searchRef = useRef(null);
 
-  const { profileImage, updateProfileImage, userData, menuItems = [], systemRole, setSystemRole } = useProfile();
+  const { profileImage, updateProfileImage, userData, menuItems = [], systemRole, setSystemRole, logoutUser } = useProfile();
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredCourses = searchQuery.trim().length > 1
@@ -324,7 +324,7 @@ export default function Navbar() {
                   </div>
 
                   <div className="mx-5 h-[1px] bg-slate-200/50 mb-1"></div>
-                  <button onClick={() => navigate('/login')} className="w-full flex items-center gap-3 px-5 py-3.5 text-[#F27474] font-bold text-sm hover:bg-red-50 transition-colors">
+                  <button onClick={() => { logoutUser(); navigate('/login'); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-[#F27474] font-bold text-sm hover:bg-red-50 transition-colors">
                     <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center"><LogOut size={13} className="text-[#F27474]" /></div> Sair
                   </button>
                 </div>
@@ -401,7 +401,7 @@ export default function Navbar() {
             </div>
             <div className="px-4 pb-6 border-t border-slate-100 pt-4">
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => { logoutUser(); navigate('/login'); }}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm text-red-400 hover:bg-red-50 transition-colors"
               >
                 <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center"><LogOut size={13} className="text-red-400" /></div>

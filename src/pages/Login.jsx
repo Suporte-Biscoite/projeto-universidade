@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useProfile } from '../context/ProfileContext';
 import { Eye, EyeOff, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 
 // ─── Constantes de segurança ────────────────────────────────────────────────
@@ -69,6 +70,7 @@ const AttemptsManager = {
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function Login() {
   const navigate = useNavigate();
+  const { loginWithCredentials } = useProfile();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -148,28 +150,12 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // ── PONTO DE INTEGRAÇÃO COM BACKEND ─────────────────────────────────
-      // Substitua este bloco pela chamada real à sua API:
-      //
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'X-CSRF-Token': getCsrfToken(),
-      //   },
-      //   credentials: 'include',                  // cookies HttpOnly
-      //   body: JSON.stringify({ email: safeEmail, password }),
-      // });
-      //
-      // if (!response.ok) throw new Error('Credenciais inválidas');
-      // const { token, user } = await response.json();
-      // ────────────────────────────────────────────────────────────────────
+      // ── Valida credenciais no ProfileContext (tabela de usuários) ──────────
+      await new Promise(r => setTimeout(r, 400)); // feedback visual mínimo
 
-      // SIMULAÇÃO (remover em produção):
-      await new Promise(r => setTimeout(r, 900));
-      const MOCK_SUCCESS = safeEmail === 'admin@biscoite.com' && password === 'Biscoite@2025';
+      const result = loginWithCredentials(safeEmail, password, rememberMe);
 
-      if (!MOCK_SUCCESS) {
+      if (!result.ok) {
         const { count, lockedUntil } = AttemptsManager.register();
         const remaining = MAX_ATTEMPTS - count;
 
@@ -178,20 +164,15 @@ export default function Login() {
           setFormError('Muitas tentativas. Conta bloqueada por 15 minutos.');
         } else {
           setFormError(
-            `Email ou senha incorretos.${remaining > 0 ? ` ${remaining} tentativa(s) restante(s).` : ''}`
+            `${result.error}${remaining > 0 ? ` ${remaining} tentativa(s) restante(s).` : ''}`
           );
         }
         return;
       }
 
       AttemptsManager.clear();
-
-      if (rememberMe) {
-        sessionStorage.setItem('biscoite_remember', '1');
-      }
-
       setSuccessMsg('Login realizado com sucesso! Redirecionando…');
-      setTimeout(() => navigate('/'), 800);
+      setTimeout(() => navigate(result.redirect), 800);
 
     } catch (err) {
       setFormError('Erro de conexão. Verifique sua rede e tente novamente.');
