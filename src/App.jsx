@@ -52,7 +52,7 @@ function ProtectedRoute({ children, roles }) {
   // Se a rota exige roles específicos, verifica
   if (roles) {
     const user = getLoggedUser();
-    if (!user || !roles.includes(user.systemRole)) {
+    if (!user || !roles.includes(user.systemRole || user.role)) {
       return <Navigate to="/" replace />;
     }
   }
