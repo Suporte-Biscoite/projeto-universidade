@@ -1,7 +1,7 @@
 // api/auth.js
 // POST /api/auth?action=login|register|refresh|logout
 
-import { createPool } from '@vercel/postgres';
+import { query } from './db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
@@ -29,14 +29,12 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return send(res, 405, { error: 'Método não permitido' });
 
-  const pool = createPool();
   const action = req.query.action;
-
   try {
-    if (action === 'login')    return await login(req, res, pool);
-    if (action === 'register') return await register(req, res, pool);
-    if (action === 'refresh')  return await refresh(req, res, pool);
-    if (action === 'logout')   return await logout(req, res, pool);
+    if (action === 'login')    return await login(req, res);
+    if (action === 'register') return await register(req, res);
+    if (action === 'refresh')  return await refresh(req, res);
+    if (action === 'logout')   return await logout(req, res);
     return send(res, 404, { error: 'Ação não encontrada' });
   } catch (err) {
     console.error('[auth]', err);
@@ -44,14 +42,13 @@ export default async function handler(req, res) {
   }
 }
 
-async function login(req, res, pool) {
+async function login(req, res) {
   const { email, password } = req.body ?? {};
   if (!email || !password)
     return send(res, 400, { error: 'Email e senha são obrigatórios' });
 
-  const { rows } = await pool.query(
-    `SELECT id, name, email, role, password_hash, active, unit, store_id, instructor_id
-     FROM users WHERE email = $1`,
+  const { rows } = await query(
+    'SELECT id, name, email, role, password_hash, active, unit, store_id, instructor_id FROM users WHERE email = :email',
     [email.toLowerCase().trim()]
   );
 
@@ -64,10 +61,10 @@ async function login(req, res, pool) {
 
   const accessToken  = signAccess(user);
   const refreshToken = randomBytes(40).toString('hex');
-  const expiresAt    = new Date(Date.now() + REFRESH_TTL_MS);
+  const expiresAt    = new Date(Date.now() + REFRESH_TTL_MS).toISOString();
 
-  await pool.query(
-    'INSERT INTO sessions (user_id, refresh_token, expires_at) VALUES ($1,$2,$3)',
+  await query(
+    'INSERT INTO sessions (user_id, refresh_token, expires_at) VALUES (:user_id, :token, :expires)',
     [user.id, refreshToken, expiresAt]
   );
 
@@ -86,73 +83,71 @@ async function login(req, res, pool) {
   });
 }
 
-async function register(req, res, pool) {
+async function register(req, res) {
   const { name, email, password, role = 'aluno' } = req.body ?? {};
   if (!name || !email || !password)
     return send(res, 400, { error: 'Nome, email e senha são obrigatórios' });
   if (password.length < 8)
     return send(res, 400, { error: 'Senha deve ter no mínimo 8 caracteres' });
 
-  const { rows: existing } = await pool.query(
-    'SELECT id FROM users WHERE email = $1',
+  const { rows: existing } = await query(
+    'SELECT id FROM users WHERE email = :email',
     [email.toLowerCase().trim()]
   );
   if (existing.length) return send(res, 409, { error: 'Email já cadastrado' });
 
   const hash = await bcrypt.hash(password, 12);
-  const { rows } = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role)
-     VALUES ($1,$2,$3,$4)
-     RETURNING id, name, email, role`,
+  const { rows } = await query(
+    'INSERT INTO users (name, email, password_hash, role) VALUES (:name, :email, :hash, :role) RETURNING id, name, email, role',
     [name.trim(), email.toLowerCase().trim(), hash, role]
   );
 
   const user = rows[0];
   const accessToken  = signAccess(user);
   const refreshToken = randomBytes(40).toString('hex');
-  const expiresAt    = new Date(Date.now() + REFRESH_TTL_MS);
+  const expiresAt    = new Date(Date.now() + REFRESH_TTL_MS).toISOString();
 
-  await pool.query(
-    'INSERT INTO sessions (user_id, refresh_token, expires_at) VALUES ($1,$2,$3)',
+  await query(
+    'INSERT INTO sessions (user_id, refresh_token, expires_at) VALUES (:user_id, :token, :expires)',
     [user.id, refreshToken, expiresAt]
   );
 
   return send(res, 201, { accessToken, refreshToken, user });
 }
 
-async function refresh(req, res, pool) {
+async function refresh(req, res) {
   const { refreshToken } = req.body ?? {};
   if (!refreshToken) return send(res, 400, { error: 'Token ausente' });
 
-  const { rows } = await pool.query(
+  const { rows } = await query(
     `SELECT s.expires_at, u.id, u.name, u.email, u.role
      FROM sessions s JOIN users u ON u.id = s.user_id
-     WHERE s.refresh_token = $1`,
+     WHERE s.refresh_token = :token`,
     [refreshToken]
   );
 
   const session = rows[0];
   if (!session) return send(res, 401, { error: 'Token inválido' });
   if (new Date(session.expires_at) < new Date()) {
-    await pool.query('DELETE FROM sessions WHERE refresh_token = $1', [refreshToken]);
+    await query('DELETE FROM sessions WHERE refresh_token = :token', [refreshToken]);
     return send(res, 401, { error: 'Token expirado — faça login novamente' });
   }
 
   const newAccess  = signAccess(session);
   const newRefresh = randomBytes(40).toString('hex');
-  const expiresAt  = new Date(Date.now() + REFRESH_TTL_MS);
+  const expiresAt  = new Date(Date.now() + REFRESH_TTL_MS).toISOString();
 
-  await pool.query(
-    'UPDATE sessions SET refresh_token=$1, expires_at=$2 WHERE refresh_token=$3',
+  await query(
+    'UPDATE sessions SET refresh_token = :new_token, expires_at = :expires WHERE refresh_token = :old_token',
     [newRefresh, expiresAt, refreshToken]
   );
 
   return send(res, 200, { accessToken: newAccess, refreshToken: newRefresh });
 }
 
-async function logout(req, res, pool) {
+async function logout(req, res) {
   const { refreshToken } = req.body ?? {};
   if (refreshToken)
-    await pool.query('DELETE FROM sessions WHERE refresh_token = $1', [refreshToken]);
+    await query('DELETE FROM sessions WHERE refresh_token = :token', [refreshToken]);
   return send(res, 200, { ok: true });
 }

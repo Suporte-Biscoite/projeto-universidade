@@ -1,13 +1,13 @@
-import { createClient } from '@vercel/postgres';
+// api/seed.js — popula usuários iniciais no banco
+// DELETAR após rodar uma vez!
+
+import { query } from './db.js';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST')
     return res.status(405).json({ error: 'Use POST' });
-
-  const client = createClient();
-  await client.connect();
 
   try {
     const users = [
@@ -21,9 +21,9 @@ export default async function handler(req, res) {
     const created = [];
     for (const u of users) {
       const hash = await bcrypt.hash(u.password, 12);
-      const { rows } = await client.query(
+      const { rows } = await query(
         `INSERT INTO users (name, email, password_hash, role, unit, active, instructor_id)
-         VALUES ($1, $2, $3, $4, $5, true, $6)
+         VALUES (:name, :email, :hash, :role, :unit, true, :instructor_id)
          ON CONFLICT (email) DO NOTHING
          RETURNING id, name, email, role`,
         [u.name, u.email, hash, u.role, u.unit, u.instructor_id]
@@ -40,7 +40,5 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('[seed]', err);
     return res.status(500).json({ error: err.message });
-  } finally {
-    await client.end();
   }
 }
