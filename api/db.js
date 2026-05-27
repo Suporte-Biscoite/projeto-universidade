@@ -1,36 +1,31 @@
-// api/db.js — conexão com Aurora Serverless via AWS Data API
-// Usa as variáveis injetadas pela Vercel ao conectar o Aurora:
-// AWS_REGION, AWS_RESOURCE_ARN, AWS_ROLE_ARN, PGDATABASE
+// api/db.js — conexão com Aurora via IAM (padrão Vercel)
+import { Signer } from '@aws-sdk/rds-signer';
+import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
+import { attachDatabasePool } from '@vercel/functions';
+import pkg from 'pg';
+const { Pool } = pkg;
 
-import { RDSDataClient, ExecuteStatementCommand, BeginTransactionCommand, CommitTransactionCommand } from '@aws-sdk/client-rds-data';
+const signer = new Signer({
+  hostname: process.env.PGHOST,
+  port:     Number(process.env.PGPORT),
+  username: process.env.PGUSER,
+  region:   process.env.AWS_REGION,
+  credentials: awsCredentialsProvider({
+    roleArn:      process.env.AWS_ROLE_ARN,
+    clientConfig: { region: process.env.AWS_REGION },
+  }),
+});
 
-const client = new RDSDataClient({ region: process.env.AWS_REGION });
+const pool = new Pool({
+  host:     process.env.PGHOST,
+  user:     process.env.PGUSER,
+  database: process.env.PGDATABASE || 'postgres',
+  password: () => signer.getAuthToken(),
+  port:     Number(process.env.PGPORT),
+  ssl:      { rejectUnauthorized: false },
+  max: 3,
+});
 
-const resourceArn = process.env.AWS_RESOURCE_ARN;
-const secretArn   = process.env.AWS_ROLE_ARN;
-const database    = process.env.PGDATABASE;
+attachDatabasePool(pool);
 
-export async function query(sql, params = []) {
-  const parameters = params.map(p => {
-    if (p === null || p === undefined) return { isNull: true };
-    if (typeof p === 'boolean') return { booleanValue: p };
-    if (typeof p === 'number') return Number.isInteger(p) ? { longValue: p } : { doubleValue: p };
-    return { stringValue: String(p) };
-  });
-
-  const command = new ExecuteStatementCommand({
-    resourceArn,
-    secretArn,
-    database,
-    sql,
-    parameters,
-    includeResultMetadata: true,
-    formatRecordsAs: 'JSON',
-  });
-
-  const result = await client.send(command);
-  
-  // Parse JSON records
-  const rows = result.formattedRecords ? JSON.parse(result.formattedRecords) : [];
-  return { rows, rowCount: result.numberOfRecordsUpdated ?? rows.length };
-}
+export default pool;

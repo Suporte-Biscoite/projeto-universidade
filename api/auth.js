@@ -1,7 +1,7 @@
 // api/auth.js
 // POST /api/auth?action=login|register|refresh|logout
 
-import { query } from './db.js';
+import pool from './db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
@@ -47,8 +47,8 @@ async function login(req, res) {
   if (!email || !password)
     return send(res, 400, { error: 'Email e senha são obrigatórios' });
 
-  const { rows } = await query(
-    'SELECT id, name, email, role, password_hash, active, unit, store_id, instructor_id FROM users WHERE email = :email',
+  const { rows } = await pool.query(
+    'SELECT id, name, email, role, password_hash, active, unit, store_id, instructor_id FROM users WHERE email = $1',
     [email.toLowerCase().trim()]
   );
 
@@ -61,10 +61,10 @@ async function login(req, res) {
 
   const accessToken  = signAccess(user);
   const refreshToken = randomBytes(40).toString('hex');
-  const expiresAt    = new Date(Date.now() + REFRESH_TTL_MS).toISOString();
+  const expiresAt    = new Date(Date.now() + REFRESH_TTL_MS);
 
-  await query(
-    'INSERT INTO sessions (user_id, refresh_token, expires_at) VALUES (:user_id, :token, :expires)',
+  await pool.query(
+    'INSERT INTO sessions (user_id, refresh_token, expires_at) VALUES ($1,$2,$3)',
     [user.id, refreshToken, expiresAt]
   );
 
@@ -90,25 +90,25 @@ async function register(req, res) {
   if (password.length < 8)
     return send(res, 400, { error: 'Senha deve ter no mínimo 8 caracteres' });
 
-  const { rows: existing } = await query(
-    'SELECT id FROM users WHERE email = :email',
+  const { rows: existing } = await pool.query(
+    'SELECT id FROM users WHERE email = $1',
     [email.toLowerCase().trim()]
   );
   if (existing.length) return send(res, 409, { error: 'Email já cadastrado' });
 
   const hash = await bcrypt.hash(password, 12);
-  const { rows } = await query(
-    'INSERT INTO users (name, email, password_hash, role) VALUES (:name, :email, :hash, :role) RETURNING id, name, email, role',
+  const { rows } = await pool.query(
+    'INSERT INTO users (name, email, password_hash, role) VALUES ($1,$2,$3,$4) RETURNING id, name, email, role',
     [name.trim(), email.toLowerCase().trim(), hash, role]
   );
 
   const user = rows[0];
   const accessToken  = signAccess(user);
   const refreshToken = randomBytes(40).toString('hex');
-  const expiresAt    = new Date(Date.now() + REFRESH_TTL_MS).toISOString();
+  const expiresAt    = new Date(Date.now() + REFRESH_TTL_MS);
 
-  await query(
-    'INSERT INTO sessions (user_id, refresh_token, expires_at) VALUES (:user_id, :token, :expires)',
+  await pool.query(
+    'INSERT INTO sessions (user_id, refresh_token, expires_at) VALUES ($1,$2,$3)',
     [user.id, refreshToken, expiresAt]
   );
 
@@ -119,26 +119,26 @@ async function refresh(req, res) {
   const { refreshToken } = req.body ?? {};
   if (!refreshToken) return send(res, 400, { error: 'Token ausente' });
 
-  const { rows } = await query(
+  const { rows } = await pool.query(
     `SELECT s.expires_at, u.id, u.name, u.email, u.role
      FROM sessions s JOIN users u ON u.id = s.user_id
-     WHERE s.refresh_token = :token`,
+     WHERE s.refresh_token = $1`,
     [refreshToken]
   );
 
   const session = rows[0];
   if (!session) return send(res, 401, { error: 'Token inválido' });
   if (new Date(session.expires_at) < new Date()) {
-    await query('DELETE FROM sessions WHERE refresh_token = :token', [refreshToken]);
+    await pool.query('DELETE FROM sessions WHERE refresh_token = $1', [refreshToken]);
     return send(res, 401, { error: 'Token expirado — faça login novamente' });
   }
 
   const newAccess  = signAccess(session);
   const newRefresh = randomBytes(40).toString('hex');
-  const expiresAt  = new Date(Date.now() + REFRESH_TTL_MS).toISOString();
+  const expiresAt  = new Date(Date.now() + REFRESH_TTL_MS);
 
-  await query(
-    'UPDATE sessions SET refresh_token = :new_token, expires_at = :expires WHERE refresh_token = :old_token',
+  await pool.query(
+    'UPDATE sessions SET refresh_token=$1, expires_at=$2 WHERE refresh_token=$3',
     [newRefresh, expiresAt, refreshToken]
   );
 
@@ -148,6 +148,6 @@ async function refresh(req, res) {
 async function logout(req, res) {
   const { refreshToken } = req.body ?? {};
   if (refreshToken)
-    await query('DELETE FROM sessions WHERE refresh_token = :token', [refreshToken]);
+    await pool.query('DELETE FROM sessions WHERE refresh_token = $1', [refreshToken]);
   return send(res, 200, { ok: true });
 }

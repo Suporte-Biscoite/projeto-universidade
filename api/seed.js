@@ -1,7 +1,7 @@
-// api/seed.js — popula usuários iniciais no banco
+// api/seed.js — popula usuários iniciais
 // DELETAR após rodar uma vez!
 
-import { query } from './db.js';
+import pool from './db.js';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
@@ -21,9 +21,9 @@ export default async function handler(req, res) {
     const created = [];
     for (const u of users) {
       const hash = await bcrypt.hash(u.password, 12);
-      const { rows } = await query(
+      const { rows } = await pool.query(
         `INSERT INTO users (name, email, password_hash, role, unit, active, instructor_id)
-         VALUES (:name, :email, :hash, :role, :unit, true, :instructor_id)
+         VALUES ($1,$2,$3,$4,$5,true,$6)
          ON CONFLICT (email) DO NOTHING
          RETURNING id, name, email, role`,
         [u.name, u.email, hash, u.role, u.unit, u.instructor_id]
