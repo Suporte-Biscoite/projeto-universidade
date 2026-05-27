@@ -194,10 +194,28 @@ export default function Register() {
         _csrf: csrfToken.current,
       };
 
-      // Em produção: await fetch('/api/auth/register', { ... })
-      void payload;
+      const response = await fetch('/api/auth?action=register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:  payload.username,
+          email: payload.email,
+          password: payload.password,
+          role: payload.occupation === 'professor' ? 'professor'
+              : payload.occupation === 'gestor'    ? 'gestor'
+              : payload.occupation === 'loja'      ? 'loja'
+              : 'aluno',
+          unit: payload.storeId || null,
+        }),
+      });
 
-      await new Promise(res => setTimeout(res, 1200));
+      const data = await response.json();
+
+      if (!response.ok) {
+        setSubmitStatus('error');
+        setSubmitMessage(data.error || 'Não foi possível criar a conta.');
+        return;
+      }
 
       setSubmitStatus('success');
       setSubmitMessage('Conta criada com sucesso! Redirecionando...');

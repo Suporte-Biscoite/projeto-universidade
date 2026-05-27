@@ -16,6 +16,8 @@ import AdminPanel from './pages/AdminPanel';
 import Settings from './pages/Settings';
 import InactivityGuard from './components/InactivityGuard';
 import InstructorProfile from './pages/InstructorProfile';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function PlaceholderPage({ title, emoji }) {
   return (
@@ -66,7 +68,9 @@ function App() {
         <Routes>
           {/* Rotas públicas */}
           <Route path="/login"     element={<Login />} />
-          <Route path="/registrar" element={<Register />} />
+          <Route path="/registrar"       element={<Register />} />
+          <Route path="/recuperar-senha"  element={<ForgotPassword />} />
+          <Route path="/redefinir-senha"  element={<ResetPassword />} />
 
           {/* Rota raiz: redireciona para login se não autenticado */}
           <Route path="/" element={
