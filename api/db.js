@@ -1,7 +1,6 @@
 // api/db.js — conexão com Aurora via IAM (padrão Vercel)
 import { Signer } from '@aws-sdk/rds-signer';
 import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
-import { attachDatabasePool } from '@vercel/functions';
 import pkg from 'pg';
 const { Pool } = pkg;
 
@@ -25,7 +24,5 @@ const pool = new Pool({
   ssl:      { rejectUnauthorized: false },
   max: 3,
 });
-
-attachDatabasePool(pool);
 
 export default pool;
