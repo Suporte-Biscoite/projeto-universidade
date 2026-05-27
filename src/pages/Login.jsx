@@ -70,7 +70,7 @@ const AttemptsManager = {
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function Login() {
   const navigate = useNavigate();
-  const { loginWithCredentials } = useProfile();
+  const { loginWithCredentials, setSystemRole } = useProfile();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -150,12 +150,16 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // ── Valida credenciais no ProfileContext (tabela de usuários) ──────────
-      await new Promise(r => setTimeout(r, 400)); // feedback visual mínimo
+      // ── Chama a API real ──────────────────────────────────────────────────
+      const response = await fetch('/api/auth?action=login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: safeEmail, password }),
+      });
 
-      const result = loginWithCredentials(safeEmail, password, rememberMe);
+      const data = await response.json();
 
-      if (!result.ok) {
+      if (!response.ok) {
         const { count, lockedUntil } = AttemptsManager.register();
         const remaining = MAX_ATTEMPTS - count;
 
@@ -164,15 +168,25 @@ export default function Login() {
           setFormError('Muitas tentativas. Conta bloqueada por 15 minutos.');
         } else {
           setFormError(
-            `${result.error}${remaining > 0 ? ` ${remaining} tentativa(s) restante(s).` : ''}`
+            `${data.error || 'Erro ao fazer login.'}${remaining > 0 ? ` ${remaining} tentativa(s) restante(s).` : ''}`
           );
         }
         return;
       }
 
+      // Salva tokens e dados do usuário
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('biscoite_auth', '1');
+      storage.setItem('biscoite_access_token', data.accessToken);
+      storage.setItem('biscoite_refresh_token', data.refreshToken);
+      storage.setItem('biscoite_logged_user', JSON.stringify(data.user));
+
+      // Atualiza o role no contexto
+      setSystemRole(data.user.role);
+
       AttemptsManager.clear();
       setSuccessMsg('Login realizado com sucesso! Redirecionando…');
-      setTimeout(() => navigate(result.redirect), 800);
+      setTimeout(() => navigate(data.redirect), 800);
 
     } catch (err) {
       setFormError('Erro de conexão. Verifique sua rede e tente novamente.');
