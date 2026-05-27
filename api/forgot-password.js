@@ -66,7 +66,7 @@ async function requestReset(req, res) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+      from: process.env.RESEND_FROM || 'noreply@biscolab.tech',
       to:   [email.toLowerCase().trim()],
       subject: 'Recuperação de senha — Universidade Biscoitê',
       html: `
