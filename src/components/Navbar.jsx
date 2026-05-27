@@ -42,7 +42,7 @@ export default function Navbar() {
   const fileInputRef = useRef(null);
   const searchRef = useRef(null);
 
-  const { profileImage, updateProfileImage, userData, menuItems = [], systemRole, setSystemRole, logoutUser } = useProfile();
+  const { profileImage, updateProfileImage, userData, menuItems = [], systemRole, setSystemRole } = useProfile();
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredCourses = searchQuery.trim().length > 1
@@ -297,34 +297,8 @@ export default function Navbar() {
                     );
                   })}
 
-                  {/* Seletor de perfil para testes (demo) */}
-                  <div className="mx-5 h-[1px] bg-slate-200/50 mt-2" />
-                  <div className="px-5 py-3">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Simular perfil (demo)</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        { role: 'admin',     label: 'Admin',     color: 'bg-purple-100 text-purple-700' },
-                        { role: 'professor', label: 'Professor', color: 'bg-blue-100 text-blue-700' },
-                        { role: 'gestor',    label: 'Gestor',    color: 'bg-teal-100 text-teal-700' },
-                        { role: 'loja',      label: 'Loja',      color: 'bg-orange-100 text-orange-700' },
-                        { role: 'franqueado',label: 'Franqueado',color: 'bg-cyan-100 text-cyan-700' },
-                        { role: 'aluno',     label: 'Aluno',     color: 'bg-slate-100 text-slate-600' },
-                      ].map(({ role, label, color }) => (
-                          <button
-                            key={role}
-                            onClick={() => { setSystemRole(role); setIsOpen(false); }}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-black transition-all border-2 ${
-                              systemRole === role ? `${color} border-current` : `${color} border-transparent opacity-60 hover:opacity-100`
-                            }`}
-                          >
-                            {label}
-                          </button>
-                      ))}
-                    </div>
-                  </div>
-
                   <div className="mx-5 h-[1px] bg-slate-200/50 mb-1"></div>
-                  <button onClick={() => { logoutUser(); navigate('/login'); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-[#F27474] font-bold text-sm hover:bg-red-50 transition-colors">
+                  <button onClick={() => navigate('/login')} className="w-full flex items-center gap-3 px-5 py-3.5 text-[#F27474] font-bold text-sm hover:bg-red-50 transition-colors">
                     <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center"><LogOut size={13} className="text-[#F27474]" /></div> Sair
                   </button>
                 </div>
@@ -401,7 +375,7 @@ export default function Navbar() {
             </div>
             <div className="px-4 pb-6 border-t border-slate-100 pt-4">
               <button
-                onClick={() => { logoutUser(); navigate('/login'); }}
+                onClick={() => navigate('/login')}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm text-red-400 hover:bg-red-50 transition-colors"
               >
                 <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center"><LogOut size={13} className="text-red-400" /></div>
