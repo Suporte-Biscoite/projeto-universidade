@@ -50,7 +50,7 @@ async function getUsers(req, res, auth, id) {
       return send(res, 403, { error: 'Sem permissão' });
 
     const { rows } = await pool.query(
-      'SELECT id, name, email, role, unit, store_id, active, instructor_id, avatar_url, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, role, unit, store_id, active, instructor_id, avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at FROM users WHERE id = $1',
       [id]
     );
     if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });
@@ -62,7 +62,7 @@ async function getUsers(req, res, auth, id) {
     return send(res, 403, { error: 'Sem permissão' });
 
   const { rows } = await pool.query(
-    'SELECT id, name, email, role, unit, store_id, active, instructor_id, avatar_url, created_at FROM users ORDER BY created_at DESC'
+    'SELECT id, name, email, role, unit, store_id, active, instructor_id, avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at FROM users ORDER BY created_at DESC'
   );
   return send(res, 200, rows);
 }
@@ -99,7 +99,7 @@ async function updateUser(req, res, auth, id) {
   if (auth.sub !== id && auth.role !== 'admin')
     return send(res, 403, { error: 'Sem permissão' });
 
-  const { name, email, password, role, unit, store_id, active, avatar_url, instructor_id } = req.body ?? {};
+  const { name, email, password, role, unit, store_id, active, avatar_url, banner_url, pronoun, position, company_time, bio, skills, instructor_id } = req.body ?? {};
 
   // Apenas admin pode mudar role e active
   const updates = [];
@@ -110,7 +110,13 @@ async function updateUser(req, res, auth, id) {
   if (email)      { updates.push(`email = $${i++}`);      values.push(email.toLowerCase().trim()); }
   if (unit)       { updates.push(`unit = $${i++}`);       values.push(unit); }
   if (store_id !== undefined) { updates.push(`store_id = $${i++}`); values.push(store_id); }
-  if (avatar_url) { updates.push(`avatar_url = $${i++}`); values.push(avatar_url); }
+  if (avatar_url !== undefined)   { updates.push(`avatar_url = $${i++}`);    values.push(avatar_url); }
+  if (banner_url !== undefined)   { updates.push(`banner_url = $${i++}`);    values.push(banner_url); }
+  if (pronoun !== undefined)      { updates.push(`pronoun = $${i++}`);       values.push(pronoun); }
+  if (position !== undefined)     { updates.push(`position = $${i++}`);      values.push(position); }
+  if (company_time !== undefined) { updates.push(`company_time = $${i++}`);  values.push(company_time); }
+  if (bio !== undefined)          { updates.push(`bio = $${i++}`);           values.push(bio); }
+  if (skills !== undefined)       { updates.push(`skills = $${i++}`);        values.push(skills); }
   if (instructor_id !== undefined) { updates.push(`instructor_id = $${i++}`); values.push(instructor_id); }
 
   // Só admin muda role e active
@@ -133,7 +139,7 @@ async function updateUser(req, res, auth, id) {
   const { rows } = await pool.query(
     `UPDATE users SET ${updates.join(', ')}, updated_at = now()
      WHERE id = $${i}
-     RETURNING id, name, email, role, unit, store_id, active, instructor_id, avatar_url`,
+     RETURNING id, name, email, role, unit, store_id, active, instructor_id, avatar_url, banner_url, pronoun, position, company_time, skills, bio`,
     values
   );
   if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });

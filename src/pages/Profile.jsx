@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Mail, Linkedin, Phone, Globe, Plus, Pencil, Star, Calendar,
   MapPin, Briefcase, ChevronLeft, ChevronRight, X, Save, Trash2,
@@ -371,7 +371,31 @@ function ComunicacaoAluno({ userRole }) {
 
 // ─── PÁGINA PRINCIPAL ──────────────────────────────────────────────────────
 export default function Profile() {
-  const { profileImage, updateProfileImage, userData, updateUserData, systemRole: userRole, users, courses } = useProfile();
+  const { profileImage, updateProfileImage, userData, updateUserData, updateUserDataApi, systemRole: userRole, users, courses } = useProfile();
+
+  // Carrega dados extras do perfil do banco ao montar
+  React.useEffect(() => {
+    const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+    const logged = raw ? JSON.parse(raw) : null;
+    if (logged?.id) {
+      const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+      fetch(`/api/users?id=${logged.id}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(u => {
+          if (u.id) {
+            updateUserData(prev => ({ ...prev,
+              pronoun: u.pronoun || prev.pronoun || '',
+              role: u.position || prev.role || '',
+              time: u.company_time || prev.time || '',
+              bio: u.bio || prev.bio || '',
+              skills: u.skills || prev.skills || [],
+            }));
+            if (u.avatar_url) updateProfileImage(u.avatar_url);
+            if (u.banner_url) setBannerImage(u.banner_url);
+          }
+        }).catch(() => {});
+    }
+  }, []);
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const bannerFileRef = useRef(null);
@@ -380,17 +404,17 @@ export default function Profile() {
     () => localStorage.getItem('biscoite_banner_image') || null
   );
 
-  const handleBannerChange = (e) => {
+  const handleBannerChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setBannerImage(url);
-    localStorage.setItem('biscoite_banner_image', url);
+    const base64 = await fileToBase64(file);
+    setBannerImage(base64);
+    await saveProfileToApi({ banner_url: base64 });
   };
 
-  const removeBanner = () => {
+  const removeBanner = async () => {
     setBannerImage(null);
-    localStorage.removeItem('biscoite_banner_image');
+    await saveProfileToApi({ banner_url: null });
   };
 
 
@@ -407,8 +431,18 @@ export default function Profile() {
     setActiveModal(type);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     updateUserData(tempData);
+    // Salva no banco os campos que temos colunas
+    await saveProfileToApi({
+      name:         tempData.name,
+      unit:         tempData.unit,
+      pronoun:      tempData.pronoun,
+      position:     tempData.role,
+      company_time: tempData.time,
+      bio:          tempData.bio,
+      skills:       tempData.skills,
+    });
     setActiveModal(null);
   };
 
@@ -496,11 +530,17 @@ export default function Profile() {
           {/* Foto de perfil */}
           <div className="absolute -bottom-20 left-10">
             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current.click()}>
-              <img
-                src={profileImage}
-                className="w-44 h-44 rounded-full border-[6px] border-white shadow-xl object-cover"
-                alt="Perfil"
-              />
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  className="w-44 h-44 rounded-full border-[6px] border-white shadow-xl object-cover"
+                  alt="Perfil"
+                />
+              ) : (
+                <div className="w-44 h-44 rounded-full border-[6px] border-white shadow-xl bg-slate-100 flex items-center justify-center">
+                  <User size={72} className="text-slate-300" />
+                </div>
+              )}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-full">
                 <Pencil size={32} className="text-white" />
               </div>
@@ -511,7 +551,13 @@ export default function Profile() {
             <input
               type="file"
               ref={fileInputRef}
-              onChange={(e) => e.target.files[0] && updateProfileImage(URL.createObjectURL(e.target.files[0]))}
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const base64 = await fileToBase64(file);
+                updateProfileImage(base64);
+              }}
               className="hidden"
             />
           </div>
