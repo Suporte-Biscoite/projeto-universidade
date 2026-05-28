@@ -3,12 +3,42 @@ import {
   Mail, Linkedin, Phone, Globe, Plus, Pencil, Star, Calendar,
   MapPin, Briefcase, ChevronLeft, ChevronRight, X, Save, Trash2,
   AlertTriangle, TrendingUp, Users, MessageSquare, Send, Bell, Check,
-  BarChart2, Store, BookOpen, Shield,
+  BarChart2, Store, BookOpen, Shield, User, Camera,
 } from 'lucide-react';
 import { useProfile, DEFAULT_COURSE_IMAGES, CURRENT_INSTRUCTOR_ID } from '../context/ProfileContext';
 import { useNavigate } from 'react-router-dom';
 
 
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+async function saveProfileToApi(data) {
+  try {
+    const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+    const logged = raw ? JSON.parse(raw) : null;
+    if (!logged?.id) return;
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    const res = await fetch(`/api/users?id=${logged.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      const newLogged = { ...logged, ...updated };
+      if (sessionStorage.getItem('biscoite_logged_user')) sessionStorage.setItem('biscoite_logged_user', JSON.stringify(newLogged));
+      if (localStorage.getItem('biscoite_logged_user'))   localStorage.setItem('biscoite_logged_user', JSON.stringify(newLogged));
+    }
+  } catch(e) { console.error('saveProfileToApi', e); }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 // ─── SUBCOMPONENTE: Input reutilizável ─────────────────────────────────────
 function InputLabel({ label, value, onChange, placeholder }) {
