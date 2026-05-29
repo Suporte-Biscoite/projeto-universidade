@@ -27,8 +27,11 @@ async function saveProfileToApi(data) {
       const newLogged = { ...logged, ...updated };
       if (sessionStorage.getItem('biscoite_logged_user')) sessionStorage.setItem('biscoite_logged_user', JSON.stringify(newLogged));
       if (localStorage.getItem('biscoite_logged_user'))   localStorage.setItem('biscoite_logged_user', JSON.stringify(newLogged));
+    } else {
+      const err = await res.json().catch(() => ({}));
+      console.error('saveProfileToApi error:', res.status, err);
     }
-  } catch(e) { console.error('saveProfileToApi', e); }
+  } catch(e) { console.error('saveProfileToApi exception:', e); }
 }
 
 function fileToBase64(file) {
@@ -462,7 +465,7 @@ export default function Profile() {
   };
 
   const handleSave = async () => {
-    updateUserData(tempData);
+    updateUserData(prev => ({ ...prev, ...tempData }));
     // Salva no banco os campos que temos colunas
     await saveProfileToApi({
       name:         tempData.name,

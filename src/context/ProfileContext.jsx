@@ -283,7 +283,7 @@ export function ProfileProvider({ children }) {
       }
     } catch (e) { console.error('updateUserDataApi', e); }
   };
-  const updateUserData = (newData) => setUserData(newData);
+  const updateUserData = (newData) => setUserData(prev => typeof newData === 'function' ? newData(prev) : { ...prev, ...newData });
 
   const completeLesson = (durationMinutes = 5) => {
     setAchievements(prev => ({ ...prev, minutesWatched: prev.minutesWatched + durationMinutes }));
