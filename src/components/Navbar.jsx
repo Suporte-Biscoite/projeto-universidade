@@ -70,10 +70,10 @@ export default function Navbar() {
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      updateProfileImage(imageUrl);
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => updateProfileImage(e.target.result);
+    reader.readAsDataURL(file);
   };
 
   const markAllRead = () => {
@@ -261,8 +261,33 @@ export default function Navbar() {
                     <div className="w-7 h-7 rounded-lg bg-white/60 flex items-center justify-center"><Pencil size={13} /></div> Minha conta
                   </Link>
 
-                  {/* Acesso ao painel do role atual */}
-                  {ROLE_PANEL[systemRole] && (() => {
+                  {/* Acesso ao painel — admin vê todos, outros veem só o seu */}
+                  {systemRole === 'admin' ? (
+                    <>
+                      <div className="mx-5 h-[1px] bg-slate-200/50" />
+                      <div className="px-5 py-2">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Painéis de acesso</p>
+                        <div className="flex flex-col gap-1">
+                          {Object.values(ROLE_PANEL).map((panel) => {
+                            const PanelIcon = panel.icon;
+                            return (
+                              <Link
+                                key={panel.path}
+                                to={panel.path}
+                                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[#00263B] font-bold text-xs hover:bg-white/60 transition-colors"
+                                onClick={() => setIsOpen(false)}
+                              >
+                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${panel.color}`}>
+                                  <PanelIcon size={12} />
+                                </div>
+                                {panel.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  ) : ROLE_PANEL[systemRole] ? (() => {
                     const panel = ROLE_PANEL[systemRole];
                     const PanelIcon = panel.icon;
                     return (
@@ -280,7 +305,7 @@ export default function Navbar() {
                         </Link>
                       </>
                     );
-                  })()}
+                  })() : null}
 
                   {dropdownLinks.map(item => {
                     const DropIcon = item.icon;
