@@ -420,8 +420,8 @@ export default function Profile() {
               bio: u.bio || prev.bio || '',
               skills: u.skills || prev.skills || [],
             }));
-            if (u.avatar_url) updateProfileImage(u.avatar_url);
-            if (u.banner_url) setBannerImage(u.banner_url);
+            if (u.avatar_url && !u.avatar_url.startsWith('blob:')) updateProfileImage(u.avatar_url);
+            if (u.banner_url && !u.banner_url.startsWith('blob:')) setBannerImage(u.banner_url);
           }
         }).catch(() => {});
     }

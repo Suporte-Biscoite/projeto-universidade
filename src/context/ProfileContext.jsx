@@ -229,6 +229,11 @@ export function ProfileProvider({ children }) {
 
   // ── Funções de profile ────────────────────────────────────────────────────
   const updateProfileImage = async (newImage) => {
+    // Rejeita blob: URLs — não persistem entre sessões
+    if (newImage && newImage.startsWith('blob:')) {
+      console.warn('updateProfileImage: blob URL rejeitada, use base64');
+      return;
+    }
     setProfileImage(newImage);
     // Persiste no banco se o usuário estiver logado
     try {
