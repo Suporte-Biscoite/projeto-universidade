@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 
 const ProfileContext = createContext();
 
@@ -241,11 +242,8 @@ export function ProfileProvider({ children }) {
                || localStorage.getItem('biscoite_logged_user');
       const logged = raw ? JSON.parse(raw) : null;
       if (logged?.id) {
-        const token = sessionStorage.getItem('biscoite_access_token')
-                   || localStorage.getItem('biscoite_access_token');
-        await fetch(`/api/users?id=${logged.id}`, {
+        await authFetch(`/api/users?id=${logged.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ avatar_url: newImage }),
         });
         // Atualiza storage local
@@ -265,9 +263,8 @@ export function ProfileProvider({ children }) {
       if (logged?.id) {
         const token = sessionStorage.getItem('biscoite_access_token')
                    || localStorage.getItem('biscoite_access_token');
-        const res = await fetch(`/api/users?id=${logged.id}`, {
+        const res = await authFetch(`/api/users?id=${logged.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             name:     newData.name,
             unit:     newData.unit,

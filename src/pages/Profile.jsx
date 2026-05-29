@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { authFetch } from '../utils/authFetch';
 import {
   Mail, Linkedin, Phone, Globe, Plus, Pencil, Star, Calendar,
   MapPin, Briefcase, ChevronLeft, ChevronRight, X, Save, Trash2,
@@ -16,10 +17,8 @@ async function saveProfileToApi(data) {
     const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
     const logged = raw ? JSON.parse(raw) : null;
     if (!logged?.id) return;
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
-    const res = await fetch(`/api/users?id=${logged.id}`, {
+    const res = await authFetch(`/api/users?id=${logged.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
     });
     if (res.ok) {
