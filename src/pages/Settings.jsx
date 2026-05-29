@@ -491,6 +491,7 @@ export default function Settings() {
     users, updateUser, addUser,
     platformConfig, updatePlatformConfig,
     updateUserDataApi, updateProfileImage,
+    userData, profileImage,
   } = useProfile();
 
   const loggedUser = (() => {
