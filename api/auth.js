@@ -68,10 +68,16 @@ async function login(req, res) {
     [user.id, refreshToken, expiresAt]
   );
 
+  // Destino pós-login por role
+  // admin      → painel admin (acesso geral)
+  // professor  → painel professor (postagem, cursos, progresso)
+  // gestor     → painel gestor (equipe, franqueados, supervisão)
+  // aluno      → home (cursos, lives, progresso)
   const destinations = {
-    admin: '/admin', professor: '/professor',
-    gestor: '/gestor', franqueado: '/franqueado',
-    loja: '/loja', aluno: '/',
+    admin:     '/admin',
+    professor: '/professor',
+    gestor:    '/gestor',
+    aluno:     '/',
   };
 
   const { password_hash: _, ...safeUser } = user;

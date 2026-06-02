@@ -280,7 +280,7 @@ export default function Home() {
         </div>
         <div className="w-full md:w-1/3 flex justify-center">
           <img
-            src="https://cdni.iconscout.com/illustration/premium/thumb/ok-hand-gesture-illustration-download-in-svg-png-gif-formats--agree-done-positive-approved-pack-gestures-illustrations-4841121.png"
+            src="https://blog.even3.com.br/wp-content/uploads/2023/12/imagem_destaque_webinar.png"
             className="w-64"
             alt="Webinar"
           />

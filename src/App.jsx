@@ -91,10 +91,11 @@ function App() {
           </Route>
 
           {/* Dashboards protegidos */}
+          {/* PROFESSOR: postagem, cursos, progresso, perfis */}
           <Route path="/professor"  element={<ProtectedRoute roles={["professor","admin"]}><ProfessorDashboard /></ProtectedRoute>} />
+          {/* GESTOR: visão geral de equipe/loja, franqueados, supervisão */}
           <Route path="/gestor"     element={<ProtectedRoute roles={["gestor","admin"]}><GestorDashboard /></ProtectedRoute>} />
-          <Route path="/franqueado" element={<ProtectedRoute roles={["franqueado","admin"]}><GestorDashboard /></ProtectedRoute>} />
-          <Route path="/loja"       element={<ProtectedRoute roles={["loja","admin"]}><LojaDashboard /></ProtectedRoute>} />
+          {/* ADMIN: acesso geral */}
           <Route path="/admin"      element={<ProtectedRoute roles={["admin"]}><AdminPanel /></ProtectedRoute>} />
 
           {/* Qualquer rota desconhecida vai para login */}
