@@ -280,7 +280,7 @@ export default function Home() {
         </div>
         <div className="w-full md:w-1/3 flex justify-center">
           <img
-            src="https://blog.even3.com.br/wp-content/uploads/2023/12/imagem_destaque_webinar.png"
+            src="https://media.licdn.com/dms/image/v2/D4D0BAQGph6emrGRPtQ/company-logo_200_200/company-logo_200_200/0/1724087286406/biscoite_logo?e=2147483647&v=beta&t=j1zwyIPIShhSJymIX-44TEZxPPiklQngeo7DsM6U4ls"
             className="w-64"
             alt="Webinar"
           />
