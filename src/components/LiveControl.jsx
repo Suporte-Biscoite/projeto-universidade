@@ -1,14 +1,7 @@
 // src/components/LiveControl.jsx
-// Componente de controle de live para professor e admin
-// Uso: <LiveControl /> dentro do dashboard
-
 import { useState, useEffect } from 'react';
 import { Radio, Square, Loader } from 'lucide-react';
-
-function getToken() {
-  return sessionStorage.getItem('biscoite_access_token')
-      || localStorage.getItem('biscoite_access_token') || '';
-}
+import { authFetch } from '../utils/authFetch';
 
 export default function LiveControl() {
   const [live, setLive]       = useState(null);
@@ -31,9 +24,8 @@ export default function LiveControl() {
   const handleStart = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/live?action=start', {
+      const res = await authFetch('/api/live?action=start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ title, stream_url: streamUrl }),
       });
       const data = await res.json();
@@ -44,9 +36,9 @@ export default function LiveControl() {
   const handleStop = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/live?action=stop', {
+      const res = await authFetch('/api/live?action=stop', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (res.ok) setLive(data.live);
@@ -67,7 +59,9 @@ export default function LiveControl() {
           <div>
             <p className="text-sm font-black text-[#001A26]">Controle de Live</p>
             <p className="text-[10px] text-slate-500">
-              {isActive ? `Ao vivo desde ${new Date(live.started_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Nenhuma live ativa'}
+              {isActive
+                ? `Ao vivo desde ${new Date(live.started_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                : 'Nenhuma live ativa'}
             </p>
           </div>
         </div>
@@ -111,7 +105,11 @@ export default function LiveControl() {
             : 'bg-[#001A26] hover:bg-[#4A72B2] text-white'
         }`}
       >
-        {saving ? <Loader size={16} className="animate-spin" /> : isActive ? <><Square size={14} /> Encerrar live</> : <><Radio size={14} /> Iniciar live</>}
+        {saving
+          ? <Loader size={16} className="animate-spin" />
+          : isActive
+            ? <><Square size={14} /> Encerrar live</>
+            : <><Radio size={14} /> Iniciar live</>}
       </button>
     </div>
   );
