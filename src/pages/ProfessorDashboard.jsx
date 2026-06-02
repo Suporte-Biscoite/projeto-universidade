@@ -11,6 +11,8 @@ import {
   Clapperboard, Trash,
 } from 'lucide-react';
 import { useProfile, CURRENT_INSTRUCTOR_ID, DEFAULT_COURSE_IMAGES } from '../context/ProfileContext';
+import LiveFloatButton from '../components/LiveFloatButton';
+import LiveControl from '../components/LiveControl';
 
 // ─── Gráfico circular SVG ───────────────────────────────────────────────────
 function CircularProgress({ value = 78, size = 100, stroke = 9, color = '#4A72B2' }) {
@@ -309,7 +311,7 @@ function Sidebar({ activeView, setActiveView, profileImage, userName, unreadComm
           </button>
         ))}
       </nav>
-
+        
       <button onClick={() => navigate('/')}
         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:bg-slate-50 hover:text-[#00263B] transition-all">
         <Home size={16} /> Ir para Home
@@ -402,6 +404,8 @@ function OverviewView({ onNewComm }) {
 
   return (
     <div className="space-y-8">
+    {/* ── Controle de Live ── */}
+    <LiveControl />
       {/* ── Cabeçalho com filtro de período ── */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-bold text-slate-400">Visão geral · <span className="text-[#4A72B2]">{PERIOD_LABELS[period]}</span></p>
