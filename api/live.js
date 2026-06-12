@@ -4,6 +4,7 @@
 // POST /api/live?action=stop   — encerra live (professor/admin)
 
 import pool from './db.js';
+import { createNotification } from './notifications.js';
 import jwt from 'jsonwebtoken';
 
 function authenticate(req) {
@@ -65,6 +66,14 @@ async function controlLive(req, res) {
        RETURNING *`,
       [title || 'Live Biscoitê', stream_url || null, auth.sub]
     );
+    // Notifica todos sobre a live
+    await createNotification({
+      title: `🔴 Live ao vivo agora: ${title || 'Live Biscoitê'}`,
+      description: 'Clique para assistir ao vivo',
+      type: 'live',
+      link: '/live',
+    });
+
     return send(res, 200, { ok: true, live: rows[0] });
   }
 

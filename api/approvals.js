@@ -4,6 +4,7 @@
 // POST /api/approvals?action=reject&id=uuid  — rejeita usuário
 
 import pool from './db.js';
+import { createNotification } from './notifications.js';
 import jwt from 'jsonwebtoken';
 
 const FRONTEND_URL = process.env.VERCEL_URL
@@ -97,6 +98,15 @@ export default async function handler(req, res) {
         `
       );
 
+      // Notificação para o usuário aprovado
+      await createNotification({
+        user_id: id,
+        title: 'Cadastro aprovado! ✅',
+        description: 'Seu cadastro na Universidade Biscoitê foi aprovado. Bem-vindo!',
+        type: 'approval',
+        link: '/login',
+      });
+
       return send(res, 200, { ok: true, user: rows[0] });
     }
 
@@ -135,6 +145,14 @@ export default async function handler(req, res) {
         </div>
         `
       );
+
+      // Notificação para o usuário rejeitado
+      await createNotification({
+        user_id: id,
+        title: 'Cadastro não aprovado',
+        description: `Motivo: ${reason}`,
+        type: 'approval',
+      });
 
       return send(res, 200, { ok: true });
     }
