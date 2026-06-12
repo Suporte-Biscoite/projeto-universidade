@@ -109,24 +109,27 @@ export function ProfileProvider({ children }) {
       const raw = sessionStorage.getItem('biscoite_logged_user')
                || localStorage.getItem('biscoite_logged_user');
       const logged = raw ? JSON.parse(raw) : null;
-      if (logged?.avatar_url) return logged.avatar_url;
+      if (logged?.avatar_url && !logged.avatar_url.startsWith('blob:'))
+        return logged.avatar_url;
     } catch {}
-    return null; // sem foto padrão
+    return null;
   });
 
   const [userData, setUserData] = useState(() => {
-    // Lê dados do usuário logado salvos no login
     try {
       const raw = sessionStorage.getItem('biscoite_logged_user')
                || localStorage.getItem('biscoite_logged_user');
       const logged = raw ? JSON.parse(raw) : null;
       if (logged) {
         return {
-          name: logged.name || 'Usuário',
-          unit: logged.unit || '',
-          role: logged.role || 'aluno',
-          time: '',
-          avatar_url: logged.avatar_url || null,
+          name:    logged.name         || 'Usuário',
+          unit:    logged.unit         || logged.store_name || '',
+          role:    logged.position     || '',
+          time:    logged.company_time || '',
+          pronoun: logged.pronoun      || '',
+          bio:     logged.bio          || '',
+          avatar_url:  logged.avatar_url  || null,
+          banner_url:  logged.banner_url  || null,
           certificates: INITIAL_CERTIFICATES,
           education: [],
           experience: [],
@@ -134,14 +137,9 @@ export function ProfileProvider({ children }) {
       }
     } catch {}
     return {
-      name: 'Usuário',
-      unit: '',
-      role: 'aluno',
-      time: '',
-      avatar_url: null,
-      certificates: INITIAL_CERTIFICATES,
-      education: [],
-      experience: [],
+      name: 'Usuário', unit: '', role: '', time: '',
+      pronoun: '', bio: '', avatar_url: null, banner_url: null,
+      certificates: INITIAL_CERTIFICATES, education: [], experience: [],
     };
   });
 

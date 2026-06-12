@@ -189,8 +189,13 @@ export default function Login() {
       storage.setItem('biscoite_refresh_token', data.refreshToken);
       storage.setItem('biscoite_logged_user', JSON.stringify(data.user));
 
-      // Atualiza o role no contexto
+      // Atualiza o role e dados no contexto imediatamente
       setSystemRole(data.user.role);
+      // Dispara evento de storage para o ProfileContext sincronizar
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'biscoite_logged_user',
+        newValue: JSON.stringify(data.user),
+      }));
 
       AttemptsManager.clear();
       setSuccessMsg('Login realizado com sucesso! Redirecionando…');

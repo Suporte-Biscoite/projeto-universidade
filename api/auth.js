@@ -74,7 +74,8 @@ async function login(req, res) {
 
   const { rows } = await pool.query(
     `SELECT id, name, email, role, password_hash, active, status,
-            unit, store_id, store_name, store_type, instructor_id
+            unit, store_id, store_name, store_type, instructor_id,
+            avatar_url, banner_url, pronoun, position, company_time, bio
      FROM users WHERE email = $1`,
     [email.toLowerCase().trim()]
   );
