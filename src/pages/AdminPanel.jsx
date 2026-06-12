@@ -5,7 +5,7 @@ import {
   Plus, Pencil, X, Check, ToggleLeft, ToggleRight,
   Search, AlertTriangle, Store, UserPlus, Clock, Lock,
 } from 'lucide-react';
-import { useProfile, STORES } from '../context/ProfileContext';
+import { useProfile } from '../context/ProfileContext';
 import ApprovalsPanel from '../components/ApprovalsPanel';
 
 const ROLE_CONFIG = {
@@ -26,14 +26,16 @@ function RoleBadge({ role }) {
 }
 
 function CreateUserForm({ onAdd, onClose }) {
-  const [form, setForm] = useState({ name: \'\', email: \'\', systemRole: \'aluno\' });
+  const [form, setForm] = useState({ name: '', email: '', systemRole: 'aluno' });
   const [done, setDone] = useState(false);
+
   const handleSubmit = () => {
     if (!form.name.trim() || !form.email.trim()) return;
     onAdd(form);
     setDone(true);
     setTimeout(() => { setDone(false); onClose(); }, 1400);
   };
+
   return (
     <div className="bg-white rounded-[24px] border-2 border-[#4A72B2]/20 p-7 space-y-5">
       <div className="flex items-center justify-between">
@@ -43,21 +45,26 @@ function CreateUserForm({ onAdd, onClose }) {
       <div className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome completo *</label>
-          <input autoFocus value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+          <input autoFocus value={form.name}
+            onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
             placeholder="Ex: João Silva"
             className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2]" />
         </div>
         <div className="space-y-1.5">
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">E-mail *</label>
-          <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+          <input type="email" value={form.email}
+            onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
             placeholder="joao@biscoite.com"
             className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2]" />
         </div>
         <div className="space-y-1.5">
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Perfil</label>
-          <select value={form.systemRole} onChange={e => setForm(p => ({ ...p, systemRole: e.target.value }))}
+          <select value={form.systemRole}
+            onChange={e => setForm(p => ({ ...p, systemRole: e.target.value }))}
             className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2] bg-white">
-            {Object.entries(ROLE_CONFIG).map(([r, cfg]) => <option key={r} value={r}>{cfg.label}</option>)}
+            {Object.entries(ROLE_CONFIG).map(([r, cfg]) => (
+              <option key={r} value={r}>{cfg.label}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -75,15 +82,15 @@ function CreateUserForm({ onAdd, onClose }) {
 export default function AdminPanel() {
   const navigate = useNavigate();
   const { systemRole, users, updateUser, addUser } = useProfile();
-  const [activeTab, setActiveTab] = useState(\'aprovacoes\');
-  const [search, setSearch] = useState(\'\');
+  const [activeTab, setActiveTab] = useState('aprovacoes');
+  const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [editRole, setEditRole] = useState(\'\');
+  const [editRole, setEditRole] = useState('');
 
   const handleLogout = () => {
-    ['biscoite_auth','biscoite_access_token','biscoite_refresh_token','biscoite_logged_user']
+    ['biscoite_auth', 'biscoite_access_token', 'biscoite_refresh_token', 'biscoite_logged_user']
       .forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
     navigate('/login');
   };
@@ -92,9 +99,15 @@ export default function AdminPanel() {
     return (
       <div className="min-h-screen bg-[#f6f9fd] flex items-center justify-center">
         <div className="bg-white rounded-[32px] p-12 text-center space-y-5 shadow-sm max-w-md w-full">
-          <Lock size={28} className="text-purple-400 mx-auto" />
+          <div className="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto">
+            <Lock size={28} className="text-purple-400" />
+          </div>
           <h2 className="text-2xl font-black text-[#001A26]">Acesso restrito</h2>
-          <button onClick={() => navigate('/')} className="px-8 py-3 bg-[#001A26] text-white rounded-xl font-bold text-sm">Voltar para Home</button>
+          <p className="text-slate-400 text-sm">Esta área é exclusiva para administradores da plataforma.</p>
+          <button onClick={() => navigate('/')}
+            className="px-8 py-3 bg-[#001A26] text-white rounded-xl font-bold text-sm hover:bg-[#4A72B2] transition-colors">
+            Voltar para Home
+          </button>
         </div>
       </div>
     );
@@ -121,6 +134,8 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-[#f6f9fd] flex">
+
+      {/* SIDEBAR */}
       <aside className="w-64 min-h-screen bg-[#001A26] flex flex-col py-8 px-6 fixed left-0 top-0 bottom-0 z-30">
         <div className="mb-10 text-center">
           <img src="/logo-biscoite.svg" alt="Logo" className="h-8 mx-auto mb-1 brightness-0 invert" />
@@ -131,50 +146,62 @@ export default function AdminPanel() {
         <nav className="space-y-1 flex-1">
           {navItems.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActiveTab(id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === id ? 'bg-white/10 text-white' : 'text-white/40 hover:bg-white/5 hover:text-white/70'}`}>
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                activeTab === id ? 'bg-white/10 text-white' : 'text-white/40 hover:bg-white/5 hover:text-white/70'
+              }`}>
               <Icon size={18} /> {label}
             </button>
           ))}
         </nav>
         <div className="space-y-2 mt-8 pt-8 border-t border-white/10">
-          <button onClick={() => navigate('/')} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-white/40 hover:bg-white/5 hover:text-white/70 transition-all">
+          <button onClick={() => navigate('/')}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-white/40 hover:bg-white/5 hover:text-white/70 transition-all">
             <Home size={18} /> Ir para Home
           </button>
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-red-400/60 hover:bg-red-500/10 hover:text-red-400 transition-all">
+          <button onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-red-400/60 hover:bg-red-500/10 hover:text-red-400 transition-all">
             <LogOut size={18} /> Sair
           </button>
         </div>
       </aside>
 
+      {/* CONTEÚDO */}
       <main className="ml-64 flex-1 p-10 space-y-8">
         <div>
           <h1 className="text-3xl font-black text-[#001A26]">Painel Administrativo</h1>
           <p className="text-slate-400 text-sm mt-1">Gerencie usuários, aprovações e configurações da plataforma.</p>
         </div>
 
+        {/* Stats por role */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Object.entries(ROLE_CONFIG).map(([role, cfg]) => (
             <button key={role} onClick={() => setFilterRole(prev => prev === role ? null : role)}
-              className={`p-4 rounded-[18px] border-2 text-center transition-all ${filterRole === role ? 'border-[#4A72B2] bg-[#e2eef9]' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
+              className={`p-4 rounded-[18px] border-2 text-center transition-all ${
+                filterRole === role ? 'border-[#4A72B2] bg-[#e2eef9]' : 'border-slate-100 bg-white hover:border-slate-200'
+              }`}>
               <p className="text-xl font-black text-[#001A26]">{countByRole[role] || 0}</p>
               <span className={`text-[9px] font-black px-2 py-0.5 rounded-full mt-1 inline-block ${cfg.color}`}>{cfg.label}</span>
             </button>
           ))}
         </div>
 
+        {/* ── APROVAÇÕES ── */}
         {activeTab === 'aprovacoes' && <ApprovalsPanel />}
 
+        {/* ── USUÁRIOS ── */}
         {activeTab === 'usuarios' && (
           <div className="space-y-5">
             <div className="flex items-center gap-4">
               <div className="flex-1 flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-5 h-12">
                 <Search size={16} className="text-slate-300 flex-shrink-0" />
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail..."
+                <input value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar por nome ou e-mail..."
                   className="flex-1 text-sm bg-transparent outline-none text-slate-600 placeholder-slate-300" />
                 {search && <button onClick={() => setSearch('')}><X size={14} className="text-slate-300" /></button>}
               </div>
               {filterRole && (
-                <button onClick={() => setFilterRole(null)} className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#4A72B2] bg-[#e2eef9] rounded-xl">
+                <button onClick={() => setFilterRole(null)}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#4A72B2] bg-[#e2eef9] rounded-xl">
                   {ROLE_CONFIG[filterRole]?.label} <X size={12} />
                 </button>
               )}
@@ -183,12 +210,14 @@ export default function AdminPanel() {
                 <UserPlus size={14} /> Novo usuário
               </button>
             </div>
+
             {showCreate && <CreateUserForm onAdd={addUser} onClose={() => setShowCreate(false)} />}
+
             <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100">
-                    {['Usuário','Perfil','Loja','Status','Ações'].map(h => (
+                    {['Usuário', 'Perfil', 'Loja', 'Status', 'Ações'].map(h => (
                       <th key={h} className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">{h}</th>
                     ))}
                   </tr>
@@ -199,7 +228,7 @@ export default function AdminPanel() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-[#e2eef9] flex items-center justify-center font-black text-[#4A72B2] text-xs flex-shrink-0">
-                            {user.name?.split(' ').map(n => n[0]).slice(0,2).join('') || '??'}
+                            {user.name?.split(' ').map(n => n[0]).slice(0, 2).join('') || '??'}
                           </div>
                           <div>
                             <p className="text-sm font-bold text-[#001A26]">{user.name}</p>
@@ -212,12 +241,18 @@ export default function AdminPanel() {
                           <div className="flex items-center gap-2">
                             <select value={editRole} onChange={e => setEditRole(e.target.value)} autoFocus
                               className="px-3 py-1.5 rounded-xl border border-[#4A72B2] text-xs font-black text-[#001A26] outline-none bg-white">
-                              {Object.entries(ROLE_CONFIG).map(([r, cfg]) => <option key={r} value={r}>{cfg.label}</option>)}
+                              {Object.entries(ROLE_CONFIG).map(([r, cfg]) => (
+                                <option key={r} value={r}>{cfg.label}</option>
+                              ))}
                             </select>
                             <button onClick={() => { updateUser(user.id, { systemRole: editRole }); setEditingId(null); }}
-                              className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center"><Check size={13} /></button>
+                              className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                              <Check size={13} />
+                            </button>
                             <button onClick={() => setEditingId(null)}
-                              className="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center"><X size={13} /></button>
+                              className="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center">
+                              <X size={13} />
+                            </button>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -229,22 +264,34 @@ export default function AdminPanel() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-4"><span className="text-xs text-slate-400">{user.unit || user.store_name || '—'}</span></td>
                       <td className="px-4 py-4">
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${user.active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-400'}`}>
+                        <span className="text-xs text-slate-400">{user.unit || user.store_name || '—'}</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                          user.active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-400'
+                        }`}>
                           {user.active ? 'Ativo' : 'Inativo'}
                         </span>
                       </td>
                       <td className="px-4 py-4">
                         <button onClick={() => updateUser(user.id, { active: !user.active })}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${user.active ? 'bg-emerald-50 text-emerald-500 hover:bg-red-50 hover:text-red-500' : 'bg-red-50 text-red-400 hover:bg-emerald-50 hover:text-emerald-500'}`}>
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                            user.active
+                              ? 'bg-emerald-50 text-emerald-500 hover:bg-red-50 hover:text-red-500'
+                              : 'bg-red-50 text-red-400 hover:bg-emerald-50 hover:text-emerald-500'
+                          }`}>
                           {user.active ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
                         </button>
                       </td>
                     </tr>
                   ))}
                   {filteredUsers.length === 0 && (
-                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">Nenhum usuário encontrado.</td></tr>
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">
+                        Nenhum usuário encontrado.
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
@@ -252,6 +299,7 @@ export default function AdminPanel() {
           </div>
         )}
 
+        {/* ── LOJAS ── */}
         {activeTab === 'lojas' && (
           <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-10 text-center space-y-4">
             <Store size={28} className="text-slate-400 mx-auto" />
@@ -260,6 +308,7 @@ export default function AdminPanel() {
           </div>
         )}
 
+        {/* ── RELATÓRIO ── */}
         {activeTab === 'relatorio' && (
           <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-10 text-center space-y-4">
             <BarChart2 size={28} className="text-slate-400 mx-auto" />
@@ -268,6 +317,7 @@ export default function AdminPanel() {
           </div>
         )}
 
+        {/* ── CONFIG ── */}
         {activeTab === 'config' && (
           <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-8 space-y-6 max-w-md">
             <p className="font-black text-[#001A26]">Configurações da plataforma</p>
