@@ -50,15 +50,19 @@ export async function authFetch(url, options = {}) {
   let res = await makeRequest(token);
 
   // Token expirado — tenta renovar e repetir
-  if (res.status === 401) {
+  // Só tenta renovar se havia um token antes (evita loop na tela de login)
+  if (res.status === 401 && token) {
     const newToken = await refreshToken();
     if (newToken) {
       res = await makeRequest(newToken);
     } else {
-      // Refresh também falhou — redireciona para login
-      sessionStorage.removeItem('biscoite_auth');
-      localStorage.removeItem('biscoite_auth');
-      window.location.href = '/login';
+      // Refresh também falhou — limpa sessão e redireciona
+      // Mas só redireciona se não estiver já na página de login
+      if (!window.location.pathname.includes('/login')) {
+        ['biscoite_auth','biscoite_access_token','biscoite_refresh_token','biscoite_logged_user']
+          .forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
+        window.location.href = '/login';
+      }
       return res;
     }
   }

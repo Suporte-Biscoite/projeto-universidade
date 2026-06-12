@@ -7,8 +7,6 @@ const ROLE_PANEL = {
   admin:     { label: 'Painel Admin',     path: '/admin',     icon: Shield,   color: 'text-purple-500 bg-purple-50' },
   professor: { label: 'Painel Professor', path: '/professor', icon: BookOpen, color: 'text-blue-500 bg-blue-50' },
   gestor:    { label: 'Painel Gestor',    path: '/gestor',    icon: BarChart2,color: 'text-teal-500 bg-teal-50' },
-  loja:      { label: 'Painel da Loja',   path: '/loja',      icon: Store,    color: 'text-orange-500 bg-orange-50' },
-  franqueado:{ label: 'Painel Franqueado',path: '/franqueado', icon: Users,    color: 'text-cyan-500 bg-cyan-50' },
 };
 
 const mockNotifications = [

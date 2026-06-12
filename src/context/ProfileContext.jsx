@@ -238,6 +238,10 @@ export function ProfileProvider({ children }) {
     // 2. Busca dados frescos da API
     const fetchFreshData = async () => {
       try {
+        // Só busca se o usuário estiver autenticado
+        const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
+        if (!isAuth) return;
+
         const raw = sessionStorage.getItem('biscoite_logged_user')
                  || localStorage.getItem('biscoite_logged_user');
         if (!raw) return;
