@@ -111,7 +111,7 @@ export function ProfileProvider({ children }) {
       const logged = raw ? JSON.parse(raw) : null;
       if (logged?.avatar_url) return logged.avatar_url;
     } catch {}
-    return 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200';
+    return null; // sem foto padrão
   });
 
   const [userData, setUserData] = useState(() => {
@@ -157,9 +157,15 @@ export function ProfileProvider({ children }) {
   // SECURITY NOTE: systemRole está em localStorage apenas para demo.
   // Em produção, DEVE vir de um JWT verificado no servidor.
   // Nunca confie em dados de role vindos do cliente para autorizar ações.
-  const [systemRole, setSystemRoleState] = useState(
-    () => loadFromStorage('biscoite_system_role', 'admin')
-  );
+  const [systemRole, setSystemRoleState] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem('biscoite_logged_user')
+               || localStorage.getItem('biscoite_logged_user');
+      const logged = raw ? JSON.parse(raw) : null;
+      if (logged?.role) return logged.role;
+    } catch {}
+    return loadFromStorage('biscoite_system_role', 'aluno');
+  });
 
   // ── Courses ───────────────────────────────────────────────────────────────
   const [courses, setCourses] = useState(
@@ -215,6 +221,69 @@ export function ProfileProvider({ children }) {
   );
 
   // ── Persistência no localStorage ──────────────────────────────────────────
+  // ── Sincroniza e busca dados frescos do banco ao inicializar ────────────────
+  useEffect(() => {
+    // 1. Sync imediato do storage local
+    try {
+      const raw = sessionStorage.getItem('biscoite_logged_user')
+               || localStorage.getItem('biscoite_logged_user');
+      if (raw) {
+        const logged = JSON.parse(raw);
+        if (logged?.name)  setUserData(prev => ({ ...prev, name: logged.name, unit: logged.unit || prev.unit }));
+        if (logged?.avatar_url && !logged.avatar_url.startsWith('blob:')) setProfileImage(logged.avatar_url);
+        if (logged?.role)  setSystemRoleState(logged.role);
+      }
+    } catch {}
+
+    // 2. Busca dados frescos da API
+    const fetchFreshData = async () => {
+      try {
+        const raw = sessionStorage.getItem('biscoite_logged_user')
+                 || localStorage.getItem('biscoite_logged_user');
+        if (!raw) return;
+        const logged = JSON.parse(raw);
+        if (!logged?.id) return;
+        const token = sessionStorage.getItem('biscoite_access_token')
+                   || localStorage.getItem('biscoite_access_token');
+        if (!token) return;
+        const res = await fetch(`/api/users?id=${logged.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const user = await res.json();
+        setUserData(prev => ({
+          ...prev,
+          name:    user.name         || prev.name,
+          unit:    user.unit         || prev.unit,
+          pronoun: user.pronoun      || prev.pronoun || '',
+          role:    user.position     || prev.role    || '',
+          time:    user.company_time || prev.time    || '',
+          bio:     user.bio          || prev.bio     || '',
+        }));
+        if (user.avatar_url && !user.avatar_url.startsWith('blob:')) setProfileImage(user.avatar_url);
+        if (user.role) setSystemRoleState(user.role);
+        // Atualiza storage
+        const storage = sessionStorage.getItem('biscoite_logged_user') ? sessionStorage : localStorage;
+        storage.setItem('biscoite_logged_user', JSON.stringify({ ...logged, ...user }));
+      } catch {}
+    };
+    fetchFreshData();
+
+    // 3. Escuta mudanças de storage (ex: outra aba)
+    const onStorage = () => {
+      try {
+        const raw = sessionStorage.getItem('biscoite_logged_user')
+                 || localStorage.getItem('biscoite_logged_user');
+        if (!raw) return;
+        const logged = JSON.parse(raw);
+        if (logged?.name)  setUserData(prev => ({ ...prev, name: logged.name }));
+        if (logged?.avatar_url && !logged.avatar_url.startsWith('blob:')) setProfileImage(logged.avatar_url);
+      } catch {}
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   useEffect(() => { try { localStorage.setItem('biscoite_system_role', JSON.stringify(systemRole)); } catch {} }, [systemRole]);
   useEffect(() => { try { localStorage.setItem('biscoite_courses', JSON.stringify(courses)); } catch {} }, [courses]);
   useEffect(() => { try { localStorage.setItem('biscoite_modules', JSON.stringify(modules)); } catch {} }, [modules]);
