@@ -38,36 +38,37 @@ export default async function handler(req, res) {
 }
 
 async function createLesson(req, res) {
-  const { moduleId, title, duration, vimeo_id, type = 'video' } = req.body ?? {};
+  const { moduleId, title, duration, vimeo_id, type = 'video', visibility } = req.body ?? {};
   if (!moduleId || !title) return send(res, 400, { error: 'moduleId e title obrigatórios' });
 
   const { rows: counts } = await pool.query(
     'SELECT COUNT(*) as count FROM lessons WHERE module_id = $1', [moduleId]
   );
   const order = Number(counts[0].count) + 1;
-  // Primeira aula desbloqueada, demais bloqueadas
   const locked = order > 1;
+  const vis = Array.isArray(visibility) && visibility.length ? visibility : ['aluno','gestor','professor','admin'];
 
   const { rows } = await pool.query(
-    `INSERT INTO lessons (module_id, title, duration, vimeo_id, "order", locked)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [moduleId, title.trim(), duration || null, vimeo_id || null, order, locked]
+    `INSERT INTO lessons (module_id, title, duration, vimeo_id, "order", locked, visibility)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+    [moduleId, title.trim(), duration || null, vimeo_id || null, order, locked, vis]
   );
   return send(res, 201, rows[0]);
 }
 
 async function updateLesson(req, res, id) {
   if (!id) return send(res, 400, { error: 'ID obrigatório' });
-  const { title, duration, vimeo_id, locked } = req.body ?? {};
+  const { title, duration, vimeo_id, locked, visibility } = req.body ?? {};
 
   const { rows } = await pool.query(
     `UPDATE lessons SET
-       title    = COALESCE($1, title),
-       duration = COALESCE($2, duration),
-       vimeo_id = COALESCE($3, vimeo_id),
-       locked   = COALESCE($4, locked)
-     WHERE id = $5 RETURNING *`,
-    [title, duration, vimeo_id, locked, id]
+       title      = COALESCE($1, title),
+       duration   = COALESCE($2, duration),
+       vimeo_id   = COALESCE($3, vimeo_id),
+       locked     = COALESCE($4, locked),
+       visibility = COALESCE($5, visibility)
+     WHERE id = $6 RETURNING *`,
+    [title, duration, vimeo_id, locked, visibility || null, id]
   );
   return send(res, 200, rows[0]);
 }

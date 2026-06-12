@@ -759,6 +759,7 @@ function CourseFormModal({ initial, onSave, onClose, systemRole }) {
     published:   initial?.published   ?? false,
     thumbnail:   initial?.thumbnail   || null,
     vimeoId:     initial?.vimeoId     || null,
+    visibility:  initial?.visibility  || ['aluno','gestor','professor','admin'], // quem pode ver
   });
   const thumbInputRef = useRef(null);
   const isEdit = Boolean(initial?.id);
@@ -850,6 +851,36 @@ function CourseFormModal({ initial, onSave, onClose, systemRole }) {
         {systemRole === 'admin' && (
           <FieldInput label="Instrutor" value={form.instructor} onChange={v => setForm(p => ({ ...p, instructor: v }))} placeholder="Nome do instrutor" maxLength={60} />
         )}
+        {/* ── VISIBILIDADE POR PERFIL ── */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Visível para</label>
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { value: 'aluno',     label: 'Colaboradores', color: 'bg-slate-100 text-slate-600 border-slate-200' },
+              { value: 'gestor',    label: 'Gestores',      color: 'bg-teal-100 text-teal-700 border-teal-200' },
+              { value: 'professor', label: 'Professores',   color: 'bg-blue-100 text-blue-700 border-blue-200' },
+              { value: 'admin',     label: 'Admins',        color: 'bg-purple-100 text-purple-700 border-purple-200' },
+            ].map(({ value, label, color }) => {
+              const active = form.visibility.includes(value);
+              return (
+                <button key={value} type="button"
+                  onClick={() => setForm(p => ({
+                    ...p,
+                    visibility: active
+                      ? p.visibility.filter(v => v !== value)
+                      : [...p.visibility, value],
+                  }))}
+                  className={`px-3 py-1.5 rounded-full text-xs font-black border transition-all ${
+                    active ? color : 'bg-white text-slate-300 border-slate-200 opacity-50'
+                  }`}>
+                  {active ? '✓ ' : ''}{label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-slate-400">Selecione quais perfis podem visualizar este curso.</p>
+        </div>
+
         <label className="flex items-center gap-3 cursor-pointer select-none">
           <div
             onClick={() => setForm(p => ({ ...p, published: !p.published }))}
@@ -1310,7 +1341,7 @@ function MeusCursosView() {
   const [newModTitle, setNewModTitle] = useState('');
   const [editingMod, setEditingMod] = useState(null);
   const [editModTitle, setEditModTitle] = useState('');
-  const [newLesson, setNewLesson] = useState({ title: '', duration: '', type: 'video', vimeoId: null });
+  const [newLesson, setNewLesson] = useState({ title: '', duration: '', type: 'video', vimeoId: null, visibility: ['aluno','gestor','professor','admin'] });
   const [uploadingLesson, setUploadingLesson] = useState(false);
   const [addingLessonTo, setAddingLessonTo] = useState(null);
   const [confirmDelMod, setConfirmDelMod] = useState(null);
@@ -1351,7 +1382,7 @@ function MeusCursosView() {
   const handleAddLesson = (moduleId) => {
     if (!newLesson.title.trim()) return;
     addLesson(moduleId, newLesson);
-    setNewLesson({ title: '', duration: '', type: 'video', vimeoId: null });
+    setNewLesson({ title: '', duration: '', type: 'video', vimeoId: null, visibility: ['aluno','gestor','professor','admin'] });
     setAddingLessonTo(null);
   };
 
@@ -1650,7 +1681,7 @@ function MeusCursosView() {
                                   {L_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
                                 <div className="flex gap-2 ml-auto shrink-0">
-                                  <button onClick={() => { setAddingLessonTo(null); setNewLesson({ title: '', duration: '', type: 'video', vimeoId: null }); }}
+                                  <button onClick={() => { setAddingLessonTo(null); setNewLesson({ title: '', duration: '', type: 'video', vimeoId: null, visibility: ['aluno','gestor','professor','admin'] }); }}
                                     className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-500 hover:bg-slate-50">Cancelar</button>
                                   <button onClick={() => handleAddLesson(mod.id)} disabled={!newLesson.title.trim()}
                                     className="px-4 py-2 rounded-xl bg-[#001A26] hover:bg-[#4A72B2] text-white text-xs font-black transition-all disabled:opacity-40">Adicionar</button>
@@ -1664,6 +1695,34 @@ function MeusCursosView() {
                                   onChange={(id) => setNewLesson(p => ({ ...p, vimeoId: id }))}
                                   courseTitle={newLesson.title}
                                 />
+                              </div>
+                              {/* Visibilidade da aula */}
+                              <div className="mt-3 space-y-1.5">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Visível para</p>
+                                <div className="flex gap-1.5 flex-wrap">
+                                  {[
+                                    { value: 'aluno', label: 'Colaboradores' },
+                                    { value: 'gestor', label: 'Gestores' },
+                                    { value: 'professor', label: 'Professores' },
+                                    { value: 'admin', label: 'Admins' },
+                                  ].map(({ value, label }) => {
+                                    const active = (newLesson.visibility || []).includes(value);
+                                    return (
+                                      <button key={value} type="button"
+                                        onClick={() => setNewLesson(p => ({
+                                          ...p,
+                                          visibility: active
+                                            ? (p.visibility || []).filter(v => v !== value)
+                                            : [...(p.visibility || []), value],
+                                        }))}
+                                        className={`px-2.5 py-1 rounded-full text-[9px] font-black border transition-all ${
+                                          active ? 'bg-[#4A72B2] text-white border-[#4A72B2]' : 'bg-white text-slate-300 border-slate-200'
+                                        }`}>
+                                        {label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
                           ) : (

@@ -83,7 +83,7 @@ async function createCourse(req, res, auth) {
   if (!['professor', 'admin'].includes(auth.role))
     return send(res, 403, { error: 'Sem permissão' });
 
-  const { title, description, category, level, format, duration, thumbnail_url, vimeo_id, published } = req.body ?? {};
+  const { title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, visibility } = req.body ?? {};
   if (!title) return send(res, 400, { error: 'Título obrigatório' });
 
   const { rows } = await pool.query(
@@ -117,9 +117,10 @@ async function updateCourse(req, res, auth, id) {
        thumbnail_url = COALESCE($7, thumbnail_url),
        vimeo_id      = COALESCE($8, vimeo_id),
        published     = COALESCE($9, published),
+       visibility    = COALESCE($10, visibility),
        updated_at    = now()
-     WHERE id = $10 RETURNING *`,
-    [title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, id]
+     WHERE id = $11 RETURNING *`,
+    [title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, visibility || null, id]
   );
   return send(res, 200, rows[0]);
 }
