@@ -245,12 +245,8 @@ export function ProfileProvider({ children }) {
         if (!raw) return;
         const logged = JSON.parse(raw);
         if (!logged?.id) return;
-        const token = sessionStorage.getItem('biscoite_access_token')
-                   || localStorage.getItem('biscoite_access_token');
-        if (!token) return;
-        const res = await fetch(`/api/users?id=${logged.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await authFetch(`/api/users?id=${logged.id}`);
+        // Ignora 401 silenciosamente — token pode ter expirado, authFetch já trata
         if (!res.ok) return;
         const user = await res.json();
         setUserData(prev => ({
