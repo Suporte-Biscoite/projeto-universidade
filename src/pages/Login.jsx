@@ -167,8 +167,16 @@ export default function Login() {
           startLockoutTimer(lockedUntil);
           setFormError('Muitas tentativas. Conta bloqueada por 15 minutos.');
         } else {
+          // Filtra erros técnicos do banco — mostra só mensagem amigável
+          const friendlyError = (data.error && (
+            data.error.toLowerCase().includes('database') ||
+            data.error.toLowerCase().includes('connection') ||
+            data.error.toLowerCase().includes('postgres') ||
+            data.error.toLowerCase().includes('could not')
+          )) ? 'Email ou senha incorretos.' : (data.error || 'Erro ao fazer login.');
+
           setFormError(
-            `${data.error || 'Erro ao fazer login.'}${remaining > 0 ? ` ${remaining} tentativa(s) restante(s).` : ''}`
+            `${friendlyError}${remaining > 0 ? ` ${remaining} tentativa(s) restante(s).` : ''}`
           );
         }
         return;

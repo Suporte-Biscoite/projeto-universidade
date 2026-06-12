@@ -1,79 +1,121 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Clock, LogOut, RefreshCw } from 'lucide-react';
-import { useInactivityTimer } from '../hooks/useInactivityTimer';
-import { useProfile } from '../context/ProfileContext';
+// src/components/InactivityGuard.jsx
+// Detecta inatividade e redireciona para login
+// FIX: limpa completamente o estado ao fazer logout por inatividade
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+const STORAGE_KEYS = [
+  'biscoite_auth', 'biscoite_access_token',
+  'biscoite_refresh_token', 'biscoite_logged_user',
+];
+
+function clearSession() {
+  STORAGE_KEYS.forEach(key => {
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  });
+}
+
+const PUBLIC_ROUTES = ['/login', '/registrar', '/recuperar-senha', '/redefinir-senha'];
 
 export default function InactivityGuard({ children, timeoutMinutes = 15 }) {
-  const navigate = useNavigate();
-  const { setSystemRole } = useProfile();
-  const { showWarning, countdown, resetTimer, registerLogout } = useInactivityTimer(timeoutMinutes);
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const [warning, setWarning] = useState(false);
+  const [countdown, setCountdown] = useState(60);
+  const timeoutRef  = useRef(null);
+  const warningRef  = useRef(null);
+  const countRef    = useRef(null);
 
+  const isPublic = PUBLIC_ROUTES.includes(location.pathname);
+  const isAuth   = !!(sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth'));
+
+  const doLogout = useCallback(() => {
+    clearSession();
+    setWarning(false);
+    setCountdown(60);
+    [timeoutRef, warningRef, countRef].forEach(r => { if (r.current) clearTimeout(r.current); });
+    navigate('/login', { replace: true });
+  }, [navigate]);
+
+  const resetTimer = useCallback(() => {
+    if (isPublic || !isAuth) return;
+    setWarning(false);
+    setCountdown(60);
+    [timeoutRef, warningRef, countRef].forEach(r => { if (r.current) clearTimeout(r.current); });
+
+    // Aviso 1 min antes do timeout
+    warningRef.current = setTimeout(() => {
+      setWarning(true);
+      setCountdown(60);
+    }, (timeoutMinutes * 60 - 60) * 1000);
+
+    // Logout automático
+    timeoutRef.current = setTimeout(() => {
+      doLogout();
+    }, timeoutMinutes * 60 * 1000);
+  }, [timeoutMinutes, isPublic, isAuth, doLogout]);
+
+  // Contagem regressiva quando aviso está visível
   useEffect(() => {
-    registerLogout(() => {
-      setSystemRole('aluno');
-      navigate('/login');
-    });
-  }, []);
+    if (!warning) return;
+    countRef.current = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { doLogout(); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(countRef.current);
+  }, [warning, doLogout]);
 
-  const pct = Math.round((countdown / 60) * 100);
-  const circumference = 2 * Math.PI * 22;
-  const offset = circumference - (pct / 100) * circumference;
+  // Escuta eventos de atividade
+  useEffect(() => {
+    if (isPublic || !isAuth) return;
+    const events = ['mousemove','keydown','click','scroll','touchstart'];
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
+    resetTimer();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetTimer));
+      [timeoutRef, warningRef, countRef].forEach(r => { if (r.current) clearTimeout(r.current); });
+    };
+  }, [resetTimer, isPublic, isAuth]);
+
+  // FIX 5: Limpa o modal quando o usuário já está em rota pública (após logout manual)
+  useEffect(() => {
+    if (isPublic) {
+      setWarning(false);
+      [timeoutRef, warningRef, countRef].forEach(r => { if (r.current) clearTimeout(r.current); });
+    }
+  }, [isPublic]);
 
   return (
     <>
       {children}
-
-      {showWarning && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[32px] shadow-2xl max-w-sm w-full p-8 space-y-6 text-center">
-
-            {/* Ícone + countdown circular */}
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative w-20 h-20">
-                <svg width="80" height="80" className="-rotate-90">
-                  <circle cx="40" cy="40" r="22" fill="none" stroke="#e2eef9" strokeWidth="6" />
-                  <circle
-                    cx="40" cy="40" r="22" fill="none"
-                    stroke={countdown <= 10 ? '#ef4444' : '#4A72B2'}
-                    strokeWidth="6"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={offset}
-                    strokeLinecap="round"
-                    style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s' }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className={`text-xl font-black ${countdown <= 10 ? 'text-red-500' : 'text-[#001A26]'}`}>
-                    {countdown}
-                  </span>
-                </div>
-              </div>
-              <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center">
-                <Clock size={20} className="text-amber-500" />
-              </div>
+      {warning && !isPublic && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[28px] p-8 max-w-sm w-full shadow-2xl space-y-5 text-center">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-2xl">⏱️</span>
             </div>
-
             <div>
-              <h2 className="text-xl font-black text-[#001A26]">Você ainda está aí?</h2>
-              <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-                Ficamos sem atividade por <strong>{15} minutos</strong>.<br />
-                Você será deslogado em <strong className={countdown <= 10 ? 'text-red-500' : 'text-[#4A72B2]'}>{countdown} segundo{countdown !== 1 ? 's' : ''}</strong>.
+              <h3 className="font-black text-[#001A26] text-lg">Sessão expirando</h3>
+              <p className="text-slate-500 text-sm mt-1">
+                Você será desconectado em <span className="font-black text-amber-500">{countdown}s</span> por inatividade.
               </p>
             </div>
-
-            <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
               <button
-                onClick={resetTimer}
-                className="w-full py-3.5 bg-[#001A26] hover:bg-[#4A72B2] text-white font-black rounded-2xl text-sm flex items-center justify-center gap-2 transition-colors"
+                onClick={doLogout}
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-black text-sm hover:bg-slate-50"
               >
-                <RefreshCw size={16} /> Continuar sessão
+                Sair agora
               </button>
               <button
-                onClick={() => { setSystemRole('aluno'); navigate('/login'); }}
-                className="w-full py-3.5 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-500 font-black rounded-2xl text-sm flex items-center justify-center gap-2 transition-colors"
+                onClick={resetTimer}
+                className="flex-1 py-3 rounded-xl bg-[#4A72B2] hover:bg-[#001A26] text-white font-black text-sm transition-all"
               >
-                <LogOut size={16} /> Sair agora
+                Continuar
               </button>
             </div>
           </div>

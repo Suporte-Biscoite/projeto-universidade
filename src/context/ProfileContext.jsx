@@ -255,27 +255,36 @@ export function ProfileProvider({ children }) {
   };
 
   const updateUserDataApi = async (newData) => {
+    // Atualiza estado local imediatamente (sem esperar API)
     setUserData(prev => ({ ...prev, ...newData }));
     try {
       const raw = sessionStorage.getItem('biscoite_logged_user')
                || localStorage.getItem('biscoite_logged_user');
       const logged = raw ? JSON.parse(raw) : null;
       if (logged?.id) {
-        const token = sessionStorage.getItem('biscoite_access_token')
-                   || localStorage.getItem('biscoite_access_token');
         const res = await authFetch(`/api/users?id=${logged.id}`, {
           method: 'PUT',
           body: JSON.stringify({
-            name:     newData.name,
-            unit:     newData.unit,
-            password: newData.password || undefined,
+            name:         newData.name,
+            unit:         newData.unit,
+            pronoun:      newData.pronoun,
+            position:     newData.role,
+            company_time: newData.time,
+            password:     newData.password || undefined,
           }),
         });
-        const updated_user = await res.json();
         if (res.ok) {
+          const updated_user = await res.json();
+          // Atualiza storage e estado com dados confirmados pelo banco
           const updatedLogged = { ...logged, ...updated_user };
-          if (sessionStorage.getItem('biscoite_logged_user')) sessionStorage.setItem('biscoite_logged_user', JSON.stringify(updatedLogged));
-          if (localStorage.getItem('biscoite_logged_user'))   localStorage.setItem('biscoite_logged_user', JSON.stringify(updatedLogged));
+          const storage = sessionStorage.getItem('biscoite_logged_user') ? sessionStorage : localStorage;
+          storage.setItem('biscoite_logged_user', JSON.stringify(updatedLogged));
+          // Re-sincroniza estado com dados do banco
+          setUserData(prev => ({
+            ...prev,
+            name: updated_user.name || prev.name,
+            unit: updated_user.unit || prev.unit,
+          }));
         }
       }
     } catch (e) { console.error('updateUserDataApi', e); }
