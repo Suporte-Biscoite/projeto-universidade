@@ -11,7 +11,7 @@ import {
   Clapperboard, Trash,
 } from 'lucide-react';
 import { useProfile, CURRENT_INSTRUCTOR_ID, DEFAULT_COURSE_IMAGES } from '../context/ProfileContext';
-import LiveFloatButton from '../components/LiveFloatButton';
+import VimeoUploader from '../components/VimeoUploader';
 import LiveControl from '../components/LiveControl';
 
 // ─── Gráfico circular SVG ───────────────────────────────────────────────────
@@ -288,7 +288,12 @@ function Sidebar({ activeView, setActiveView, profileImage, userName, unreadComm
                 </button>
               ))}
               <div className="mx-6 h-px bg-slate-300/30" />
-              <button onClick={() => { navigate('/login'); setDropdownOpen(false); }}
+              <button onClick={() => {
+                  ['biscoite_auth','biscoite_access_token','biscoite_refresh_token','biscoite_logged_user']
+                    .forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
+                  navigate('/login');
+                  setDropdownOpen(false);
+                }}
                 className="block w-full text-left px-6 py-4 text-[#F27474] font-bold text-sm hover:bg-red-50 transition-colors">
                 Log out
               </button>
@@ -311,7 +316,7 @@ function Sidebar({ activeView, setActiveView, profileImage, userName, unreadComm
           </button>
         ))}
       </nav>
-        
+
       <button onClick={() => navigate('/')}
         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:bg-slate-50 hover:text-[#00263B] transition-all">
         <Home size={16} /> Ir para Home
@@ -404,8 +409,9 @@ function OverviewView({ onNewComm }) {
 
   return (
     <div className="space-y-8">
-    {/* ── Controle de Live ── */}
-    <LiveControl />
+      {/* ── Controle de Live ── */}
+      <LiveControl />
+
       {/* ── Cabeçalho com filtro de período ── */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-bold text-slate-400">Visão geral · <span className="text-[#4A72B2]">{PERIOD_LABELS[period]}</span></p>
@@ -752,12 +758,9 @@ function CourseFormModal({ initial, onSave, onClose, systemRole }) {
     instructor:  initial?.instructor  || '',
     published:   initial?.published   ?? false,
     thumbnail:   initial?.thumbnail   || null,
-    videoUrl:    initial?.videoUrl    || '',
-    videoType:   initial?.videoType   || 'youtube',
+    vimeoId:     initial?.vimeoId     || null,
   });
-  const [videoTab, setVideoTab] = useState(initial?.videoType === 'local' ? 'local' : 'youtube');
-  const thumbInputRef    = useRef(null);
-  const videoInputRef    = useRef(null);
+  const thumbInputRef = useRef(null);
   const isEdit = Boolean(initial?.id);
 
   const handleThumbFile = (e) => {
@@ -767,15 +770,6 @@ function CourseFormModal({ initial, onSave, onClose, systemRole }) {
     reader.onload = ev => setForm(p => ({ ...p, thumbnail: ev.target.result }));
     reader.readAsDataURL(file);
   };
-
-  const handleVideoFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setForm(p => ({ ...p, videoUrl: URL.createObjectURL(file), videoType: 'local' }));
-  };
-
-  const ytId = videoTab === 'youtube' ? extractYouTubeId(form.videoUrl) : null;
-  const ytThumb = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null;
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -794,10 +788,10 @@ function CourseFormModal({ initial, onSave, onClose, systemRole }) {
             onClick={() => thumbInputRef.current.click()}
             className="relative w-full h-44 rounded-2xl border-2 border-dashed border-slate-200 hover:border-[#4A72B2] transition-colors cursor-pointer overflow-hidden group bg-slate-50"
           >
-            {(form.thumbnail || ytThumb) ? (
+            {form.thumbnail ? (
               <>
                 <img
-                  src={form.thumbnail || ytThumb}
+                  src={form.thumbnail}
                   className="w-full h-full object-cover"
                   alt="thumbnail"
                 />
@@ -828,86 +822,18 @@ function CourseFormModal({ initial, onSave, onClose, systemRole }) {
               <X size={11} /> Remover thumbnail customizada
             </button>
           )}
-          {!form.thumbnail && ytThumb && (
-            <p className="text-[10px] text-[#4A72B2] font-bold flex items-center gap-1">
-              <Check size={11} /> Usando thumbnail automática do YouTube
-            </p>
-          )}
+
         </div>
 
-        {/* ── VÍDEO ── */}
+        {/* ── VÍDEO (Vimeo) ── */}
         <div className="space-y-3">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Fonte do vídeo</label>
-          <div className="flex gap-1.5 bg-slate-100 rounded-xl p-1">
-            {[
-              { key: 'youtube', icon: Video,     label: 'YouTube' },
-              { key: 'local',   icon: HardDrive, label: 'Arquivo local' },
-            ].map(({ key, icon: Icon, label }) => (
-              <button
-                key={key}
-                onClick={() => { setVideoTab(key); setForm(p => ({ ...p, videoType: key, videoUrl: '' })); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-black transition-all ${
-                  videoTab === key ? 'bg-white text-[#001A26] shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <Icon size={14} /> {label}
-              </button>
-            ))}
-          </div>
-
-          {videoTab === 'youtube' && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-4 focus-within:border-[#4A72B2] transition-colors">
-                <Link size={14} className="text-slate-300 flex-shrink-0" />
-                <input
-                  value={form.videoUrl}
-                  onChange={e => {
-                    const url = e.target.value;
-                    const thumb = extractYouTubeId(url) ? `https://img.youtube.com/vi/${extractYouTubeId(url)}/hqdefault.jpg` : null;
-                    setForm(p => ({ ...p, videoUrl: url, videoType: 'youtube', thumbnail: p.thumbnail || thumb }));
-                  }}
-                  placeholder="https://youtube.com/watch?v=... ou youtu.be/..."
-                  className="flex-1 py-3 text-sm text-[#001A26] outline-none font-medium placeholder-slate-300 bg-transparent"
-                />
-                {ytId && <Check size={14} className="text-emerald-500 flex-shrink-0" />}
-              </div>
-              <p className="text-[10px] text-slate-400 pl-1">
-                {ytId
-                  ? 'URL válida · thumbnail importada automaticamente (pode substituir acima)'
-                  : 'Cole o link do YouTube ou compartilhamento curto (youtu.be)'}
-              </p>
-            </div>
-          )}
-
-          {videoTab === 'local' && (
-            <div className="space-y-2">
-              {form.videoUrl ? (
-                <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                  <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Film size={16} className="text-emerald-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-emerald-700">Arquivo carregado</p>
-                    <p className="text-[10px] text-emerald-600 truncate">Arquivo de vídeo local</p>
-                  </div>
-                  <button onClick={() => setForm(p => ({ ...p, videoUrl: '' }))} className="text-red-400 hover:text-red-600 flex-shrink-0"><X size={14} /></button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => videoInputRef.current.click()}
-                  className="w-full flex items-center justify-center gap-3 py-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#4A72B2] transition-colors text-slate-400 hover:text-[#4A72B2] group"
-                >
-                  <Upload size={18} />
-                  <div className="text-left">
-                    <p className="text-sm font-black">Enviar arquivo de vídeo</p>
-                    <p className="text-[10px] text-slate-300 group-hover:text-[#4A72B2]/60">MP4, MOV, AVI, MKV</p>
-                  </div>
-                </button>
-              )}
-              <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFile} />
-              <p className="text-[10px] text-slate-400 pl-1">Para melhor performance, prefira YouTube. Arquivo local é ideal para conteúdo privado.</p>
-            </div>
-          )}
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Vídeo do curso</label>
+          <VimeoUploader
+            value={form.vimeoId}
+            onChange={(id) => setForm(p => ({ ...p, vimeoId: id }))}
+            courseTitle={form.title}
+            courseDesc={form.description}
+          />
         </div>
 
         <div className="border-t border-slate-100" />
@@ -1364,7 +1290,7 @@ function MeusCursosView() {
   const {
     courses, modules, systemRole,
     addCourse, updateCourse, deleteCourse,
-    addModule, updateModule, deleteModule, addLesson, deleteLesson,
+    addModule, updateModule, deleteModule, addLesson, updateLesson, deleteLesson,
     certTemplates, addCertTemplate, updateCertTemplate, deleteCertTemplate,
     issuedCerts, issueCertificate, revokeIssuedCert,
     users,
@@ -1384,7 +1310,8 @@ function MeusCursosView() {
   const [newModTitle, setNewModTitle] = useState('');
   const [editingMod, setEditingMod] = useState(null);
   const [editModTitle, setEditModTitle] = useState('');
-  const [newLesson, setNewLesson] = useState({ title: '', duration: '', type: 'video', videoUrl: '' });
+  const [newLesson, setNewLesson] = useState({ title: '', duration: '', type: 'video', vimeoId: null });
+  const [uploadingLesson, setUploadingLesson] = useState(false);
   const [addingLessonTo, setAddingLessonTo] = useState(null);
   const [confirmDelMod, setConfirmDelMod] = useState(null);
 
@@ -1424,7 +1351,7 @@ function MeusCursosView() {
   const handleAddLesson = (moduleId) => {
     if (!newLesson.title.trim()) return;
     addLesson(moduleId, newLesson);
-    setNewLesson({ title: '', duration: '', type: 'video', videoUrl: '' });
+    setNewLesson({ title: '', duration: '', type: 'video', vimeoId: null });
     setAddingLessonTo(null);
   };
 
@@ -1722,15 +1649,21 @@ function MeusCursosView() {
                                   className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-[#001A26] outline-none focus:border-[#4A72B2] font-medium bg-white">
                                   {L_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
-                                <input type="text" placeholder="Link do vídeo (YouTube ou outro)" value={newLesson.videoUrl}
-                                  onChange={e => setNewLesson(p => ({ ...p, videoUrl: e.target.value.slice(0, 300) }))}
-                                  className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-[#001A26] outline-none focus:border-[#4A72B2] font-medium placeholder-slate-300" />
                                 <div className="flex gap-2 ml-auto shrink-0">
-                                  <button onClick={() => { setAddingLessonTo(null); setNewLesson({ title: '', duration: '', type: 'video', videoUrl: '' }); }}
+                                  <button onClick={() => { setAddingLessonTo(null); setNewLesson({ title: '', duration: '', type: 'video', vimeoId: null }); }}
                                     className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-500 hover:bg-slate-50">Cancelar</button>
                                   <button onClick={() => handleAddLesson(mod.id)} disabled={!newLesson.title.trim()}
                                     className="px-4 py-2 rounded-xl bg-[#001A26] hover:bg-[#4A72B2] text-white text-xs font-black transition-all disabled:opacity-40">Adicionar</button>
                                 </div>
+                              </div>
+                              {/* Upload de vídeo Vimeo para a aula */}
+                              <div className="mt-3">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Vídeo da aula (opcional)</p>
+                                <VimeoUploader
+                                  value={newLesson.vimeoId}
+                                  onChange={(id) => setNewLesson(p => ({ ...p, vimeoId: id }))}
+                                  courseTitle={newLesson.title}
+                                />
                               </div>
                             </div>
                           ) : (

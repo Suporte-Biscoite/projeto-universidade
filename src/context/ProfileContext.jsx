@@ -235,6 +235,7 @@ export function ProfileProvider({ children }) {
       console.warn('updateProfileImage: blob URL rejeitada, use base64');
       return;
     }
+    // Atualiza estado imediatamente — sem esperar API
     setProfileImage(newImage);
     // Persiste no banco se o usuário estiver logado
     try {
