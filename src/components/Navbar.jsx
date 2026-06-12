@@ -45,6 +45,12 @@ export default function Navbar() {
   const { profileImage, updateProfileImage, userData, menuItems = [], systemRole, setSystemRole } = useProfile();
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const handleLogout = () => {
+    ['biscoite_auth','biscoite_access_token','biscoite_refresh_token','biscoite_logged_user']
+      .forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
+    navigate('/login');
+  };
+
   const filteredCourses = searchQuery.trim().length > 1
     ? allCourses.filter(c =>
         c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -400,7 +406,7 @@ export default function Navbar() {
             </div>
             <div className="px-4 pb-6 border-t border-slate-100 pt-4">
               <button
-                onClick={() => navigate('/login')}
+                onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm text-red-400 hover:bg-red-50 transition-colors"
               >
                 <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center"><LogOut size={13} className="text-red-400" /></div>
