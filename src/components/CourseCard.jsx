@@ -22,7 +22,7 @@ export default function CourseCard({ title, instructor, progress, image, categor
   const catColor = categoryColors[category] || 'bg-slate-100 text-slate-600';
 
   return (
-    <Link to="/player" className="block group">
+    <Link to={`/player?id=${id}`} className="block group">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all duration-300 cursor-pointer">
         
         {/* THUMBNAIL */}
