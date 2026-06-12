@@ -75,11 +75,62 @@ function isRateLimited() {
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
+const LOJAS_PROPRIAS = [
+  'BISCOITE ABC SHOPPING','BISCOITÊ AEROPORTO DE GUARULHOS','BISCOITE ALPHAVILLE',
+  'BISCOITE ANALIA FRANCO SHOPPING','BISCOITE BOSSA NOVA RJ','BISCOITE BOURBON',
+  'BISCOITE BUTANTA SHOPPING','BISCOITE CASA CULTURA HIGIENÓPOLIS','BISCOITE CATARINA OUTLET',
+  'BISCOITE CENTER NORTE','BISCOITE COLINAS','BISCOITE ECOMMERCE DIGITAL','BISCOITE ELDORADO',
+  'BISCOITE GAVEA RJ','BISCOITE HCOR','BISCOITE INTERNACIONAL','BISCOITE ITAU PAULISTA',
+  'BISCOITE JARDIM SUL','BISCOITE LEBLON RJ','BISCOITE METROPOLE','BISCOITE MOOCA',
+  'BISCOITE MORUMBI QSQ','BISCOITE MORUMBI TOWN','BISCOITE NITEROI RJ',
+  'BISCOITE NORTE SHOPPING RJ','BISCOITE NOVA AMERICA RJ','BISCOITE PAMPLONA',
+  'BISCOITE PENHA SHOPPING','BISCOITE PLAZA SUL','BISCOITE RIO DESIGN RJ',
+  'BISCOITE RIOSUL RJ','BISCOITE SAO BERNARDO SHOPPING','BISCOITE SP MARKET',
+  'BISCOITE TABOAO DA SERRA','BISCOITE TAMBORE','BISCOITE TIETE PLAZA',
+  'BISCOITE TIJUCA RJ','BISCOITE TRAILER','BISCOITE VILA OLIMPIA','BISCOITE VILLA LOBOS',
+];
+
+const LOJAS_FRANQUIA = [
+  'FRANQUIA - BISCOITE ALAGOAS MACEIO','FRANQUIA - BISCOITE AURORA SHOPPING',
+  'FRANQUIA - BISCOITE BAHIA SHOP','FRANQUIA - BISCOITE BALNEARIO CAMBORIU SHOPPING',
+  'FRANQUIA - BISCOITE BELÉM','FRANQUIA - BISCOITE BH SHOPPING',
+  'FRANQUIA - BISCOITE BOULEVARD BH','FRANQUIA - BISCOITE BURITI RIO VERDE GO',
+  'FRANQUIA - BISCOITE CAMBUI','FRANQUIA - BISCOITE CAMPINAS',
+  'FRANQUIA - BISCOITE CAMPO GRANDE MS','FRANQUIA - BISCOITE CATUAI CASCAVEL SHOP',
+  'FRANQUIA - BISCOITE CIDADE SP','FRANQUIA - BISCOITE DIAMOND MALL',
+  'FRANQUIA - BISCOITE DOM PEDRO','FRANQUIA - BISCOITE ESTACAO CUIABA',
+  'FRANQUIA - BISCOITE GALLERIA','FRANQUIA - BISCOITE GRAND PLAZA',
+  'FRANQUIA - BISCOITE GRAO PARA','FRANQUIA - BISCOITE IBIRAPUERA SHOPPING',
+  'FRANQUIA - BISCOITE INDEPENDENCIA MG','FRANQUIA - BISCOITE JOCKEY PLAZA SHOPPING',
+  'FRANQUIA - BISCOITE JUNDIAÍ','FRANQUIA - BISCOITE MANAUARA SHOPPING',
+  'FRANQUIA - BISCOITE MAXI JUNDIAI','FRANQUIA - BISCOITE MOGI',
+  'FRANQUIA - BISCOITE MUELLER CURITIBA','FRANQUIA - BISCOITE PANTANAL SHOP',
+  'FRANQUIA - BISCOITE PARALELA SHOPPING','FRANQUIA - BISCOITE PATIO BATEL',
+  'FRANQUIA - BISCOITE PATIO PAULISTA','FRANQUIA - BISCOITE PERDIZES',
+  'FRANQUIA - BISCOITE PIRACICABA','FRANQUIA - BISCOITE RIBEIRÃO PRETO IGUATEMI SHOP',
+  'FRANQUIA - BISCOITE RIO POTY SHOP PIAUI','FRANQUIA - BISCOITE SANTA CRUZ',
+  'FRANQUIA - BISCOITE SÃO JOSE DO RIO PRETO','FRANQUIA - BISCOITE SOROCABA',
+  'FRANQUIA - BISCOITE SP MARKET SHOP','FRANQUIA - BISCOITE TATUAPÉ METRO SHOPPING',
+];
+
+const STORE_TYPES = [
+  { value: 'propria',    label: 'Loja Própria' },
+  { value: 'franquia',   label: 'Franquia' },
+  { value: 'escritorio', label: 'Escritório' },
+  { value: 'galpao',     label: 'Galpão / CD' },
+];
+
+const ROLES_CADASTRO = [
+  { value: 'aluno',     label: 'Colaborador' },
+  { value: 'gestor',    label: 'Gestor / Franqueado' },
+  { value: 'professor', label: 'Professor / Instrutor' },
+];
+
 export default function Register() {
   const navigate = useNavigate();
   const csrfToken = useRef(generateCsrfToken());
 
-  const [form, setForm] = useState({ email: '', username: '', cpf: '', password: '', occupation: '', storeId: '' });
+  const [form, setForm] = useState({ email: '', username: '', cpf: '', password: '', role: '', storeType: '', storeName: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -113,10 +164,13 @@ export default function Register() {
         if (value.length < 8) return 'Mínimo de 8 caracteres';
         if (pwdScore < 3) return 'Senha muito fraca — adicione maiúsculas, números ou símbolos';
         return '';
-      case 'occupation':
-        if (!value) return 'Selecione uma ocupação';
+      case 'role':
+        if (!value) return 'Selecione seu perfil';
         return '';
-      case 'storeId':
+      case 'storeType':
+        if (!value) return 'Selecione o tipo de unidade';
+        return '';
+      case 'storeName':
         return '';
       default:
         return '';
@@ -131,7 +185,7 @@ export default function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const maxLen = { email: 254, username: 60, cpf: 14, password: 128, occupation: 50, storeId: 50 };
+    const maxLen = { email: 254, username: 60, cpf: 14, password: 128, role: 50, storeType: 50, storeName: 100 };
 
     let safeValue = value.slice(0, maxLen[name] ?? 100);
     if (name === 'cpf') safeValue = formatCPF(value);
@@ -165,7 +219,7 @@ export default function Register() {
       return;
     }
 
-    const allTouched = { email: true, username: true, cpf: true, password: true, occupation: true, storeId: true };
+    const allTouched = { email: true, username: true, cpf: true, password: true, role: true, storeType: true, storeName: true };
     setTouched(allTouched);
 
     const newErrors = {
@@ -173,8 +227,9 @@ export default function Register() {
       username: validateField('username', form.username),
       cpf: validateField('cpf', form.cpf),
       password: validateField('password', form.password),
-      occupation: validateField('occupation', form.occupation),
-      storeId: validateField('storeId', form.storeId),
+      role: validateField('role', form.role),
+      storeType: validateField('storeType', form.storeType),
+      storeName: '',
     };
     setErrors(newErrors);
 
@@ -185,27 +240,27 @@ export default function Register() {
 
     try {
       const payload = {
-        email: sanitize(form.email).toLowerCase(),
-        username: sanitize(form.username),
-        cpf: form.cpf.replace(/\D/g, ''),
-        password: form.password,
-        occupation: sanitize(form.occupation),
-        storeId: form.occupation === 'aluno' ? sanitize(form.storeId) : null,
-        _csrf: csrfToken.current,
+        email:      sanitize(form.email).toLowerCase(),
+        username:   sanitize(form.username),
+        cpf:        form.cpf.replace(/\D/g, ''),
+        password:   form.password,
+        role:       form.role,
+        storeType:  form.storeType,
+        storeName:  form.storeName,
+        _csrf:      csrfToken.current,
       };
 
       const response = await fetch('/api/auth?action=register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name:  payload.username,
-          email: payload.email,
-          password: payload.password,
-          role: payload.occupation === 'professor' ? 'professor'
-              : payload.occupation === 'gestor'    ? 'gestor'
-              : payload.occupation === 'loja'      ? 'loja'
-              : 'aluno',
-          unit: payload.storeId || null,
+          name:       payload.username,
+          email:      payload.email,
+          password:   payload.password,
+          role:       payload.role || 'aluno',
+          unit:       payload.storeName || null,
+          store_name: payload.storeName || null,
+          store_type: payload.storeType || null,
         }),
       });
 
@@ -218,9 +273,9 @@ export default function Register() {
       }
 
       setSubmitStatus('success');
-      setSubmitMessage('Conta criada com sucesso! Redirecionando...');
+      setSubmitMessage('Cadastro enviado! Aguarde a aprovação do administrador. Você receberá um email em breve.');
       csrfToken.current = generateCsrfToken();
-      setTimeout(() => navigate('/login'), 2000);
+      setTimeout(() => navigate('/login'), 4000);
     } catch {
       setSubmitStatus('error');
       setSubmitMessage('Não foi possível criar a conta. Tente novamente em instantes.');
@@ -425,52 +480,64 @@ export default function Register() {
                 )}
               </div>
 
-              {/* OCUPAÇÃO */}
+              {/* PERFIL */}
               <div>
-                <label className="block text-xs font-black text-[#001A26] mb-2">Ocupação</label>
+                <label className="block text-xs font-black text-[#001A26] mb-2">Meu perfil</label>
                 <div className="relative">
-                  <select
-                    name="occupation"
-                    value={form.occupation}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`${inputClass('occupation')} appearance-none`}
-                    aria-invalid={!!(touched.occupation && errors.occupation)}
-                  >
-                    <option value="">Selecione sua ocupação</option>
-                    <option value="aluno">Sou colaborador / aluno</option>
-                    <option value="gestor">Sou gestor de loja</option>
-                    <option value="franqueado">Sou franqueado</option>
-                    <option value="professor">Sou professor / instrutor</option>
+                  <select name="role" value={form.role} onChange={handleChange} onBlur={handleBlur}
+                    className={`${inputClass('role')} appearance-none`}>
+                    <option value="">Selecione seu perfil</option>
+                    {ROLES_CADASTRO.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                   <ChevronDown size={18} className="absolute right-6 bottom-3.5 text-slate-400 pointer-events-none" />
                 </div>
-                {touched.occupation && errors.occupation && (
-                  <p className="mt-1 text-xs text-red-500 px-3" role="alert">{errors.occupation}</p>
+                {touched.role && errors.role && (
+                  <p className="mt-1 text-xs text-red-500 px-3" role="alert">{errors.role}</p>
                 )}
               </div>
 
-              {/* LOJA (apenas para aluno) */}
-              {form.occupation === 'aluno' && (
+              {/* TIPO DE UNIDADE */}
+              <div>
+                <label className="block text-xs font-black text-[#001A26] mb-2">Tipo de unidade</label>
+                <div className="relative">
+                  <select name="storeType" value={form.storeType} onChange={handleChange} onBlur={handleBlur}
+                    className={`${inputClass('storeType')} appearance-none`}>
+                    <option value="">Selecione o tipo</option>
+                    {STORE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  <ChevronDown size={18} className="absolute right-6 bottom-3.5 text-slate-400 pointer-events-none" />
+                </div>
+                {touched.storeType && errors.storeType && (
+                  <p className="mt-1 text-xs text-red-500 px-3" role="alert">{errors.storeType}</p>
+                )}
+              </div>
+
+              {/* LOJA — filtra por tipo */}
+              {(form.storeType === 'propria' || form.storeType === 'franquia') && (
                 <div>
-                  <label className="block text-xs font-black text-[#001A26] mb-2">Loja que trabalha</label>
+                  <label className="block text-xs font-black text-[#001A26] mb-2">
+                    {form.storeType === 'propria' ? 'Loja Própria' : 'Franquia'}
+                  </label>
                   <div className="relative">
-                    <select
-                      name="storeId"
-                      value={form.storeId}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      className={`${inputClass('storeId')} appearance-none`}
-                    >
+                    <select name="storeName" value={form.storeName} onChange={handleChange}
+                      className={`${inputClass('storeName')} appearance-none`}>
                       <option value="">Selecione a loja</option>
-                      {STORES.map(store => (
-                        <option key={store.id} value={store.id}>
-                          {store.name} — {store.city}
-                        </option>
+                      {(form.storeType === 'propria' ? LOJAS_PROPRIAS : LOJAS_FRANQUIA).map(loja => (
+                        <option key={loja} value={loja}>{loja}</option>
                       ))}
                     </select>
                     <ChevronDown size={18} className="absolute right-6 bottom-3.5 text-slate-400 pointer-events-none" />
                   </div>
+                </div>
+              )}
+
+              {/* Escritório / Galpão não têm dropdown de loja */}
+              {(form.storeType === 'escritorio' || form.storeType === 'galpao') && (
+                <div>
+                  <label className="block text-xs font-black text-[#001A26] mb-2">Setor / Área</label>
+                  <input name="storeName" value={form.storeName} onChange={handleChange}
+                    placeholder={form.storeType === 'escritorio' ? 'Ex: Marketing, RH, Financeiro...' : 'Ex: Galpão SP, CD Guarulhos...'}
+                    className={inputClass('storeName')} />
                 </div>
               )}
 
