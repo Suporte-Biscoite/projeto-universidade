@@ -124,7 +124,7 @@ export function ProfileProvider({ children }) {
         return {
           name:    logged.name         || 'Usuário',
           unit:    logged.unit         || logged.store_name || '',
-          role:    logged.position     || '',
+          role:    '',  // sempre carregado do banco via fetchFreshData
           time:    logged.company_time || '',
           pronoun: logged.pronoun      || '',
           bio:     logged.bio          || '',
@@ -261,7 +261,6 @@ export function ProfileProvider({ children }) {
     // 2. Busca dados frescos da API
     const fetchFreshData = async () => {
       try {
-        // Só busca se o usuário estiver autenticado
         const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
         if (!isAuth) return;
 
@@ -270,22 +269,34 @@ export function ProfileProvider({ children }) {
         if (!raw) return;
         const logged = JSON.parse(raw);
         if (!logged?.id) return;
-        const res = await authFetch(`/api/users?id=${logged.id}`);
-        // Ignora 401 silenciosamente — token pode ter expirado, authFetch já trata
+
+        const token = sessionStorage.getItem('biscoite_access_token')
+                   || localStorage.getItem('biscoite_access_token');
+        if (!token) return;
+
+        // Busca direto sem authFetch para não triggerar refresh loop no mount
+        const res = await fetch(`/api/users?id=${logged.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         if (!res.ok) return;
         const user = await res.json();
+
+        // Atualiza estado imediatamente com dados do banco
         setUserData(prev => ({
           ...prev,
           name:    user.name         || prev.name,
-          unit:    user.unit         || prev.unit,
+          unit:    user.unit         || user.store_name || prev.unit,
           pronoun: user.pronoun      || prev.pronoun || '',
-          role:    user.position     || prev.role    || '',
+          role:    user.position     || '',          // sempre usa o banco, não o cache
           time:    user.company_time || prev.time    || '',
           bio:     user.bio          || prev.bio     || '',
         }));
-        if (user.avatar_url && !user.avatar_url.startsWith('blob:')) setProfileImage(user.avatar_url);
+        if (user.avatar_url && !user.avatar_url.startsWith('blob:')) {
+          setProfileImage(user.avatar_url);
+        }
         if (user.role) setSystemRoleState(user.role);
-        // Atualiza storage
+
+        // Atualiza storage com dados frescos
         const storage = sessionStorage.getItem('biscoite_logged_user') ? sessionStorage : localStorage;
         storage.setItem('biscoite_logged_user', JSON.stringify({ ...logged, ...user }));
       } catch {}
