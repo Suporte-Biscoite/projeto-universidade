@@ -225,9 +225,22 @@ export function ProfileProvider({ children }) {
 
     const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
     if (!isAuth) return;
+
     authFetch('/api/courses')
       .then(r => r.ok ? r.json() : [])
-      .then(data => { if (Array.isArray(data)) setCourses(data); })
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        setCourses(data);
+        // Extrai módulos e aulas de todos os cursos e coloca no estado global
+        const allModules = data.flatMap(course =>
+          (course.modules || []).map(mod => ({
+            ...mod,
+            courseId:  mod.course_id || mod.courseId || course.id,
+            lessons:   mod.lessons   || [],
+          }))
+        );
+        if (allModules.length > 0) setModules(allModules);
+      })
       .catch(() => {});
   }, []);
 
@@ -462,8 +475,15 @@ export function ProfileProvider({ children }) {
       });
       if (res.ok) {
         const newModule = await res.json();
-        setModules(prev => [...prev, { ...newModule, lessons: [] }]);
+        setModules(prev => [...prev, {
+          ...newModule,
+          courseId:  newModule.course_id || courseId,
+          lessons:   [],
+        }]);
         return newModule.id;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error('addModule error:', res.status, err);
       }
     } catch (e) { console.error('addModule:', e); }
   };

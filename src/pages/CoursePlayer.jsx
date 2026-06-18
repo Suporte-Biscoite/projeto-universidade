@@ -20,10 +20,8 @@ function VimeoPlayer({ vimeoId, onEnded }) {
     <iframe
       src={`https://player.vimeo.com/video/${vimeoId}?badge=0&autopause=0&player_id=0&autoplay=1`}
       className="absolute inset-0 w-full h-full"
-      allow="autoplay; fullscreen; picture-in-picture"
-      allowFullScreen
+      allow="autoplay; fullscreen; picture-in-picture; clipboard-write"
       title="Aula"
-      onEnded={onEnded}
     />
   );
 }
@@ -65,9 +63,11 @@ export default function CoursePlayer() {
 
     const fetchCourse = async () => {
       try {
+        const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
+
         const [courseRes, progressRes] = await Promise.all([
           authFetch(`/api/courses?id=${courseId}`),
-          authFetch(`/api/progress?courseId=${courseId}`),
+          isAuth ? authFetch(`/api/progress?courseId=${courseId}`) : Promise.resolve({ ok: false }),
         ]);
 
         if (!courseRes.ok) throw new Error('Curso não encontrado');
@@ -216,7 +216,7 @@ export default function CoursePlayer() {
           <div className="relative">
             <div className="aspect-video bg-[#001A26] rounded-[32px] overflow-hidden relative flex items-center justify-center border-4 border-white shadow-xl">
               <VimeoPlayer
-                vimeoId={activeLesson?.vimeo_id || activeLesson?.vimeoId}
+                vimeoId={activeLesson?.vimeo_id || activeLesson?.vimeoId || activeLesson?.videoUrl}
                 onEnded={markLessonComplete}
               />
               <button
