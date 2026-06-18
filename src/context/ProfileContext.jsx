@@ -760,9 +760,9 @@ export function ProfileProvider({ children }) {
       // Sistema de acesso
       systemRole, setSystemRole,
       // Cursos
-      courses, addCourse, updateCourse, deleteCourse,
+      courses, setCourses, addCourse, updateCourse, deleteCourse,
       // Módulos
-      modules, addModule, updateModule, deleteModule, addLesson, deleteLesson,
+      modules, setModules, addModule, updateModule, deleteModule, addLesson, deleteLesson,
       // Menus
       menuItems, toggleMenuItemVisibility, reorderMenuItem,
       // Usuários

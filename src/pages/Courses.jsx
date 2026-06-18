@@ -81,20 +81,37 @@ export default function Courses() {
   const [favorites, setFavorites] = useState([]);
   const [modal, setModal]       = useState(null);
 
-  // Busca cursos da API
+  // Busca cursos + progresso da API
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         const res  = await authFetch('/api/courses');
         const data = await res.json();
         if (res.ok) {
-          const normalized = (Array.isArray(data) ? data : []).map(c => ({
-            ...c,
-            image:    c.thumbnail_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400',
-            instructor: c.instructor_name || '—',
-            rating:   4.5,
-            progress: 0,
-          }));
+          const list = Array.isArray(data) ? data : [];
+
+          // Busca progresso de todos os cursos em paralelo
+          const progressResults = await Promise.all(
+            list.map(c =>
+              authFetch(`/api/progress?courseId=${c.id}`)
+                .then(r => r.ok ? r.json() : { completed: [], count: 0 })
+                .catch(() => ({ completed: [], count: 0 }))
+            )
+          );
+
+          const normalized = list.map((c, i) => {
+            const prog  = progressResults[i];
+            const total = (c.modules || []).flatMap(m => m.lessons || []).length;
+            const done  = prog.count || 0;
+            const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+            return {
+              ...c,
+              image:      c.thumbnail_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400',
+              instructor: c.instructor_name || '—',
+              rating:     4.5,
+              progress:   pct,
+            };
+          });
           setCourses(normalized);
         }
       } catch (e) {

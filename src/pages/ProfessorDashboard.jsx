@@ -1324,8 +1324,33 @@ function MeusCursosView() {
     addModule, updateModule, deleteModule, addLesson, updateLesson, deleteLesson,
     certTemplates, addCertTemplate, updateCertTemplate, deleteCertTemplate,
     issuedCerts, issueCertificate, revokeIssuedCert,
-    users,
+    users, setCourses, setModules,
   } = useProfile();
+
+  // Recarrega cursos e módulos frescos do banco ao abrir aba
+  const { authFetch: _af } = window.__authFetch || {};
+  const [refreshKey, setRefreshKey] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    if (!token) return;
+    fetch('/api/courses', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (cancelled || !Array.isArray(data)) return;
+        if (setCourses) setCourses(data);
+        const allMods = data.flatMap(c =>
+          (c.modules || []).map(m => ({
+            ...m,
+            courseId: m.course_id || c.id,
+            lessons:  m.lessons   || [],
+          }))
+        );
+        if (setModules) setModules(allMods);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [refreshKey]);
 
   const [mainTab, setMainTab] = useState('gerenciamento');
   const [subTab, setSubTab] = useState('cursos');

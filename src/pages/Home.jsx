@@ -30,19 +30,36 @@ export default function Home() {
   useEffect(() => {
     const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
     if (!isAuth) return;
-    authFetch('/api/courses')
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        if (Array.isArray(data)) {
-          setMyCourses(data.filter(c => c.published).map(c => ({
+    const loadCourses = async () => {
+      try {
+        const res = await authFetch('/api/courses');
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = Array.isArray(data) ? data.filter(c => c.published) : [];
+
+        const progressResults = await Promise.all(
+          list.map(c =>
+            authFetch(`/api/progress?courseId=${c.id}`)
+              .then(r => r.ok ? r.json() : { completed: [], count: 0 })
+              .catch(() => ({ completed: [], count: 0 }))
+          )
+        );
+
+        setMyCourses(list.map((c, i) => {
+          const prog  = progressResults[i];
+          const total = (c.modules || []).flatMap(m => m.lessons || []).length;
+          const done  = prog.count || 0;
+          const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+          return {
             ...c,
             image:      c.thumbnail_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400',
             instructor: c.instructor_name || '—',
-            progress:   0,
-          })));
-        }
-      })
-      .catch(() => {});
+            progress:   pct,
+          };
+        }));
+      } catch {}
+    };
+    loadCourses();
   }, []);
 
   const maxCourseIndex = Math.max(0, myCourses.length - coursesPerPage);

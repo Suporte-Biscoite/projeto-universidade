@@ -60,21 +60,37 @@ async function getCourses(req, res, id) {
     return send(res, 200, { ...courses[0], modules });
   }
 
-  // Lista todos publicados
-  const { rows } = await pool.query(
-    `SELECT c.id, c.title, c.description, c.category, c.level, c.format,
-            c.duration, c.thumbnail_url, c.vimeo_id, c.instructor_id, c.published,
-            u.name as instructor_name,
-            COUNT(DISTINCT m.id) as module_count,
-            COUNT(DISTINCT l.id) as lesson_count
-     FROM courses c
-     LEFT JOIN users u ON u.instructor_id = c.instructor_id
-     LEFT JOIN modules m ON m.course_id = c.id
-     LEFT JOIN lessons l ON l.module_id = m.id
-     WHERE c.published = true
-     GROUP BY c.id, u.name
-     ORDER BY c.created_at DESC`
-  );
+  // Lista todos cursos — professor vê todos seus, aluno vê publicados
+  const isInstructor = ['professor', 'admin'].includes(auth?.role);
+  const query = isInstructor
+    ? `SELECT c.*, COALESCE(u.name, c.instructor_name) as instructor_name
+       FROM courses c
+       LEFT JOIN users u ON u.id = c.instructor_id
+       ORDER BY c.created_at DESC`
+    : `SELECT c.*, COALESCE(u.name, c.instructor_name) as instructor_name
+       FROM courses c
+       LEFT JOIN users u ON u.id = c.instructor_id
+       WHERE c.published = true
+       ORDER BY c.created_at DESC`;
+
+  const { rows } = await pool.query(query);
+
+  // Carrega módulos e aulas para cada curso
+  for (const course of rows) {
+    const { rows: mods } = await pool.query(
+      'SELECT * FROM modules WHERE course_id = $1 ORDER BY "order"',
+      [course.id]
+    );
+    for (const mod of mods) {
+      const { rows: lessons } = await pool.query(
+        'SELECT * FROM lessons WHERE module_id = $1 ORDER BY "order"',
+        [mod.id]
+      );
+      mod.lessons = lessons;
+    }
+    course.modules = mods;
+  }
+
   return send(res, 200, rows);
 }
 
@@ -86,11 +102,19 @@ async function createCourse(req, res, auth) {
   const { title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, visibility, instructor } = req.body ?? {};
   if (!title) return send(res, 400, { error: 'Título obrigatório' });
 
+  const vis = Array.isArray(visibility) && visibility.length
+    ? visibility
+    : ['aluno','gestor','professor','admin'];
+
   const { rows } = await pool.query(
-    `INSERT INTO courses (title, description, category, level, format, duration, thumbnail_url, vimeo_id, instructor_id, published)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `INSERT INTO courses (title, description, category, level, format, duration,
+                          thumbnail_url, vimeo_id, instructor_id, instructor_name,
+                          published, visibility)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
      RETURNING *`,
-    [title, description, category, level, format, duration, thumbnail_url, vimeo_id, auth.sub, Boolean(published)]
+    [title, description, category, level, format, duration,
+     thumbnail_url || null, vimeo_id || null, auth.sub, instructor || null,
+     Boolean(published), vis]
   );
   return send(res, 201, rows[0]);
 }
