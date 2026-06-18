@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Settings, Trash2, Bell, Star,
@@ -1328,7 +1328,6 @@ function MeusCursosView() {
   } = useProfile();
 
   // Recarrega cursos e módulos frescos do banco ao abrir aba
-  const { authFetch: _af } = window.__authFetch || {};
   const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
     let cancelled = false;

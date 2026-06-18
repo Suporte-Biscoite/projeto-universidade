@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   const { id } = req.query;
   try {
-    if (req.method === 'GET')    return await getCourses(req, res, id);
+    if (req.method === 'GET')    return await getCourses(req, res, id, authenticate(req));
     if (req.method === 'POST')   return await createCourse(req, res, authenticate(req));
     if (req.method === 'PUT')    return await updateCourse(req, res, authenticate(req), id);
     if (req.method === 'DELETE') return await deleteCourse(req, res, authenticate(req), id);
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function getCourses(req, res, id) {
+async function getCourses(req, res, id, auth) {
   // Curso específico com módulos e aulas
   if (id) {
     const { rows: courses } = await pool.query(
@@ -65,11 +65,11 @@ async function getCourses(req, res, id) {
   const query = isInstructor
     ? `SELECT c.*, COALESCE(u.name, c.instructor_name) as instructor_name
        FROM courses c
-       LEFT JOIN users u ON u.id = c.instructor_id
+       LEFT JOIN users u ON u.id::text = c.instructor_id::text
        ORDER BY c.created_at DESC`
     : `SELECT c.*, COALESCE(u.name, c.instructor_name) as instructor_name
        FROM courses c
-       LEFT JOIN users u ON u.id = c.instructor_id
+       LEFT JOIN users u ON u.id::text = c.instructor_id::text
        WHERE c.published = true
        ORDER BY c.created_at DESC`;
 
