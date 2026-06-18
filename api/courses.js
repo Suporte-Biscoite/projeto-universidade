@@ -105,7 +105,7 @@ async function updateCourse(req, res, auth, id) {
   const { rows: existing } = await pool.query(`SELECT id FROM courses ${where}`, check);
   if (!existing.length) return send(res, 403, { error: 'Sem permissão ou curso não encontrado' });
 
-  const { title, description, category, level, format, duration, thumbnail_url, vimeo_id, published } = req.body ?? {};
+  const { title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, instructor, visibility } = req.body ?? {};
   const { rows } = await pool.query(
     `UPDATE courses SET
        title         = COALESCE($1, title),
@@ -116,11 +116,12 @@ async function updateCourse(req, res, auth, id) {
        duration      = COALESCE($6, duration),
        thumbnail_url = COALESCE($7, thumbnail_url),
        vimeo_id      = COALESCE($8, vimeo_id),
-       published     = COALESCE($9, published),
-       visibility    = COALESCE($10, visibility),
+       instructor_name = COALESCE($9, instructor_name),
+       published     = COALESCE($10, published),
+       visibility    = COALESCE($11, visibility),
        updated_at    = now()
-     WHERE id = $11 RETURNING *`,
-    [title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, visibility || null, id]
+     WHERE id = $12 RETURNING *`,
+    [title, description, category, level, format, duration, thumbnail_url, vimeo_id, instructor || null, published, visibility || null, id]
   );
   return send(res, 200, rows[0]);
 }

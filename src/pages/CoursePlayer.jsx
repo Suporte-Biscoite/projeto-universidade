@@ -50,6 +50,9 @@ export default function CoursePlayer() {
   const [isExpanded, setIsExpanded]           = useState(false);
   const [courseCompleted, setCourseCompleted] = useState(false);
   const [toast, setToast]                     = useState(null);
+  const [watchedSeconds, setWatchedSeconds]   = useState(0);  // tempo assistido na aula atual
+  const [canComplete, setCanComplete]         = useState(false); // habilitado após 80% do tempo
+  const watchTimerRef                         = useRef(null);
   const coursesScrollRef                      = useRef(null);
 
   const showToast = (msg, type = 'default') => {
@@ -108,6 +111,45 @@ export default function CoursePlayer() {
   const progressPercent = allLessons.length > 0
     ? Math.round((completedCount / allLessons.length) * 100)
     : 0;
+
+  // ── Timer de watch time — habilita conclusão após 80% do tempo ───────────
+  useEffect(() => {
+    if (!activeLesson) return;
+    if (progress[activeLesson.id]) { setCanComplete(true); return; }
+
+    // Reseta timer ao trocar de aula
+    setWatchedSeconds(0);
+    setCanComplete(false);
+    if (watchTimerRef.current) clearInterval(watchTimerRef.current);
+
+    // Calcula duração em segundos a partir da string (ex: "10 min", "05:30")
+    let durationSeconds = 300; // padrão 5 min se não informado
+    if (activeLesson.duration) {
+      const d = activeLesson.duration;
+      if (d.includes(':')) {
+        const [m, s] = d.split(':').map(Number);
+        durationSeconds = (m || 0) * 60 + (s || 0);
+      } else {
+        const mins = parseInt(d);
+        if (!isNaN(mins)) durationSeconds = mins * 60;
+      }
+    }
+
+    const required = Math.max(30, durationSeconds * 0.8); // 80% do tempo, mínimo 30s
+
+    watchTimerRef.current = setInterval(() => {
+      setWatchedSeconds(prev => {
+        const next = prev + 1;
+        if (next >= required) {
+          setCanComplete(true);
+          clearInterval(watchTimerRef.current);
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => { if (watchTimerRef.current) clearInterval(watchTimerRef.current); };
+  }, [activeLesson?.id]);
 
   // ── Selecionar aula ────────────────────────────────────────────────────────
   const selectLesson = (lesson) => {
@@ -238,15 +280,20 @@ export default function CoursePlayer() {
               </button>
 
               <button onClick={markLessonComplete}
-                disabled={!activeLesson || !!progress[activeLesson?.id]}
+                disabled={!activeLesson || !!progress[activeLesson?.id] || !canComplete}
                 className={`flex-1 max-w-xs py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all ${
                   progress[activeLesson?.id]
                     ? 'bg-emerald-500 text-white cursor-default'
-                    : 'bg-[#4A72B2] hover:bg-[#001A26] text-white'
-                }`}>
+                    : canComplete
+                      ? 'bg-[#4A72B2] hover:bg-[#001A26] text-white'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+                title={!canComplete && !progress[activeLesson?.id] ? 'Assista pelo menos 80% do vídeo para concluir' : ''}>
                 {progress[activeLesson?.id]
                   ? <><CheckCircle2 size={16} /> Concluída</>
-                  : <><CheckCircle2 size={16} /> Marcar como concluída</>}
+                  : canComplete
+                    ? <><CheckCircle2 size={16} /> Marcar como concluída</>
+                    : <><Clock size={16} /> Assista o vídeo para concluir</>}
               </button>
 
               <button onClick={() => nextLesson && selectLesson(nextLesson)}

@@ -71,10 +71,11 @@ export default function Home() {
           {visibleCourses.map((course) => (
             <CourseCard
               key={course.id}
+              id={course.id}
               title={course.title}
-              instructor={course.instructor}
+              instructor={course.instructor_name || course.instructor}
               progress={course.progress}
-              image={course.image}
+              image={course.thumbnail_url || course.image}
             />
           ))}
         </div>

@@ -1600,8 +1600,15 @@ function MeusCursosView() {
                       placeholder="Nome do novo módulo..."
                       onKeyDown={e => e.key === 'Enter' && handleAddMod()}
                       className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm text-[#001A26] outline-none focus:border-[#4A72B2] font-medium placeholder-slate-300" />
-                    <button onClick={handleAddMod} disabled={!newModTitle.trim()}
-                      className="px-5 py-3 bg-[#00263B] hover:bg-[#4A72B2] text-white rounded-xl text-xs font-black flex items-center gap-2 transition-all disabled:opacity-40">
+                    <button
+                      onClick={() => {
+                        if (!newModTitle.trim()) {
+                          alert('Digite o nome do módulo antes de criar.');
+                          return;
+                        }
+                        handleAddMod();
+                      }}
+                      className="px-5 py-3 bg-[#00263B] hover:bg-[#4A72B2] text-white rounded-xl text-xs font-black flex items-center gap-2 transition-all">
                       <Plus size={14} /> Módulo
                     </button>
                   </div>
