@@ -3,6 +3,13 @@ import { ChevronDown, ChevronUp, Search, Bell, Pencil, X, Heart, Briefcase, Sett
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 
+const ROLE_LABEL = {
+  admin:     'Administrador',
+  professor: 'Professor',
+  gestor:    'Gestor',
+  aluno:     'Colaborador',
+};
+
 const ROLE_PANEL = {
   admin:     { label: 'Painel Admin',     path: '/admin',     icon: Shield,   color: 'text-purple-500 bg-purple-50' },
   professor: { label: 'Painel Professor', path: '/professor', icon: BookOpen, color: 'text-blue-500 bg-blue-50' },
@@ -269,7 +276,7 @@ export default function Navbar() {
           <div className="relative hidden md:flex items-center gap-3 cursor-pointer">
             <div className="text-right" onClick={() => setIsOpen(!isOpen)}>
               <p className="text-sm font-black text-[#00263B] leading-none uppercase">{userData.name.split(' ')[0]}</p>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 opacity-80">{userData.role || 'VENDEDORA'}</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 opacity-80">{ROLE_LABEL[systemRole] || systemRole || '—'}</p>
             </div>
             <div className="relative group" onClick={() => fileInputRef.current.click()}>
               <img src={profileImage} className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover transition-all group-hover:brightness-90" alt="Perfil" />
@@ -379,7 +386,7 @@ export default function Navbar() {
                 <img src={profileImage} className="w-10 h-10 rounded-full object-cover border-2 border-[#e2eef9]" alt="Perfil" />
                 <div>
                   <p className="font-black text-sm text-[#001A26]">{userData.name.split(' ')[0]}</p>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">{userData.role || 'Vendedora'}</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">{ROLE_LABEL[systemRole] || systemRole || '—'}</p>
                 </div>
               </div>
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 text-slate-400"><X size={18} /></button>
