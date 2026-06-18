@@ -166,14 +166,10 @@ export function ProfileProvider({ children }) {
   });
 
   // ── Courses ───────────────────────────────────────────────────────────────
-  const [courses, setCourses] = useState(
-    () => loadFromStorage('biscoite_courses', INITIAL_COURSES)
-  );
+  const [courses, setCourses] = useState([]);
 
   // ── Modules ───────────────────────────────────────────────────────────────
-  const [modules, setModules] = useState(
-    () => loadFromStorage('biscoite_modules', INITIAL_MODULES)
-  );
+  const [modules, setModules] = useState([]);
 
   // ── Menu items ────────────────────────────────────────────────────────────
   const [menuItems, setMenuItems] = useState(() => loadMenuItems());
@@ -219,6 +215,22 @@ export function ProfileProvider({ children }) {
   );
 
   // ── Persistência no localStorage ──────────────────────────────────────────
+  // ── Busca cursos do banco ao inicializar ─────────────────────────────────────
+  useEffect(() => {
+    // Remove dados falsos do localStorage automaticamente
+    localStorage.removeItem('biscoite_courses');
+    localStorage.removeItem('biscoite_modules');
+    sessionStorage.removeItem('biscoite_courses');
+    sessionStorage.removeItem('biscoite_modules');
+
+    const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
+    if (!isAuth) return;
+    authFetch('/api/courses')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setCourses(data); })
+      .catch(() => {});
+  }, []);
+
   // ── Sincroniza e busca dados frescos do banco ao inicializar ────────────────
   useEffect(() => {
     // 1. Sync imediato do storage local
@@ -385,103 +397,123 @@ export function ProfileProvider({ children }) {
   // TODO (backend): cada função abaixo deve chamar a API com o token JWT do usuário.
   // O servidor deve re-validar o role antes de executar qualquer operação.
 
-  const addCourse = (data) => {
-    const newCourse = {
-      id: Date.now(),
-      title: sanitizeText(data.title, 100),
-      description: sanitizeText(data.description, 500),
-      category: data.category || 'Operações',
-      level: data.level || 'Iniciante',
-      format: data.format || 'Vídeo',
-      duration: sanitizeText(data.duration, 20),
-      instructor: sanitizeText(data.instructor, 60),
-      instructorId: systemRole === 'admin' ? (data.instructorId || CURRENT_INSTRUCTOR_ID) : CURRENT_INSTRUCTOR_ID,
-      published: Boolean(data.published),
-      thumbnail: data.thumbnail || null,
-      videoUrl: data.videoUrl || '',
-      videoType: data.videoType || null,
-    };
-    setCourses(prev => [...prev, newCourse]);
-    return newCourse.id;
+  const addCourse = async (data) => {
+    try {
+      const res = await authFetch('/api/courses', {
+        method: 'POST',
+        body: JSON.stringify({
+          title:        data.title,
+          description:  data.description,
+          category:     data.category    || 'Operações',
+          level:        data.level       || 'Iniciante',
+          format:       data.format      || 'Vídeo',
+          duration:     data.duration    || '',
+          thumbnail_url: data.thumbnail  || null,
+          vimeo_id:     data.vimeoId     || null,
+          published:    Boolean(data.published),
+          visibility:   data.visibility  || ['aluno','gestor','professor','admin'],
+        }),
+      });
+      if (res.ok) {
+        const newCourse = await res.json();
+        setCourses(prev => [...prev, newCourse]);
+        return newCourse.id;
+      }
+    } catch (e) { console.error('addCourse:', e); }
   };
 
-  const updateCourse = (id, data) => {
-    setCourses(prev => prev.map(c => {
-      if (c.id !== id) return c;
-      if (systemRole === 'professor' && c.instructorId !== CURRENT_INSTRUCTOR_ID) return c;
-      return {
-        ...c,
-        title:       data.title !== undefined       ? sanitizeText(data.title, 100) : c.title,
-        description: data.description !== undefined ? sanitizeText(data.description, 500) : c.description,
-        category:    data.category  || c.category,
-        level:       data.level     || c.level,
-        format:      data.format    || c.format,
-        duration:    data.duration !== undefined    ? sanitizeText(data.duration, 20) : c.duration,
-        instructor:  data.instructor !== undefined  ? sanitizeText(data.instructor, 60) : c.instructor,
-        published:   data.published !== undefined   ? Boolean(data.published) : c.published,
-        thumbnail:   data.thumbnail !== undefined   ? data.thumbnail : c.thumbnail,
-        videoUrl:    data.videoUrl !== undefined    ? data.videoUrl  : c.videoUrl,
-        videoType:   data.videoType !== undefined   ? data.videoType : c.videoType,
-      };
-    }));
+  const updateCourse = async (id, data) => {
+    // Atualiza estado local imediatamente
+    setCourses(prev => prev.map(c => c.id !== id ? c : { ...c, ...data }));
+    try {
+      await authFetch(`/api/courses?id=${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          title:        data.title,
+          description:  data.description,
+          category:     data.category,
+          level:        data.level,
+          format:       data.format,
+          duration:     data.duration,
+          thumbnail_url: data.thumbnail || null,
+          vimeo_id:     data.vimeoId   || null,
+          published:    data.published !== undefined ? Boolean(data.published) : undefined,
+          visibility:   data.visibility,
+        }),
+      });
+    } catch (e) { console.error('updateCourse:', e); }
   };
 
-  const deleteCourse = (id) => {
-    // TODO (backend): verificar propriedade no servidor
-    const course = courses.find(c => c.id === id);
-    if (!course) return;
-    if (systemRole === 'professor' && course.instructorId !== CURRENT_INSTRUCTOR_ID) return;
+  const deleteCourse = async (id) => {
     setCourses(prev => prev.filter(c => c.id !== id));
     setModules(prev => prev.filter(m => m.courseId !== id));
+    try {
+      await authFetch(`/api/courses?id=${id}`, { method: 'DELETE' });
+    } catch (e) { console.error('deleteCourse:', e); }
   };
 
   // ── Funções de modules ────────────────────────────────────────────────────
-  const addModule = (courseId, title) => {
-    const course = courses.find(c => c.id === courseId);
-    if (!course) return;
-    if (systemRole === 'professor' && course.instructorId !== CURRENT_INSTRUCTOR_ID) return;
-    const courseModules = modules.filter(m => m.courseId === courseId);
-    const newModule = {
-      id: Date.now(),
-      courseId,
-      title: sanitizeText(title, 100),
-      order: courseModules.length + 1,
-      lessons: [],
-    };
-    setModules(prev => [...prev, newModule]);
-    return newModule.id;
+  const addModule = async (courseId, title) => {
+    try {
+      const res = await authFetch('/api/modules', {
+        method: 'POST',
+        body: JSON.stringify({ courseId, title }),
+      });
+      if (res.ok) {
+        const newModule = await res.json();
+        setModules(prev => [...prev, { ...newModule, lessons: [] }]);
+        return newModule.id;
+      }
+    } catch (e) { console.error('addModule:', e); }
   };
 
-  const updateModule = (id, title) => {
-    setModules(prev => prev.map(m =>
-      m.id === id ? { ...m, title: sanitizeText(title, 100) } : m
-    ));
+  const updateModule = async (id, title) => {
+    setModules(prev => prev.map(m => m.id === id ? { ...m, title } : m));
+    try {
+      await authFetch(`/api/modules?id=${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ title }),
+      });
+    } catch (e) { console.error('updateModule:', e); }
   };
 
-  const deleteModule = (id) => {
+  const deleteModule = async (id) => {
     setModules(prev => prev.filter(m => m.id !== id));
+    try {
+      await authFetch(`/api/modules?id=${id}`, { method: 'DELETE' });
+    } catch (e) { console.error('deleteModule:', e); }
   };
 
-  const addLesson = (moduleId, lessonData) => {
-    setModules(prev => prev.map(m => {
-      if (m.id !== moduleId) return m;
-      return {
-        ...m,
-        lessons: [...m.lessons, {
-          id: Date.now(),
-          title: sanitizeText(lessonData.title, 100),
-          duration: sanitizeText(lessonData.duration, 20),
-          type: lessonData.type || 'video',
-        }],
-      };
-    }));
+  const addLesson = async (moduleId, lessonData) => {
+    try {
+      const res = await authFetch('/api/lessons', {
+        method: 'POST',
+        body: JSON.stringify({
+          moduleId,
+          title:      lessonData.title,
+          duration:   lessonData.duration,
+          type:       lessonData.type || 'video',
+          vimeo_id:   lessonData.vimeoId || null,
+          visibility: lessonData.visibility || ['aluno','gestor','professor','admin'],
+        }),
+      });
+      if (res.ok) {
+        const newLesson = await res.json();
+        setModules(prev => prev.map(m =>
+          m.id === moduleId ? { ...m, lessons: [...(m.lessons || []), newLesson] } : m
+        ));
+        return newLesson.id;
+      }
+    } catch (e) { console.error('addLesson:', e); }
   };
 
-  const deleteLesson = (moduleId, lessonId) => {
-    setModules(prev => prev.map(m => {
-      if (m.id !== moduleId) return m;
-      return { ...m, lessons: m.lessons.filter(l => l.id !== lessonId) };
-    }));
+  const deleteLesson = async (moduleId, lessonId) => {
+    setModules(prev => prev.map(m =>
+      m.id !== moduleId ? m : { ...m, lessons: (m.lessons || []).filter(l => l.id !== lessonId) }
+    ));
+    try {
+      await authFetch(`/api/lessons?id=${lessonId}`, { method: 'DELETE' });
+    } catch (e) { console.error('deleteLesson:', e); }
   };
 
   // ── Funções de menu ───────────────────────────────────────────────────────

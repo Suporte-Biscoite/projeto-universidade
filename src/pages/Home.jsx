@@ -1,16 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 import { ChevronRight, Play, Clock, LayoutDashboard, Store, ShoppingBag, BarChart3, Megaphone, Brain, Tent, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CourseCard from '../components/CourseCard';
 import { useProfile } from '../context/ProfileContext';
 
-const myCourses = [
-  { id: 1, title: 'Fase 1 - Básico', instructor: 'Karla', progress: 100, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400' },
-  { id: 2, title: 'Operação cafeteria', instructor: 'Karla', progress: 65, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400' },
-  { id: 3, title: 'Páscoa 2026', instructor: 'Karla', progress: 0, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400' },
-  { id: 4, title: 'Atendimento Premium', instructor: 'Marcos', progress: 30, image: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=400' },
-  { id: 5, title: 'Visual Merchandising', instructor: 'Ana', progress: 80, image: 'https://images.unsplash.com/photo-1556740738-b6a63e27c4df?q=80&w=400' },
-];
+
 
 
 const categories = [
@@ -29,7 +24,26 @@ export default function Home() {
   const { reels: reelsData } = useProfile();
   const [courseIndex, setCourseIndex] = useState(0);
   const [hoveredReel, setHoveredReel] = useState(null);
+  const [myCourses, setMyCourses] = useState([]);
   const coursesPerPage = 3;
+
+  useEffect(() => {
+    const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
+    if (!isAuth) return;
+    authFetch('/api/courses')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) {
+          setMyCourses(data.filter(c => c.published).map(c => ({
+            ...c,
+            image:      c.thumbnail_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400',
+            instructor: c.instructor_name || '—',
+            progress:   0,
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const maxCourseIndex = Math.max(0, myCourses.length - coursesPerPage);
   const visibleCourses = myCourses.slice(courseIndex, courseIndex + coursesPerPage);
