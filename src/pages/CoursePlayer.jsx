@@ -225,35 +225,34 @@ export default function CoursePlayer() {
 
       {/* HEADER */}
       {!isExpanded && (
-        <div className="bg-[#b9d2eb] rounded-[32px] p-10 flex justify-between items-start shadow-sm mt-4">
-          <div className="space-y-3">
-            <Link to="/courses" className="flex items-center gap-2 text-slate-600 hover:text-[#001A26] text-sm font-semibold transition-colors">
-              <ChevronLeft size={18} /> Voltar para os cursos
-            </Link>
-            <h1 className="text-4xl font-black text-[#001A26]">{course.title}</h1>
-            <div className="flex items-center gap-2 text-slate-600 text-sm font-bold">
-              <Clock size={16} /> {course.duration || '—'}
-            </div>
-            <div className="flex items-center gap-3 mt-1">
-              <div className="w-40 h-2 bg-white/60 rounded-full overflow-hidden">
-                <div className="h-full bg-[#4A72B2] rounded-full transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }} />
+        <div className="space-y-4 mt-4">
+          <div className="bg-[#b9d2eb] rounded-[32px] p-10 flex justify-between items-start shadow-sm">
+            <div className="space-y-3">
+              <Link to="/courses" className="flex items-center gap-2 text-slate-600 hover:text-[#001A26] text-sm font-semibold transition-colors">
+                <ChevronLeft size={18} /> Voltar para os cursos
+              </Link>
+              <h1 className="text-4xl font-black text-[#001A26]">{course.title}</h1>
+              <div className="flex items-center gap-2 text-slate-600 text-sm font-bold">
+                <Clock size={16} /> {course.duration || '—'}
               </div>
-              <span className="text-xs font-black text-[#001A26]">{completedCount}/{allLessons.length} aulas</span>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="w-40 h-2 bg-white/60 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#4A72B2] rounded-full transition-all duration-500"
+                    style={{ width: `${progressPercent}%` }} />
+                </div>
+                <span className="text-xs font-black text-[#001A26]">{completedCount}/{allLessons.length} aulas</span>
+              </div>
             </div>
+            {course.level && (
+              <div className="bg-[#FEF9C3] text-[#A16207] px-5 py-2.5 rounded-full text-xs font-black border border-[#FDE68A] flex items-center gap-2 mt-2">
+                <Star size={14} fill="currentColor" /> {course.level}
+              </div>
+            )}
           </div>
-          {course.level && (
-            <div className="bg-[#FEF9C3] text-[#A16207] px-5 py-2.5 rounded-full text-xs font-black border border-[#FDE68A] flex items-center gap-2 mt-2">
-              <Star size={14} fill="currentColor" /> {course.level}
-            </div>
+          {course.description && (
+            <p className="text-sm text-slate-600 leading-relaxed px-2">{course.description}</p>
           )}
         </div>
-        {/* Descrição do curso */}
-        {course.description && (
-          <div className="mt-4 px-1">
-            <p className="text-sm text-slate-600 leading-relaxed">{course.description}</p>
-          </div>
-        )}
       )}
 
       {/* GRID PRINCIPAL */}
