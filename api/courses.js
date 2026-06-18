@@ -132,20 +132,23 @@ async function updateCourse(req, res, auth, id) {
   const { title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, instructor, visibility } = req.body ?? {};
   const { rows } = await pool.query(
     `UPDATE courses SET
-       title         = COALESCE($1, title),
-       description   = COALESCE($2, description),
-       category      = COALESCE($3, category),
-       level         = COALESCE($4, level),
-       format        = COALESCE($5, format),
-       duration      = COALESCE($6, duration),
-       thumbnail_url = COALESCE($7, thumbnail_url),
-       vimeo_id      = COALESCE($8, vimeo_id),
-       instructor_name = COALESCE($9, instructor_name),
-       published     = COALESCE($10, published),
-       visibility    = COALESCE($11, visibility),
-       updated_at    = now()
+       title           = COALESCE($1, title),
+       description     = COALESCE($2, description),
+       category        = COALESCE($3, category),
+       level           = COALESCE($4, level),
+       format          = COALESCE($5, format),
+       duration        = COALESCE($6, duration),
+       thumbnail_url   = COALESCE($7, thumbnail_url),
+       vimeo_id        = COALESCE($8, vimeo_id),
+       instructor_name = $9,
+       published       = COALESCE($10, published),
+       visibility      = COALESCE($11, visibility),
+       updated_at      = now()
      WHERE id = $12 RETURNING *`,
-    [title, description, category, level, format, duration, thumbnail_url, vimeo_id, instructor || null, published, visibility || null, id]
+    [title, description, category, level, format, duration,
+     thumbnail_url || null, vimeo_id || null,
+     instructor || null,
+     published, visibility || null, id]
   );
   return send(res, 200, rows[0]);
 }

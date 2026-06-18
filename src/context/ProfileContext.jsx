@@ -443,16 +443,17 @@ export function ProfileProvider({ children }) {
       await authFetch(`/api/courses?id=${id}`, {
         method: 'PUT',
         body: JSON.stringify({
-          title:        data.title,
-          description:  data.description,
-          category:     data.category,
-          level:        data.level,
-          format:       data.format,
-          duration:     data.duration,
-          thumbnail_url: data.thumbnail || null,
-          vimeo_id:     data.vimeoId   || null,
-          published:    data.published !== undefined ? Boolean(data.published) : undefined,
-          visibility:   data.visibility,
+          title:          data.title,
+          description:    data.description,
+          category:       data.category,
+          level:          data.level,
+          format:         data.format,
+          duration:       data.duration,
+          thumbnail_url:  data.thumbnail      || data.thumbnail_url || null,
+          vimeo_id:       data.vimeoId        || data.vimeo_id      || null,
+          instructor:     data.instructor     || data.instructor_name || null,
+          published:      data.published !== undefined ? Boolean(data.published) : undefined,
+          visibility:     data.visibility,
         }),
       });
     } catch (e) { console.error('updateCourse:', e); }
