@@ -410,6 +410,7 @@ export function ProfileProvider({ children }) {
           duration:     data.duration    || '',
           thumbnail_url: data.thumbnail  || null,
           vimeo_id:     data.vimeoId     || null,
+          instructor:   data.instructor  || null,
           published:    Boolean(data.published),
           visibility:   data.visibility  || ['aluno','gestor','professor','admin'],
         }),

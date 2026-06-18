@@ -755,10 +755,10 @@ function CourseFormModal({ initial, onSave, onClose, systemRole }) {
     level:       initial?.level       || 'Iniciante',
     format:      initial?.format      || 'Vídeo',
     duration:    initial?.duration    || '',
-    instructor:  initial?.instructor  || '',
     published:   initial?.published   ?? false,
-    thumbnail:   initial?.thumbnail   || null,
-    vimeoId:     initial?.vimeoId     || null,
+    thumbnail:   initial?.thumbnail   || initial?.thumbnail_url || null,
+    vimeoId:     initial?.vimeoId     || initial?.vimeo_id     || null,
+    instructor:  initial?.instructor  || initial?.instructor_name || '',
     visibility:  initial?.visibility  || ['aluno','gestor','professor','admin'], // quem pode ver
   });
   const thumbInputRef = useRef(null);
@@ -1370,7 +1370,7 @@ function MeusCursosView() {
     : myCourses.filter(c => !c.published);
 
   const courseModules = selCourseId
-    ? modules.filter(m => m.courseId === selCourseId).sort((a, b) => a.order - b.order)
+    ? modules.filter(m => String(m.courseId) === String(selCourseId) || String(m.course_id) === String(selCourseId)).sort((a, b) => (a.order || 0) - (b.order || 0))
     : [];
 
   const handleAddMod = () => {
@@ -1472,7 +1472,7 @@ function MeusCursosView() {
               ) : (
                 <div className="flex gap-4 overflow-x-auto pb-3">
                   {myCourses.map((course, ci) => {
-                    const cMods = modules.filter(m => m.courseId === course.id).sort((a, b) => a.order - b.order);
+                    const cMods = modules.filter(m => String(m.courseId || m.course_id) === String(course.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
                     const color = KANBAN_COLORS[ci % KANBAN_COLORS.length];
                     return (
                       <div key={course.id} className="min-w-[220px] max-w-[220px] bg-white rounded-[20px] border border-slate-100 overflow-hidden flex-shrink-0 shadow-sm">
@@ -1588,10 +1588,10 @@ function MeusCursosView() {
               <div className="flex gap-3 items-end">
                 <div className="flex-1 max-w-xs space-y-1.5">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Selecione o curso</label>
-                  <select value={selCourseId || ''} onChange={e => { setSelCourseId(Number(e.target.value) || null); setExpandedMod(null); }}
+                  <select value={selCourseId || ''} onChange={e => { setSelCourseId(e.target.value || null); setExpandedMod(null); }}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-[#001A26] outline-none focus:border-[#4A72B2] font-medium bg-white">
                     <option value="">Escolha um curso...</option>
-                    {myCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                    {myCourses.map(c => <option key={c.id} value={String(c.id)}>{c.title}</option>)}
                   </select>
                 </div>
                 {selCourseId && (

@@ -83,7 +83,7 @@ async function createCourse(req, res, auth) {
   if (!['professor', 'admin'].includes(auth.role))
     return send(res, 403, { error: 'Sem permissão' });
 
-  const { title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, visibility } = req.body ?? {};
+  const { title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, visibility, instructor } = req.body ?? {};
   if (!title) return send(res, 400, { error: 'Título obrigatório' });
 
   const { rows } = await pool.query(
