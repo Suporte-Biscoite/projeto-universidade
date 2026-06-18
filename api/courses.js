@@ -62,12 +62,13 @@ async function getCourses(req, res, id, auth) {
 
   // Lista todos cursos — professor vê todos seus, aluno vê publicados
   const isInstructor = ['professor', 'admin'].includes(auth?.role);
+  // Prioriza instructor_name salvo manualmente; fallback para nome do usuário logado
   const query = isInstructor
-    ? `SELECT c.*, COALESCE(u.name, c.instructor_name) as instructor_name
+    ? `SELECT c.*, COALESCE(c.instructor_name, u.name) as instructor_name
        FROM courses c
        LEFT JOIN users u ON u.id::text = c.instructor_id::text
        ORDER BY c.created_at DESC`
-    : `SELECT c.*, COALESCE(u.name, c.instructor_name) as instructor_name
+    : `SELECT c.*, COALESCE(c.instructor_name, u.name) as instructor_name
        FROM courses c
        LEFT JOIN users u ON u.id::text = c.instructor_id::text
        WHERE c.published = true
