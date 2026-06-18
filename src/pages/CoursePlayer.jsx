@@ -248,6 +248,12 @@ export default function CoursePlayer() {
             </div>
           )}
         </div>
+        {/* Descrição do curso */}
+        {course.description && (
+          <div className="mt-4 px-1">
+            <p className="text-sm text-slate-600 leading-relaxed">{course.description}</p>
+          </div>
+        )}
       )}
 
       {/* GRID PRINCIPAL */}
