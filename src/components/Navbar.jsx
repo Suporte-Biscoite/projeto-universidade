@@ -50,7 +50,7 @@ export default function Navbar() {
     if (!isAuth) return;
     const fetchNotifs = async () => {
       try {
-        const res = await authFetch('/api/notifications');
+        const res = await authFetch('/api/data?resource=notifications');
         if (!res.ok) return;
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -102,7 +102,7 @@ export default function Navbar() {
   const markAllRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     setUnreadCount(0);
-    try { await authFetch('/api/notifications?action=read-all', { method: 'POST' }); } catch {}
+    try { await authFetch('/api/data?resource=notifications&action=read-all', { method: 'POST' }); } catch {}
   };
 
   useEffect(() => {
@@ -252,7 +252,7 @@ export default function Navbar() {
                         onClick={async () => {
           setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
           setUnreadCount(prev => Math.max(0, prev - 1));
-          try { await authFetch(`/api/notifications?action=read&id=${notif.id}`, { method: 'POST' }); } catch {}
+          try { await authFetch(`/api/data?resource=notifications&action=read&id=${notif.id}`, { method: 'POST' }); } catch {}
           if (notif.link) navigate(notif.link);
         }}
                       >

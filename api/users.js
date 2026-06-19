@@ -30,8 +30,13 @@ export default async function handler(req, res) {
   if (!user) return send(res, 401, { error: 'Não autorizado' });
 
   const { id } = req.query;
+  const { action } = req.query;
 
   try {
+    // Approvals consolidado
+    if (action === 'approvals' || action === 'approve' || action === 'reject')
+      return await handleApprovals(req, res, user);
+
     if (req.method === 'GET')    return await getUsers(req, res, user, id);
     if (req.method === 'POST')   return await createUser(req, res, user);
     if (req.method === 'PUT')    return await updateUser(req, res, user, id);
@@ -154,4 +159,102 @@ async function deleteUser(req, res, auth, id) {
   // Soft delete — não apaga, só desativa
   await pool.query('UPDATE users SET active = false WHERE id = $1', [id]);
   return send(res, 200, { ok: true });
+}
+
+// ── APPROVALS (consolidado) ────────────────────────────────────────────────────
+// GET    /api/users?action=approvals         — lista pendentes (admin)
+// POST   /api/users?action=approve&id=uuid   — aprova
+// POST   /api/users?action=reject&id=uuid    — rejeita
+
+import { createNotification } from './data.js';
+
+const FRONTEND_URL = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : (process.env.FRONTEND_URL || 'http://localhost:3000');
+
+async function sendEmail(to, subject, html) {
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || 'noreply@biscolab.tech',
+        to: [to], subject, html,
+      }),
+    });
+  } catch (e) { console.error('[sendEmail]', e); }
+}
+
+export async function handleApprovals(req, res, auth) {
+  if (auth.role !== 'admin')
+    return send(res, 403, { error: 'Apenas admins podem gerenciar aprovações' });
+
+  const { action, id } = req.query;
+
+  if (req.method === 'GET') {
+    const { rows } = await pool.query(
+      `SELECT id, name, email, role, unit, store_name, store_type, created_at
+       FROM users WHERE status = 'pending' ORDER BY created_at DESC`
+    );
+    return send(res, 200, rows);
+  }
+
+  if (req.method === 'POST' && action === 'approve') {
+    const { rows } = await pool.query(
+      `UPDATE users SET status='approved', active=true WHERE id=$1
+       RETURNING id, name, email, role`,
+      [id]
+    );
+    if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });
+
+    await sendEmail(rows[0].email, 'Cadastro aprovado — Universidade Biscoitê ✅',
+      `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#001A26;">Olá, ${rows[0].name}!</h2>
+        <p>Seu cadastro na <strong>Universidade Biscoitê</strong> foi <strong style="color:#1D9E75;">aprovado</strong>!</p>
+        <a href="${FRONTEND_URL}/login" style="display:inline-block;background:#4A72B2;color:white;padding:14px 28px;border-radius:24px;text-decoration:none;font-weight:bold;">
+          Acessar a plataforma
+        </a>
+      </div>`
+    );
+    await createNotification({
+      user_id: id,
+      title: 'Cadastro aprovado! ✅',
+      description: 'Seu cadastro na Universidade Biscoitê foi aprovado. Bem-vindo!',
+      type: 'approval',
+      link: '/login',
+    });
+    return send(res, 200, { ok: true, user: rows[0] });
+  }
+
+  if (req.method === 'POST' && action === 'reject') {
+    const { reason = 'Cadastro não autorizado.' } = req.body ?? {};
+    const { rows } = await pool.query(
+      `UPDATE users SET status='rejected', active=false, rejected_reason=$2
+       WHERE id=$1 RETURNING id, name, email`,
+      [id, reason]
+    );
+    if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });
+
+    await sendEmail(rows[0].email, 'Cadastro não aprovado — Universidade Biscoitê',
+      `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#001A26;">Olá, ${rows[0].name}!</h2>
+        <p>Seu cadastro na <strong>Universidade Biscoitê</strong> não foi aprovado.</p>
+        <div style="background:#fff5f5;border-radius:12px;padding:16px;border-left:3px solid #E24B4A;">
+          <p style="color:#E24B4A;margin:0;"><strong>Motivo:</strong> ${reason}</p>
+        </div>
+      </div>`
+    );
+    await createNotification({
+      user_id: id,
+      title: 'Cadastro não aprovado',
+      description: `Motivo: ${reason}`,
+      type: 'approval',
+    });
+    return send(res, 200, { ok: true });
+  }
+
+  return send(res, 400, { error: 'Ação inválida' });
 }

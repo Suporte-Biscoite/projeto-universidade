@@ -95,7 +95,7 @@ export default function Register() {
   const [sectors, setSectors] = useState([]);
 
   useEffect(() => {
-    fetch('/api/config?type=sectors')
+    fetch('/api/data?resource=sectors')
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (Array.isArray(data)) setSectors(data); })
       .catch(() => {});

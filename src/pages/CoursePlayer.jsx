@@ -70,7 +70,7 @@ export default function CoursePlayer() {
 
         const [courseRes, progressRes] = await Promise.all([
           authFetch(`/api/courses?id=${courseId}`),
-          isAuth ? authFetch(`/api/progress?courseId=${courseId}`) : Promise.resolve({ ok: false }),
+          isAuth ? authFetch(`/api/courses?sub=progress&courseId=${courseId}`) : Promise.resolve({ ok: false }),
         ]);
 
         if (!courseRes.ok) throw new Error('Curso não encontrado');
@@ -167,7 +167,7 @@ export default function CoursePlayer() {
 
     // Salva no banco
     try {
-      await authFetch('/api/progress', {
+      await authFetch('/api/courses?sub=progress', {
         method: 'POST',
         body: JSON.stringify({ lessonId: activeLesson.id, courseId }),
       });

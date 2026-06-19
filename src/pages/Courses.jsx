@@ -93,7 +93,7 @@ export default function Courses() {
           // Busca progresso de todos os cursos em paralelo
           const progressResults = await Promise.all(
             list.map(c =>
-              authFetch(`/api/progress?courseId=${c.id}`)
+              authFetch(`/api/courses?sub=progress&courseId=${c.id}`)
                 .then(r => r.ok ? r.json() : { completed: [], count: 0 })
                 .catch(() => ({ completed: [], count: 0 }))
             )

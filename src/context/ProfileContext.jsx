@@ -220,7 +220,7 @@ export function ProfileProvider({ children }) {
     // Remove reels antigos do localStorage
     localStorage.removeItem('biscoite_reels');
     sessionStorage.removeItem('biscoite_reels');
-    authFetch('/api/reels')
+    authFetch('/api/data?resource=reels')
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (Array.isArray(data)) setReels(data); })
       .catch(() => {});
@@ -492,7 +492,7 @@ export function ProfileProvider({ children }) {
   // ── Funções de modules ────────────────────────────────────────────────────
   const addModule = async (courseId, title) => {
     try {
-      const res = await authFetch('/api/modules', {
+      const res = await authFetch('/api/courses?sub=modules', {
         method: 'POST',
         body: JSON.stringify({ courseId, title }),
       });
@@ -514,7 +514,7 @@ export function ProfileProvider({ children }) {
   const updateModule = async (id, title) => {
     setModules(prev => prev.map(m => m.id === id ? { ...m, title } : m));
     try {
-      await authFetch(`/api/modules?id=${id}`, {
+      await authFetch(`/api/courses?sub=modules&id=${id}`, {
         method: 'PUT',
         body: JSON.stringify({ title }),
       });
@@ -524,13 +524,13 @@ export function ProfileProvider({ children }) {
   const deleteModule = async (id) => {
     setModules(prev => prev.filter(m => m.id !== id));
     try {
-      await authFetch(`/api/modules?id=${id}`, { method: 'DELETE' });
+      await authFetch(`/api/courses?sub=modules&id=${id}`, { method: 'DELETE' });
     } catch (e) { console.error('deleteModule:', e); }
   };
 
   const addLesson = async (moduleId, lessonData) => {
     try {
-      const res = await authFetch('/api/lessons', {
+      const res = await authFetch('/api/courses?sub=lessons', {
         method: 'POST',
         body: JSON.stringify({
           moduleId,
@@ -556,7 +556,7 @@ export function ProfileProvider({ children }) {
       m.id !== moduleId ? m : { ...m, lessons: (m.lessons || []).filter(l => l.id !== lessonId) }
     ));
     try {
-      await authFetch(`/api/lessons?id=${lessonId}`, { method: 'DELETE' });
+      await authFetch(`/api/courses?sub=lessons&id=${lessonId}`, { method: 'DELETE' });
     } catch (e) { console.error('deleteLesson:', e); }
   };
 
@@ -715,7 +715,7 @@ export function ProfileProvider({ children }) {
   // ── Funções de reels (API) ────────────────────────────────────────────────
   const addReel = async (data) => {
     try {
-      const res = await authFetch('/api/reels', {
+      const res = await authFetch('/api/data?resource=reels', {
         method: 'POST',
         body: JSON.stringify({
           caption:       data.caption,
@@ -735,7 +735,7 @@ export function ProfileProvider({ children }) {
   const deleteReel = async (id) => {
     setReels(prev => prev.filter(r => r.id !== id));
     try {
-      await authFetch(`/api/reels?id=${id}`, { method: 'DELETE' });
+      await authFetch(`/api/data?resource=reels&id=${id}`, { method: 'DELETE' });
     } catch (e) { console.error('deleteReel:', e); }
   };
 

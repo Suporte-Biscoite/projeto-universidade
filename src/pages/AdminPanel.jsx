@@ -144,8 +144,8 @@ function ConfigTablesPanel() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/config?type=sectors',    { headers: headers() }).then(r => r.json()),
-      fetch('/api/config?type=job_titles', { headers: headers() }).then(r => r.json()),
+      fetch('/api/data?resource=sectors',    { headers: headers() }).then(r => r.json()),
+      fetch('/api/data?resource=job_titles', { headers: headers() }).then(r => r.json()),
     ]).then(([s, j]) => {
       setSectors(Array.isArray(s) ? s : []);
       setJobTitles(Array.isArray(j) ? j : []);
@@ -156,7 +156,7 @@ function ConfigTablesPanel() {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/config', {
+      const res = await fetch('/api/data', {
         method: 'POST',
         headers: headers(),
         body: JSON.stringify({ type, name }),
@@ -170,7 +170,7 @@ function ConfigTablesPanel() {
   };
 
   const removeItem = async (type, id, setList) => {
-    await fetch(`/api/config?type=${type}&id=${id}`, {
+    await fetch(`/api/data?resource=${type}&id=${id}`, {
       method: 'DELETE',
       headers: headers(),
       body: JSON.stringify({ type }),

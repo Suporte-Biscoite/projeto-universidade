@@ -34,7 +34,7 @@ export default function Home() {
 
         const progressResults = await Promise.all(
           list.map(c =>
-            authFetch(`/api/progress?courseId=${c.id}`)
+            authFetch(`/api/courses?sub=progress&courseId=${c.id}`)
               .then(r => r.ok ? r.json() : { count: 0 })
               .catch(() => ({ count: 0 }))
           )

@@ -4,7 +4,7 @@
 // POST /api/live?action=stop   — encerra live (professor/admin)
 
 import pool from './db.js';
-import { createNotification } from './notifications.js';
+import { createNotification } from './data.js';
 import jwt from 'jsonwebtoken';
 
 function authenticate(req) {
