@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Search, Bell, Pencil, X, Heart, Briefcase, Settings, LogOut, Home, BookOpen, Award, Menu, Radio, Shield, Store, BarChart2, Users } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
+import { authFetch } from '../utils/authFetch';
 
 const ROLE_LABEL = {
   admin:     'Administrador',
@@ -57,7 +58,7 @@ export default function Navbar() {
       } catch {}
     };
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 60_000); // atualiza a cada 1 min
+    const interval = setInterval(fetchNotifs, 30_000); // atualiza a cada 30s
     return () => clearInterval(interval);
   }, []);
 
