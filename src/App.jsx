@@ -1,24 +1,71 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Register from './pages/Register';
-import Login from './pages/Login';
-import MainLayout from './components/layouts/MainLayout';
-import Home from './pages/Home';
-import Courses from './pages/Courses';
-import CoursePlayer from './pages/CoursePlayer';
-import LiveChat from './pages/LiveChat';
-import LiveFloatButton from './components/LiveFloatButton';
-import Profile from './pages/Profile';
-import Certificates from './pages/Certificates';
-import ProfessorDashboard from './pages/ProfessorDashboard';
-import GestorDashboard from './pages/GestorDashboard';
-import LojaDashboard from './pages/LojaDashboard';
-import AdminPanel from './pages/AdminPanel';
-import Settings from './pages/Settings';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import InactivityGuard from './components/InactivityGuard';
-import InstructorProfile from './pages/InstructorProfile';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
 
+// ─── Lazy loading de todas as páginas ────────────────────────────────────────
+const Login            = lazy(() => import('./pages/Login'));
+const Register         = lazy(() => import('./pages/Register'));
+const ForgotPassword   = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword    = lazy(() => import('./pages/ResetPassword'));
+const MainLayout       = lazy(() => import('./components/layouts/MainLayout'));
+const Home             = lazy(() => import('./pages/Home'));
+const Courses          = lazy(() => import('./pages/Courses'));
+const CoursePlayer     = lazy(() => import('./pages/CoursePlayer'));
+const LiveChat         = lazy(() => import('./pages/LiveChat'));
+const Profile          = lazy(() => import('./pages/Profile'));
+const Certificates     = lazy(() => import('./pages/Certificates'));
+const Settings         = lazy(() => import('./pages/Settings'));
+const InstructorProfile = lazy(() => import('./pages/InstructorProfile'));
+const ProfessorDashboard = lazy(() => import('./pages/ProfessorDashboard'));
+const GestorDashboard  = lazy(() => import('./pages/GestorDashboard'));
+const LojaDashboard    = lazy(() => import('./pages/LojaDashboard'));
+const AdminPanel       = lazy(() => import('./pages/AdminPanel'));
+
+// ─── Loading screen ───────────────────────────────────────────────────────────
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="relative w-14 h-14">
+          <div className="absolute inset-0 rounded-full border-4 border-[#e2eef9]" />
+          <div className="absolute inset-0 rounded-full border-4 border-t-[#4A72B2] animate-spin" />
+        </div>
+        <p className="text-sm font-bold text-slate-400">Carregando...</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Route transition loading bar ─────────────────────────────────────────────
+function RouteLoadingBar() {
+  const location = useLocation();
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    setLoading(true);
+    setProgress(20);
+    const t1 = setTimeout(() => setProgress(60), 100);
+    const t2 = setTimeout(() => setProgress(90), 300);
+    const t3 = setTimeout(() => { setProgress(100); }, 500);
+    const t4 = setTimeout(() => { setLoading(false); setProgress(0); }, 700);
+    return () => [t1, t2, t3, t4].forEach(clearTimeout);
+  }, [location.pathname]);
+
+  if (!loading) return null;
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[9999] h-0.5">
+      <div
+        className="h-full bg-[#4A72B2] transition-all duration-300 ease-out"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+  );
+}
+
+// ─── Placeholder ──────────────────────────────────────────────────────────────
 function PlaceholderPage({ title, emoji }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
@@ -29,7 +76,7 @@ function PlaceholderPage({ title, emoji }) {
   );
 }
 
-// ─── Helpers de autenticação e autorização ───────────────────────────────────
+// ─── Auth helpers ─────────────────────────────────────────────────────────────
 function getLoggedUser() {
   try {
     const raw = sessionStorage.getItem('biscoite_logged_user')
@@ -45,13 +92,12 @@ function isAuthenticated() {
   );
 }
 
-// ─── Protege rotas — redireciona para /login se não autenticado ───────────────
+// ─── Rota protegida ───────────────────────────────────────────────────────────
 function ProtectedRoute({ children, roles }) {
   const location = useLocation();
   if (!isAuthenticated()) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  // Se a rota exige roles específicos, verifica
   if (roles) {
     const user = getLoggedUser();
     if (!user || !roles.includes(user.systemRole || user.role)) {
@@ -61,49 +107,67 @@ function ProtectedRoute({ children, roles }) {
   return children;
 }
 
-function App() {
+// ─── App ──────────────────────────────────────────────────────────────────────
+function AppRoutes() {
   return (
-    <BrowserRouter>
-      <InactivityGuard timeoutMinutes={15}>
+    <>
+      <RouteLoadingBar />
+      <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Rotas públicas */}
-          <Route path="/login"     element={<Login />} />
-          <Route path="/registrar"       element={<Register />} />
+          {/* Públicas */}
+          <Route path="/login"            element={<Login />} />
+          <Route path="/registrar"        element={<Register />} />
           <Route path="/recuperar-senha"  element={<ForgotPassword />} />
           <Route path="/redefinir-senha"  element={<ResetPassword />} />
 
-          {/* Rota raiz: redireciona para login se não autenticado */}
+          {/* Protegidas com layout */}
           <Route path="/" element={
             <ProtectedRoute>
               <MainLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<Home />} />
-            <Route path="live"        element={<LiveChat />} />
-            <Route path="courses"     element={<Courses />} />
-            <Route path="player"      element={<CoursePlayer />} />
-            <Route path="profile"     element={<Profile />} />
-            <Route path="certificados" element={<Certificates />} />
-            <Route path="favoritos"   element={<PlaceholderPage title="Meus Favoritos" emoji="❤️" />} />
-            <Route path="carreira"    element={<PlaceholderPage title="Minha Carreira" emoji="🚀" />} />
-            <Route path="configuracoes" element={<Settings />} />
+            <Route index                  element={<Home />} />
+            <Route path="live"            element={<LiveChat />} />
+            <Route path="courses"         element={<Courses />} />
+            <Route path="player"          element={<CoursePlayer />} />
+            <Route path="profile"         element={<Profile />} />
+            <Route path="certificados"    element={<Certificates />} />
+            <Route path="favoritos"       element={<PlaceholderPage title="Meus Favoritos" emoji="❤️" />} />
+            <Route path="carreira"        element={<PlaceholderPage title="Minha Carreira" emoji="🚀" />} />
+            <Route path="configuracoes"   element={<Settings />} />
             <Route path="instructor/:instructorId" element={<InstructorProfile />} />
           </Route>
 
-          {/* Dashboards protegidos */}
-          {/* PROFESSOR: postagem, cursos, progresso, perfis */}
-          <Route path="/professor"  element={<ProtectedRoute roles={["professor","admin"]}><ProfessorDashboard /></ProtectedRoute>} />
-          {/* GESTOR: visão geral de equipe/loja, franqueados, supervisão */}
-          <Route path="/gestor"     element={<ProtectedRoute roles={["gestor","admin"]}><GestorDashboard /></ProtectedRoute>} />
-          {/* ADMIN: acesso geral */}
-          <Route path="/admin"      element={<ProtectedRoute roles={["admin"]}><AdminPanel /></ProtectedRoute>} />
+          {/* Dashboards */}
+          <Route path="/professor" element={
+            <ProtectedRoute roles={['professor','admin']}>
+              <ProfessorDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/gestor" element={
+            <ProtectedRoute roles={['gestor','admin']}>
+              <GestorDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute roles={['admin']}>
+              <AdminPanel />
+            </ProtectedRoute>
+          } />
 
-          {/* Qualquer rota desconhecida vai para login */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+      </Suspense>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <InactivityGuard timeoutMinutes={15}>
+        <AppRoutes />
       </InactivityGuard>
     </BrowserRouter>
   );
 }
-
-export default App;
