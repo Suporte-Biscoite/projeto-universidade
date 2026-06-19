@@ -6,6 +6,7 @@
 // DELETE /api/courses?id=uuid      — deletar curso
 
 import pool from './db.js';
+import { createNotification } from './notifications.js';
 import jwt from 'jsonwebtoken';
 
 function authenticate(req) {
@@ -117,6 +118,25 @@ async function createCourse(req, res, auth) {
      thumbnail_url || null, vimeo_id || null, auth.sub, instructor || null,
      Boolean(published), vis]
   );
+  // Se publicado, notifica usuários com acesso baseado na visibilidade
+  if (Boolean(published) && rows[0]) {
+    const course = rows[0];
+    const visibility = course.visibility || ['aluno','gestor','professor','admin'];
+    // Busca usuários que têm acesso ao curso
+    await pool.query(
+      `INSERT INTO notifications (user_id, title, description, type, link)
+       SELECT id, $1, $2, 'course', $3
+       FROM users
+       WHERE active = true AND status = 'approved'
+       AND role = ANY($4::text[])`,
+      [
+        `Novo curso disponível: ${course.title}`,
+        `Um novo curso foi publicado. Confira agora!`,
+        `/player?id=${course.id}`,
+        visibility,
+      ]
+    ).catch(() => {});
+  }
   return send(res, 201, rows[0]);
 }
 
@@ -151,6 +171,28 @@ async function updateCourse(req, res, auth, id) {
      instructor || null,
      published, visibility || null, id]
   );
+  // Se publicação foi ativada neste update, notifica
+  if (published === true && rows[0] && !rows[0].published === false) {
+    const course = rows[0];
+    const vis = course.visibility || ['aluno','gestor','professor','admin'];
+    await pool.query(
+      `INSERT INTO notifications (user_id, title, description, type, link)
+       SELECT id, $1, $2, 'course', $3
+       FROM users
+       WHERE active = true AND status = 'approved'
+       AND role = ANY($4::text[])
+       AND id NOT IN (
+         SELECT user_id FROM notifications
+         WHERE link = $3 AND type = 'course'
+       )`,
+      [
+        `Novo curso disponível: ${course.title}`,
+        `Um novo curso foi publicado. Confira agora!`,
+        `/player?id=${course.id}`,
+        vis,
+      ]
+    ).catch(() => {});
+  }
   return send(res, 200, rows[0]);
 }
 

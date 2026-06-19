@@ -3,6 +3,7 @@
 // POST /api/progress                — marca aula como concluída
 
 import pool from './db.js';
+import { createNotification } from './notifications.js';
 import jwt from 'jsonwebtoken';
 
 function authenticate(req) {
@@ -74,6 +75,24 @@ export default async function handler(req, res) {
         );
 
         const courseCompleted = Number(done[0].count) >= Number(total[0].count);
+
+        if (courseCompleted) {
+          // Busca título do curso
+          const { rows: courseRows } = await pool.query(
+            'SELECT title FROM courses WHERE id = $1', [courseId]
+          );
+          const courseTitle = courseRows[0]?.title || 'curso';
+
+          // Notificação de curso concluído para o próprio usuário
+          await createNotification({
+            user_id:     auth.sub,
+            title:       `Parabéns! Você concluiu "${courseTitle}" 🎉`,
+            description: 'Seu progresso foi registrado. Continue aprendendo!',
+            type:        'certificate',
+            link:        `/certificados`,
+          });
+        }
+
         return send(res, 200, { ok: true, courseCompleted });
       }
 

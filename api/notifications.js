@@ -95,18 +95,32 @@ export default async function handler(req, res) {
 }
 
 // ── Helper exportado para outras APIs usarem internamente ──────────────────────
-export async function createNotification({ user_id, title, description, type = 'info', link }) {
+// roles: array de roles que devem receber (ex: ['aluno','gestor']). null = todos
+export async function createNotification({ user_id, title, description, type = 'info', link, roles }) {
   try {
     if (user_id) {
+      // Notificação para usuário específico
       await pool.query(
         'INSERT INTO notifications (user_id, title, description, type, link) VALUES ($1,$2,$3,$4,$5)',
         [user_id, title, description, type, link || null]
       );
-    } else {
-      // Global
+    } else if (roles && roles.length > 0) {
+      // Notificação para roles específicos
       await pool.query(
         `INSERT INTO notifications (user_id, title, description, type, link)
-         SELECT id, $1, $2, $3, $4 FROM users WHERE active = true AND status = 'approved'`,
+         SELECT id, $1, $2, $3, $4
+         FROM users
+         WHERE active = true AND status = 'approved'
+         AND role = ANY($5::text[])`,
+        [title, description, type, link || null, roles]
+      );
+    } else {
+      // Global — todos os usuários ativos
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, description, type, link)
+         SELECT id, $1, $2, $3, $4
+         FROM users
+         WHERE active = true AND status = 'approved'`,
         [title, description, type, link || null]
       );
     }
