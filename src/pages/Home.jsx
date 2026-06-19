@@ -142,7 +142,7 @@ export default function Home() {
             {reelsData.map((item) => {
               const isActive = hoveredReel === item.id;
               return (
-                <button key={item.id} onClick={() => navigate('/player')}
+                <button key={item.id} onClick={() => item.vimeo_id ? window.open(`https://vimeo.com/${item.vimeo_id}`, '_blank') : null}
                   onMouseEnter={() => setHoveredReel(item.id)}
                   onMouseLeave={() => setHoveredReel(null)}
                   className="relative flex-shrink-0 rounded-[24px] overflow-hidden border-2 border-white shadow-sm cursor-pointer text-left"

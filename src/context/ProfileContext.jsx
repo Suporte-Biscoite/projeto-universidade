@@ -210,11 +210,22 @@ export function ProfileProvider({ children }) {
   );
 
   // ── Reels ─────────────────────────────────────────────────────────────────
-  const [reels, setReels] = useState(
-    () => loadFromStorage('biscoite_reels', INITIAL_REELS)
-  );
+  const [reels, setReels] = useState([]);
 
   // ── Persistência no localStorage ──────────────────────────────────────────
+  // ── Busca reels do banco ao inicializar ──────────────────────────────────────
+  useEffect(() => {
+    const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
+    if (!isAuth) return;
+    // Remove reels antigos do localStorage
+    localStorage.removeItem('biscoite_reels');
+    sessionStorage.removeItem('biscoite_reels');
+    authFetch('/api/reels')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setReels(data); })
+      .catch(() => {});
+  }, []);
+
   // ── Busca cursos do banco ao inicializar ─────────────────────────────────────
   useEffect(() => {
     // Remove dados falsos do localStorage automaticamente
@@ -329,7 +340,7 @@ export function ProfileProvider({ children }) {
   useEffect(() => { try { localStorage.setItem('biscoite_cert_templates', JSON.stringify(certTemplates)); } catch {} }, [certTemplates]);
   useEffect(() => { try { localStorage.setItem('biscoite_issued_certs', JSON.stringify(issuedCerts)); } catch {} }, [issuedCerts]);
   useEffect(() => { try { localStorage.setItem('biscoite_instructor_profiles', JSON.stringify(instructorProfiles)); } catch {} }, [instructorProfiles]);
-  useEffect(() => { try { localStorage.setItem('biscoite_reels', JSON.stringify(reels)); } catch {} }, [reels]);
+  // reels saved to DB via API
 
   // ── Funções de profile ────────────────────────────────────────────────────
   const updateProfileImage = async (newImage) => {
@@ -701,28 +712,31 @@ export function ProfileProvider({ children }) {
     setIssuedCerts(prev => prev.filter(ic => ic.id !== issuedCertId));
   };
 
-  // ── Funções de reels ──────────────────────────────────────────────────────
-  const addReel = (data) => {
-    const profile = instructorProfiles[CURRENT_INSTRUCTOR_ID] || {};
-    const newReel = {
-      id: Date.now(),
-      instructorId: CURRENT_INSTRUCTOR_ID,
-      caption:   sanitizeText(data.caption, 200),
-      tag:       sanitizeText(data.tag, 30),
-      instructor: profile.name || 'Instrutor',
-      avatar:    profile.avatar || '',
-      views:     '0',
-      time:      'agora',
-      thumbnail: data.thumbnail || null,
-      videoUrl:  data.videoUrl  || '',
-      videoType: data.videoType || null,
-    };
-    setReels(prev => [newReel, ...prev]);
-    return newReel.id;
+  // ── Funções de reels (API) ────────────────────────────────────────────────
+  const addReel = async (data) => {
+    try {
+      const res = await authFetch('/api/reels', {
+        method: 'POST',
+        body: JSON.stringify({
+          caption:       data.caption,
+          tag:           data.tag || 'Dica',
+          thumbnail_url: data.thumbnail || null,
+          vimeo_id:      data.vimeoId   || null,
+        }),
+      });
+      if (res.ok) {
+        const newReel = await res.json();
+        setReels(prev => [newReel, ...prev]);
+        return newReel.id;
+      }
+    } catch (e) { console.error('addReel:', e); }
   };
 
-  const deleteReel = (id) => {
+  const deleteReel = async (id) => {
     setReels(prev => prev.filter(r => r.id !== id));
+    try {
+      await authFetch(`/api/reels?id=${id}`, { method: 'DELETE' });
+    } catch (e) { console.error('deleteReel:', e); }
   };
 
   // ── Funções de instructor profiles ───────────────────────────────────────

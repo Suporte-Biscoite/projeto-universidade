@@ -2185,8 +2185,8 @@ function ComunicacaoView({ onRead }) {
 // ═══════════════════════════════════════════════════════════════════════════
 const REEL_TAGS = ['Dica', 'Novidade', 'Aviso', 'Evento', 'Vendas', 'Operações', 'IA', 'Motivação'];
 
-function extractYTId(url) {
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+function extractVimeoId(url) {
+  const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   return m ? m[1] : null;
 }
 
@@ -2197,7 +2197,7 @@ function ReelsView() {
   const [showForm, setShowForm]       = useState(false);
   const [caption, setCaption]         = useState('');
   const [tag, setTag]                 = useState('Dica');
-  const [videoTab, setVideoTab]       = useState('youtube'); // 'youtube' | 'local'
+  const [videoTab, setVideoTab]       = useState('vimeo'); // vimeo only
   const [videoUrl, setVideoUrl]       = useState('');
   const [videoFile, setVideoFile]     = useState(null);
   const [thumbnail, setThumbnail]     = useState('');
@@ -2207,9 +2207,8 @@ function ReelsView() {
   const thumbInputRef = useRef(null);
   const videoInputRef = useRef(null);
 
-  const ytId = extractYTId(videoUrl);
-  const ytThumb = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null;
-  const previewThumb = thumbFile ? thumbnail : (ytThumb || thumbnail);
+  const vimeoId = extractVimeoId(videoUrl);
+  const previewThumb = thumbFile ? thumbnail : thumbnail;
 
   const handleThumbFile = (file) => {
     if (!file) return;
@@ -2228,11 +2227,9 @@ function ReelsView() {
   const handleSubmit = () => {
     if (!caption.trim()) return;
     const finalThumb = previewThumb || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400';
-    const finalVideoUrl = videoTab === 'youtube' ? videoUrl : videoUrl;
-    const finalVideoType = videoTab === 'youtube' ? 'youtube' : 'local';
-    addReel({ caption, tag, thumbnail: finalThumb, videoUrl: finalVideoUrl, videoType: finalVideoUrl ? finalVideoType : null });
+    addReel({ caption, tag, thumbnail: finalThumb, vimeoId: vimeoId || null });
     setShowForm(false);
-    setCaption(''); setTag('Dica'); setVideoUrl(''); setVideoFile(null); setThumbnail(''); setThumbFile(null); setVideoTab('youtube');
+    setCaption(''); setTag('Dica'); setVideoUrl(''); setVideoFile(null); setThumbnail(''); setThumbFile(null);
     setToast('Reel publicado com sucesso!');
     setTimeout(() => setToast(null), 2800);
   };
@@ -2323,50 +2320,20 @@ function ReelsView() {
 
               {/* Vídeo */}
               <div>
-                <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Vídeo (opcional)</p>
-                <div className="flex gap-2 mb-3">
-                  {[['youtube', 'YouTube'], ['local', 'Arquivo local']].map(([val, label]) => (
-                    <button
-                      key={val}
-                      onClick={() => { setVideoTab(val); setVideoUrl(''); setVideoFile(null); }}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${videoTab === val ? 'bg-[#e2eef9] text-[#4A72B2] border-[#4A72B2]' : 'border-slate-200 text-slate-400 hover:border-slate-300'}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Vídeo Vimeo (opcional)</p>
+                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-slate-200 focus-within:border-[#4A72B2]">
+                  <Link size={14} className="text-slate-400 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={videoUrl}
+                    onChange={e => setVideoUrl(e.target.value)}
+                    placeholder="https://vimeo.com/123456789"
+                    className="flex-1 text-sm outline-none text-slate-700 bg-transparent"
+                  />
+                  {vimeoId && <span className="text-[10px] text-emerald-500 font-bold whitespace-nowrap">✓ válido</span>}
                 </div>
-
-                {videoTab === 'youtube' ? (
-                  <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-slate-200 focus-within:border-[#4A72B2]">
-                    <Link size={14} className="text-slate-400 flex-shrink-0" />
-                    <input
-                      type="text"
-                      value={videoUrl}
-                      onChange={e => setVideoUrl(e.target.value)}
-                      placeholder="Cole o link do YouTube aqui"
-                      className="flex-1 text-sm outline-none text-slate-700 bg-transparent"
-                    />
-                    {ytId && <span className="text-[10px] text-emerald-500 font-bold whitespace-nowrap">✓ válido</span>}
-                  </div>
-                ) : (
-                  <div>
-                    {videoFile ? (
-                      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-emerald-200 bg-emerald-50">
-                        <Film size={14} className="text-emerald-500 flex-shrink-0" />
-                        <span className="text-xs font-bold text-emerald-700 flex-1 truncate">{videoFile.name}</span>
-                        <button onClick={() => { setVideoFile(null); setVideoUrl(''); }} className="text-slate-400 hover:text-red-400"><X size={13} /></button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => videoInputRef.current?.click()}
-                        className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-200 hover:border-[#4A72B2] text-slate-400 text-xs font-medium transition-colors"
-                      >
-                        Selecionar arquivo de vídeo
-                      </button>
-                    )}
-                    <input ref={videoInputRef} type="file" accept="video/*" className="hidden"
-                      onChange={e => handleVideoFile(e.target.files?.[0])} />
-                  </div>
+                {vimeoId && (
+                  <p className="text-[10px] text-slate-400 mt-1 pl-1">ID detectado: {vimeoId}</p>
                 )}
               </div>
             </div>
