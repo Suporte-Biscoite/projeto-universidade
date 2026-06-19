@@ -405,6 +405,21 @@ function ComunicacaoAluno({ userRole }) {
 export default function Profile() {
   const { profileImage, updateProfileImage, userData, updateUserData, updateUserDataApi, systemRole: userRole, users, courses } = useProfile();
 
+  // Busca cargos e lojas do banco para dropdowns
+  const [jobTitles, setJobTitles] = React.useState([]);
+  const [allStores, setAllStores] = React.useState([]);
+
+  React.useEffect(() => {
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    // Cargos
+    fetch('/api/config?type=job_titles', { headers })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setJobTitles(data); })
+      .catch(() => {});
+    // Lojas já disponíveis via import
+  }, []);
+
   // Carrega dados extras do perfil do banco ao montar
   React.useEffect(() => {
     const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
@@ -1209,8 +1224,33 @@ export default function Profile() {
                 <div className="space-y-4">
                   <InputLabel label="Nome" value={tempData.name} onChange={(v) => setTempData({ ...tempData, name: v })} />
                   <InputLabel label="Pronome" value={tempData.pronoun} onChange={(v) => setTempData({ ...tempData, pronoun: v })} />
-                  <InputLabel label="Unidade / Loja" value={tempData.unit} onChange={(v) => setTempData({ ...tempData, unit: v })} />
-                  <InputLabel label="Cargo" value={tempData.role} onChange={(v) => setTempData({ ...tempData, role: v })} />
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Unidade / Loja</label>
+                    <select
+                      value={tempData.unit || ''}
+                      onChange={e => setTempData({ ...tempData, unit: e.target.value })}
+                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm text-[#001A26] outline-none focus:border-[#4A72B2] bg-white font-medium"
+                    >
+                      <option value="">Selecione a unidade</option>
+                      <optgroup label="Lojas Próprias">
+                        {LOJAS_PROPRIAS.map(l => <option key={l} value={l}>{l}</option>)}
+                      </optgroup>
+                      <optgroup label="Franquias">
+                        {LOJAS_FRANQUIA.map(l => <option key={l} value={l}>{l}</option>)}
+                      </optgroup>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Cargo</label>
+                    <select
+                      value={tempData.role || ''}
+                      onChange={e => setTempData({ ...tempData, role: e.target.value })}
+                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm text-[#001A26] outline-none focus:border-[#4A72B2] bg-white font-medium"
+                    >
+                      <option value="">Selecione o cargo</option>
+                      {jobTitles.map(j => <option key={j.id} value={j.name}>{j.name}</option>)}
+                    </select>
+                  </div>
                   <InputLabel label="Tempo de Empresa" value={tempData.time} onChange={(v) => setTempData({ ...tempData, time: v })} />
 
                   {/* Banner */}

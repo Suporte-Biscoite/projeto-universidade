@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { LOJAS_PROPRIAS, LOJAS_FRANQUIA } from '../utils/stores';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ChevronDown, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { STORES } from '../context/ProfileContext';
@@ -75,43 +76,7 @@ function isRateLimited() {
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-const LOJAS_PROPRIAS = [
-  'BISCOITE ABC SHOPPING','BISCOITÊ AEROPORTO DE GUARULHOS','BISCOITE ALPHAVILLE',
-  'BISCOITE ANALIA FRANCO SHOPPING','BISCOITE BOSSA NOVA RJ','BISCOITE BOURBON',
-  'BISCOITE BUTANTA SHOPPING','BISCOITE CASA CULTURA HIGIENÓPOLIS','BISCOITE CATARINA OUTLET',
-  'BISCOITE CENTER NORTE','BISCOITE COLINAS','BISCOITE ECOMMERCE DIGITAL','BISCOITE ELDORADO',
-  'BISCOITE GAVEA RJ','BISCOITE HCOR','BISCOITE INTERNACIONAL','BISCOITE ITAU PAULISTA',
-  'BISCOITE JARDIM SUL','BISCOITE LEBLON RJ','BISCOITE METROPOLE','BISCOITE MOOCA',
-  'BISCOITE MORUMBI QSQ','BISCOITE MORUMBI TOWN','BISCOITE NITEROI RJ',
-  'BISCOITE NORTE SHOPPING RJ','BISCOITE NOVA AMERICA RJ','BISCOITE PAMPLONA',
-  'BISCOITE PENHA SHOPPING','BISCOITE PLAZA SUL','BISCOITE RIO DESIGN RJ',
-  'BISCOITE RIOSUL RJ','BISCOITE SAO BERNARDO SHOPPING','BISCOITE SP MARKET',
-  'BISCOITE TABOAO DA SERRA','BISCOITE TAMBORE','BISCOITE TIETE PLAZA',
-  'BISCOITE TIJUCA RJ','BISCOITE TRAILER','BISCOITE VILA OLIMPIA','BISCOITE VILLA LOBOS',
-];
-
-const LOJAS_FRANQUIA = [
-  'FRANQUIA - BISCOITE ALAGOAS MACEIO','FRANQUIA - BISCOITE AURORA SHOPPING',
-  'FRANQUIA - BISCOITE BAHIA SHOP','FRANQUIA - BISCOITE BALNEARIO CAMBORIU SHOPPING',
-  'FRANQUIA - BISCOITE BELÉM','FRANQUIA - BISCOITE BH SHOPPING',
-  'FRANQUIA - BISCOITE BOULEVARD BH','FRANQUIA - BISCOITE BURITI RIO VERDE GO',
-  'FRANQUIA - BISCOITE CAMBUI','FRANQUIA - BISCOITE CAMPINAS',
-  'FRANQUIA - BISCOITE CAMPO GRANDE MS','FRANQUIA - BISCOITE CATUAI CASCAVEL SHOP',
-  'FRANQUIA - BISCOITE CIDADE SP','FRANQUIA - BISCOITE DIAMOND MALL',
-  'FRANQUIA - BISCOITE DOM PEDRO','FRANQUIA - BISCOITE ESTACAO CUIABA',
-  'FRANQUIA - BISCOITE GALLERIA','FRANQUIA - BISCOITE GRAND PLAZA',
-  'FRANQUIA - BISCOITE GRAO PARA','FRANQUIA - BISCOITE IBIRAPUERA SHOPPING',
-  'FRANQUIA - BISCOITE INDEPENDENCIA MG','FRANQUIA - BISCOITE JOCKEY PLAZA SHOPPING',
-  'FRANQUIA - BISCOITE JUNDIAÍ','FRANQUIA - BISCOITE MANAUARA SHOPPING',
-  'FRANQUIA - BISCOITE MAXI JUNDIAI','FRANQUIA - BISCOITE MOGI',
-  'FRANQUIA - BISCOITE MUELLER CURITIBA','FRANQUIA - BISCOITE PANTANAL SHOP',
-  'FRANQUIA - BISCOITE PARALELA SHOPPING','FRANQUIA - BISCOITE PATIO BATEL',
-  'FRANQUIA - BISCOITE PATIO PAULISTA','FRANQUIA - BISCOITE PERDIZES',
-  'FRANQUIA - BISCOITE PIRACICABA','FRANQUIA - BISCOITE RIBEIRÃO PRETO IGUATEMI SHOP',
-  'FRANQUIA - BISCOITE RIO POTY SHOP PIAUI','FRANQUIA - BISCOITE SANTA CRUZ',
-  'FRANQUIA - BISCOITE SÃO JOSE DO RIO PRETO','FRANQUIA - BISCOITE SOROCABA',
-  'FRANQUIA - BISCOITE SP MARKET SHOP','FRANQUIA - BISCOITE TATUAPÉ METRO SHOPPING',
-];
+// Lojas importadas do arquivo compartilhado
 
 const STORE_TYPES = [
   { value: 'propria',    label: 'Loja Própria' },
@@ -127,6 +92,14 @@ const ROLES_CADASTRO = [
 ];
 
 export default function Register() {
+  const [sectors, setSectors] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/config?type=sectors')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setSectors(data); })
+      .catch(() => {});
+  }, []);
   const navigate = useNavigate();
   const csrfToken = useRef(generateCsrfToken());
 
@@ -531,13 +504,20 @@ export default function Register() {
                 </div>
               )}
 
-              {/* Escritório / Galpão não têm dropdown de loja */}
+              {/* Escritório / Galpão — dropdown de setor do banco */}
               {(form.storeType === 'escritorio' || form.storeType === 'galpao') && (
                 <div>
                   <label className="block text-xs font-black text-[#001A26] mb-2">Setor / Área</label>
-                  <input name="storeName" value={form.storeName} onChange={handleChange}
-                    placeholder={form.storeType === 'escritorio' ? 'Ex: Marketing, RH, Financeiro...' : 'Ex: Galpão SP, CD Guarulhos...'}
-                    className={inputClass('storeName')} />
+                  <div className="relative">
+                    <select name="storeName" value={form.storeName} onChange={handleChange}
+                      className={`${inputClass('storeName')} appearance-none`}>
+                      <option value="">Selecione o setor</option>
+                      {sectors.map(s => (
+                        <option key={s.id} value={s.name}>{s.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={18} className="absolute right-6 bottom-3.5 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
               )}
 

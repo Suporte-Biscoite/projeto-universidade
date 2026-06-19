@@ -79,6 +79,126 @@ function CreateUserForm({ onAdd, onClose }) {
   );
 }
 
+// ─── Painel de Setores e Cargos ──────────────────────────────────────────────
+function ConfigTablesPanel() {
+  const [sectors, setSectors]       = useState([]);
+  const [jobTitles, setJobTitles]   = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [newSector, setNewSector]   = useState('');
+  const [newJob, setNewJob]         = useState('');
+  const [saving, setSaving]         = useState(false);
+
+  const getToken = () =>
+    sessionStorage.getItem('biscoite_access_token') ||
+    localStorage.getItem('biscoite_access_token') || '';
+
+  const headers = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${getToken()}`,
+  });
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/config?type=sectors',    { headers: headers() }).then(r => r.json()),
+      fetch('/api/config?type=job_titles', { headers: headers() }).then(r => r.json()),
+    ]).then(([s, j]) => {
+      setSectors(Array.isArray(s) ? s : []);
+      setJobTitles(Array.isArray(j) ? j : []);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const addItem = async (type, name, setList, setInput) => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ type, name }),
+      });
+      if (res.ok) {
+        const item = await res.json();
+        setList(prev => [...prev, item].sort((a,b) => a.name.localeCompare(b.name)));
+        setInput('');
+      }
+    } finally { setSaving(false); }
+  };
+
+  const removeItem = async (type, id, setList) => {
+    await fetch(`/api/config?type=${type}&id=${id}`, {
+      method: 'DELETE',
+      headers: headers(),
+      body: JSON.stringify({ type }),
+    });
+    setList(prev => prev.filter(i => i.id !== id));
+  };
+
+  const ListCard = ({ title, items, type, newVal, setNew, setList }) => (
+    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="font-black text-[#001A26] text-sm">{title}</p>
+        <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-full">{items.length} itens</span>
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={newVal}
+          onChange={e => setNew(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addItem(type, newVal, setList, setNew)}
+          placeholder={`Novo ${title.toLowerCase()}...`}
+          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2]"
+        />
+        <button
+          onClick={() => addItem(type, newVal, setList, setNew)}
+          disabled={!newVal.trim() || saving}
+          className="px-4 py-2.5 bg-[#001A26] hover:bg-[#4A72B2] text-white rounded-xl text-xs font-black transition-all disabled:opacity-40"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
+      <div className="space-y-2 max-h-64 overflow-y-auto">
+        {loading ? (
+          <p className="text-sm text-slate-400 text-center py-4">Carregando...</p>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-4">Nenhum item cadastrado.</p>
+        ) : items.map(item => (
+          <div key={item.id} className="flex items-center justify-between px-4 py-2.5 bg-slate-50 rounded-xl group">
+            <span className="text-sm text-[#001A26] font-medium">{item.name}</span>
+            <button
+              onClick={() => removeItem(type, item.id, setList)}
+              className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-sm font-black text-[#001A26]">Setores e Cargos</p>
+        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+          Gerencie as opções disponíveis nos formulários de cadastro e perfil.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-6">
+        <ListCard
+          title="Setores" type="sectors"
+          items={sectors} setList={setSectors}
+          newVal={newSector} setNew={setNewSector}
+        />
+        <ListCard
+          title="Cargos" type="job_titles"
+          items={jobTitles} setList={setJobTitles}
+          newVal={newJob} setNew={setNewJob}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   const navigate = useNavigate();
   const { systemRole, users, updateUser, addUser } = useProfile();
@@ -130,6 +250,7 @@ export default function AdminPanel() {
     { id: 'lojas',      label: 'Lojas',      icon: Store },
     { id: 'relatorio',  label: 'Relatório',  icon: BarChart2 },
     { id: 'config',     label: 'Config',     icon: Settings },
+    { id: 'tabelas',    label: 'Setores/Cargos', icon: Plus },
   ];
 
   return (
@@ -316,6 +437,9 @@ export default function AdminPanel() {
             <p className="text-sm text-slate-400">Análises de conclusão de cursos e engajamento por loja e perfil.</p>
           </div>
         )}
+
+        {/* ── SETORES E CARGOS ── */}
+        {activeTab === 'tabelas' && <ConfigTablesPanel />}
 
         {/* ── CONFIG ── */}
         {activeTab === 'config' && (
