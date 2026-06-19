@@ -79,6 +79,51 @@ function CreateUserForm({ onAdd, onClose }) {
   );
 }
 
+// ─── ListCard — fora do ConfigTablesPanel para evitar re-criação ─────────────
+function ListCard({ title, items, type, newVal, setNew, onAdd, onRemove, loading, saving }) {
+  return (
+    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="font-black text-[#001A26] text-sm">{title}</p>
+        <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-full">{items.length} itens</span>
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={newVal}
+          onChange={e => setNew(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && onAdd()}
+          placeholder={`Novo ${title.toLowerCase()}...`}
+          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2]"
+        />
+        <button
+          onClick={onAdd}
+          disabled={!newVal.trim() || saving}
+          className="px-4 py-2.5 bg-[#001A26] hover:bg-[#4A72B2] text-white rounded-xl text-xs font-black transition-all disabled:opacity-40"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
+      <div className="space-y-2 max-h-64 overflow-y-auto">
+        {loading ? (
+          <p className="text-sm text-slate-400 text-center py-4">Carregando...</p>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-4">Nenhum item cadastrado.</p>
+        ) : items.map(item => (
+          <div key={item.id} className="flex items-center justify-between px-4 py-2.5 bg-slate-50 rounded-xl group">
+            <span className="text-sm text-[#001A26] font-medium">{item.name}</span>
+            <button
+              onClick={() => onRemove(item.id)}
+              className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Painel de Setores e Cargos ──────────────────────────────────────────────
 function ConfigTablesPanel() {
   const [sectors, setSectors]       = useState([]);
@@ -133,48 +178,6 @@ function ConfigTablesPanel() {
     setList(prev => prev.filter(i => i.id !== id));
   };
 
-  const ListCard = ({ title, items, type, newVal, setNew, setList }) => (
-    <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="font-black text-[#001A26] text-sm">{title}</p>
-        <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-full">{items.length} itens</span>
-      </div>
-      <div className="flex gap-2">
-        <input
-          value={newVal}
-          onChange={e => setNew(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && addItem(type, newVal, setList, setNew)}
-          placeholder={`Novo ${title.toLowerCase()}...`}
-          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2]"
-        />
-        <button
-          onClick={() => addItem(type, newVal, setList, setNew)}
-          disabled={!newVal.trim() || saving}
-          className="px-4 py-2.5 bg-[#001A26] hover:bg-[#4A72B2] text-white rounded-xl text-xs font-black transition-all disabled:opacity-40"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
-      <div className="space-y-2 max-h-64 overflow-y-auto">
-        {loading ? (
-          <p className="text-sm text-slate-400 text-center py-4">Carregando...</p>
-        ) : items.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-4">Nenhum item cadastrado.</p>
-        ) : items.map(item => (
-          <div key={item.id} className="flex items-center justify-between px-4 py-2.5 bg-slate-50 rounded-xl group">
-            <span className="text-sm text-[#001A26] font-medium">{item.name}</span>
-            <button
-              onClick={() => removeItem(type, item.id, setList)}
-              className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
       <div>
@@ -185,14 +188,24 @@ function ConfigTablesPanel() {
       </div>
       <div className="grid grid-cols-2 gap-6">
         <ListCard
-          title="Setores" type="sectors"
-          items={sectors} setList={setSectors}
-          newVal={newSector} setNew={setNewSector}
+          title="Setores"
+          items={sectors}
+          newVal={newSector}
+          setNew={setNewSector}
+          onAdd={() => addItem('sectors', newSector, setSectors, setNewSector)}
+          onRemove={(id) => removeItem('sectors', id, setSectors)}
+          loading={loading}
+          saving={saving}
         />
         <ListCard
-          title="Cargos" type="job_titles"
-          items={jobTitles} setList={setJobTitles}
-          newVal={newJob} setNew={setNewJob}
+          title="Cargos"
+          items={jobTitles}
+          newVal={newJob}
+          setNew={setNewJob}
+          onAdd={() => addItem('job_titles', newJob, setJobTitles, setNewJob)}
+          onRemove={(id) => removeItem('job_titles', id, setJobTitles)}
+          loading={loading}
+          saving={saving}
         />
       </div>
     </div>
