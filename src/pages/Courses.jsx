@@ -77,7 +77,7 @@ export default function Courses() {
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters]   = useState({ area: null, nivel: null, formato: null });
+  const [filters, setFilters]   = useState({ area: null, nivel: null, formato: null, instructor: null });
   const [favorites, setFavorites] = useState([]);
   const [modal, setModal]       = useState(null);
 
@@ -134,22 +134,24 @@ export default function Courses() {
   const handleSearch = () => setSearchQuery(search.trim().toLowerCase());
   const toggleFav    = (id) => setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
 
-  const hasActiveFilters = Object.values(filters).some(v => v !== null) || searchQuery;
+  const hasActiveFilters = Object.values(filters).some(v => v !== null) || !!searchQuery;
 
   const filteredCourses = courses.filter(c => {
     if (searchQuery && !c.title.toLowerCase().includes(searchQuery) && !(c.category || '').toLowerCase().includes(searchQuery)) return false;
-    if (filters.area    && c.category !== filters.area)    return false;
-    if (filters.nivel   && c.level    !== filters.nivel)   return false;
-    if (filters.formato && c.format   !== filters.formato) return false;
+    if (filters.area       && c.category !== filters.area)       return false;
+    if (filters.nivel      && c.level    !== filters.nivel)      return false;
+    if (filters.formato    && c.format   !== filters.formato)    return false;
+    if (filters.instructor && (c.instructor_name || c.instructor) !== filters.instructor) return false;
     return true;
   });
 
   const favoriteCourses = courses.filter(c => favorites.includes(c.id));
 
   const filterOpts = {
-    area:    [...new Set(courses.map(c => c.category).filter(Boolean))],
-    nivel:   [...new Set(courses.map(c => c.level).filter(Boolean))],
-    formato: [...new Set(courses.map(c => c.format).filter(Boolean))],
+    area:       [...new Set(courses.map(c => c.category).filter(Boolean))],
+    nivel:      [...new Set(courses.map(c => c.level).filter(Boolean))],
+    formato:    [...new Set(courses.map(c => c.format).filter(Boolean))],
+    instructor: [...new Set(courses.map(c => c.instructor_name || c.instructor).filter(Boolean))],
   };
 
   return (
@@ -160,22 +162,35 @@ export default function Courses() {
       )}
 
       {/* ── HERO ── */}
-      <section className="bg-[#001A26] rounded-[40px] px-12 py-16 flex justify-between items-center gap-8 shadow-sm">
-        <div className="space-y-5 max-w-xl">
-          <span className="inline-block bg-[#4A72B2]/30 text-[#b9d2eb] text-xs font-black px-4 py-2 rounded-full border border-[#4A72B2]/40 uppercase tracking-widest">
-            Universidade Biscoitê
+      <section
+        className="relative rounded-[40px] px-12 py-16 flex justify-between items-center gap-8 shadow-sm overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #001A26 0%, #0a3349 50%, #4A72B2 100%)',
+        }}
+      >
+        {/* Decoração de fundo */}
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #b9d2eb 0%, transparent 60%)' }} />
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-[#4A72B2]/20 -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-1/3 w-32 h-32 rounded-full bg-[#b9d2eb]/10 translate-y-1/2" />
+
+        <div className="relative space-y-5 max-w-xl">
+          <span className="inline-block bg-white/10 text-[#b9d2eb] text-xs font-black px-4 py-2 rounded-full border border-white/20 uppercase tracking-widest backdrop-blur-sm">
+            ✦ Universidade Biscoitê
           </span>
           <h1 className="text-4xl font-black text-white leading-tight">
             Aprenda com quem vive<br />o dia a dia da Biscoitê
           </h1>
-          <p className="text-slate-400 text-sm leading-relaxed">
-            Treinamentos práticos para colaboradores, gestores e franqueados. Do atendimento boutique à gestão de alta performance.
+          <p className="text-white/60 text-sm leading-relaxed">
+            Treinamentos práticos para colaboradores, gestores e franqueados.<br />
+            Do atendimento boutique à gestão de alta performance.
           </p>
         </div>
-        <div className="hidden lg:flex items-center gap-4">
-          <div className="text-center">
-            <p className="text-4xl font-black text-white">{courses.length}</p>
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mt-1">Cursos</p>
+
+        <div className="relative hidden lg:flex flex-col items-center gap-6">
+          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl px-8 py-5 text-center">
+            <p className="text-5xl font-black text-white">{courses.length}</p>
+            <p className="text-white/60 text-xs font-bold uppercase tracking-wider mt-1">Cursos disponíveis</p>
           </div>
         </div>
       </section>
@@ -196,11 +211,12 @@ export default function Courses() {
           </button>
         </div>
         <div className="flex gap-3 flex-wrap">
-          <FilterDropdown label="Área"    options={filterOpts.area}    value={filters.area}    onChange={v => setFilter('area', v)} />
-          <FilterDropdown label="Nível"   options={filterOpts.nivel}   value={filters.nivel}   onChange={v => setFilter('nivel', v)} />
-          <FilterDropdown label="Formato" options={filterOpts.formato} value={filters.formato} onChange={v => setFilter('formato', v)} />
+          <FilterDropdown label="Área"       options={filterOpts.area}       value={filters.area}       onChange={v => setFilter('area', v)} />
+          <FilterDropdown label="Nível"      options={filterOpts.nivel}      value={filters.nivel}      onChange={v => setFilter('nivel', v)} />
+          <FilterDropdown label="Formato"    options={filterOpts.formato}    value={filters.formato}    onChange={v => setFilter('formato', v)} />
+          <FilterDropdown label="Instrutor"  options={filterOpts.instructor} value={filters.instructor} onChange={v => setFilter('instructor', v)} />
           {hasActiveFilters && (
-            <button onClick={() => { setFilters({ area: null, nivel: null, formato: null }); setSearch(''); setSearchQuery(''); }}
+            <button onClick={() => { setFilters({ area: null, nivel: null, formato: null, instructor: null }); setSearch(''); setSearchQuery(''); }}
               className="px-4 py-2 rounded-xl text-xs font-black text-red-400 hover:bg-red-50 flex items-center gap-1 transition-colors">
               <X size={12} /> Limpar filtros
             </button>
