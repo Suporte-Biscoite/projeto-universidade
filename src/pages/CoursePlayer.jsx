@@ -211,7 +211,7 @@ export default function CoursePlayer() {
   );
 
   return (
-    <div className="max-w-[1440px] mx-auto pb-20 px-4">
+    <div className="max-w-[1440px] mx-auto pb-20 px-3 sm:px-4 md:px-6">
 
       {/* TOAST */}
       {toast && (
@@ -226,12 +226,12 @@ export default function CoursePlayer() {
       {/* HEADER */}
       {!isExpanded && (
         <div className="space-y-4 mt-4">
-          <div className="bg-[#b9d2eb] rounded-[32px] p-10 flex justify-between items-start shadow-sm">
+          <div className="bg-[#b9d2eb] rounded-[20px] sm:rounded-[32px] p-5 sm:p-8 md:p-10 flex flex-col sm:flex-row justify-between items-start gap-4 shadow-sm">
             <div className="space-y-3">
               <Link to="/courses" className="flex items-center gap-2 text-slate-600 hover:text-[#001A26] text-sm font-semibold transition-colors">
                 <ChevronLeft size={18} /> Voltar para os cursos
               </Link>
-              <h1 className="text-4xl font-black text-[#001A26]">{course.title}</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#001A26]">{course.title}</h1>
               <div className="flex items-center gap-2 text-slate-600 text-sm font-bold">
                 <Clock size={16} /> {course.duration || '—'}
               </div>
@@ -256,7 +256,7 @@ export default function CoursePlayer() {
       )}
 
       {/* GRID PRINCIPAL */}
-      <div className={`grid gap-8 ${isExpanded ? 'grid-cols-1 mt-4' : 'grid-cols-1 lg:grid-cols-12 mt-8'}`}>
+      <div className={`grid gap-4 sm:gap-6 md:gap-8 ${isExpanded ? 'grid-cols-1 mt-4' : 'grid-cols-1 lg:grid-cols-12 mt-4 sm:mt-6 md:mt-8'}`}>
 
         {/* PLAYER */}
         <div className={`${isExpanded ? 'w-full' : 'lg:col-span-8'} space-y-6`}>
@@ -275,7 +275,7 @@ export default function CoursePlayer() {
             </div>
 
             {/* NAVEGAÇÃO + CONCLUIR */}
-            <div className="flex justify-between items-center mt-4 gap-3">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-3 sm:mt-4 gap-2 sm:gap-3">
               <button onClick={() => prevLesson && selectLesson(prevLesson)}
                 disabled={!prevLesson}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${

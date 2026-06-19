@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react';
-import { authFetch } from '../utils/authFetch';
+import { useState } from 'react';
 import { ChevronRight, Play, Clock, LayoutDashboard, Store, ShoppingBag, BarChart3, Megaphone, Brain, Tent, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CourseCard from '../components/CourseCard';
 import { useProfile } from '../context/ProfileContext';
 
-
+const myCourses = [
+  { id: 1, title: 'Fase 1 - Básico', instructor: 'Karla', progress: 100, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400' },
+  { id: 2, title: 'Operação cafeteria', instructor: 'Karla', progress: 65, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400' },
+  { id: 3, title: 'Páscoa 2026', instructor: 'Karla', progress: 0, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400' },
+  { id: 4, title: 'Atendimento Premium', instructor: 'Marcos', progress: 30, image: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=400' },
+  { id: 5, title: 'Visual Merchandising', instructor: 'Ana', progress: 80, image: 'https://images.unsplash.com/photo-1556740738-b6a63e27c4df?q=80&w=400' },
+];
 
 
 const categories = [
@@ -24,43 +29,7 @@ export default function Home() {
   const { reels: reelsData } = useProfile();
   const [courseIndex, setCourseIndex] = useState(0);
   const [hoveredReel, setHoveredReel] = useState(null);
-  const [myCourses, setMyCourses] = useState([]);
   const coursesPerPage = 3;
-
-  useEffect(() => {
-    const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
-    if (!isAuth) return;
-    const loadCourses = async () => {
-      try {
-        const res = await authFetch('/api/courses');
-        if (!res.ok) return;
-        const data = await res.json();
-        const list = Array.isArray(data) ? data.filter(c => c.published) : [];
-
-        const progressResults = await Promise.all(
-          list.map(c =>
-            authFetch(`/api/progress?courseId=${c.id}`)
-              .then(r => r.ok ? r.json() : { completed: [], count: 0 })
-              .catch(() => ({ completed: [], count: 0 }))
-          )
-        );
-
-        setMyCourses(list.map((c, i) => {
-          const prog  = progressResults[i];
-          const total = (c.modules || []).flatMap(m => m.lessons || []).length;
-          const done  = prog.count || 0;
-          const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
-          return {
-            ...c,
-            image:      c.thumbnail_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400',
-            instructor: c.instructor_name || '—',
-            progress:   pct,
-          };
-        }));
-      } catch {}
-    };
-    loadCourses();
-  }, []);
 
   const maxCourseIndex = Math.max(0, myCourses.length - coursesPerPage);
   const visibleCourses = myCourses.slice(courseIndex, courseIndex + coursesPerPage);
@@ -73,7 +42,7 @@ export default function Home() {
     <div className="max-w-[1200px] mx-auto space-y-20 pb-20">
 
       {/* 1. MEUS CURSOS */}
-      <section className="bg-[#e2eef9] -mx-8 px-8 py-16 rounded-[48px] space-y-8">
+      <section className="bg-[#e2eef9] -mx-4 sm:-mx-8 px-4 sm:px-8 py-10 sm:py-16 rounded-[32px] sm:rounded-[48px] space-y-6 sm:space-y-8">
         <div className="flex justify-between items-center max-w-[1200px] mx-auto">
           <h2 className="text-2xl font-black text-[#001A26]">Meus Cursos</h2>
           <button
@@ -84,15 +53,14 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-[1200px] mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-[1200px] mx-auto">
           {visibleCourses.map((course) => (
             <CourseCard
               key={course.id}
-              id={course.id}
               title={course.title}
-              instructor={course.instructor_name || course.instructor}
+              instructor={course.instructor}
               progress={course.progress}
-              image={course.thumbnail_url || course.image}
+              image={course.image}
             />
           ))}
         </div>
@@ -118,8 +86,8 @@ export default function Home() {
 
       {/* 2. CATEGORIAS */}
       <section className="space-y-10">
-        <h2 className="text-2xl font-black text-[#001A26] text-center md:text-left">Procure seu curso por categorias</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <h2 className="text-xl sm:text-2xl font-black text-[#001A26] text-center sm:text-left">Procure seu curso por categorias</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {categories.map((cat) => (
             <button
               key={cat.name}

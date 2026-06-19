@@ -217,8 +217,8 @@ export default function Login() {
   const isLocked = lockoutRemaining > 0;
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] flex items-center justify-center p-4 lg:p-20">
-      <div className="max-w-6xl w-full grid lg:grid-cols-2 gap-12 items-center bg-white rounded-[40px] overflow-hidden p-4 lg:p-0">
+    <div className="min-h-screen bg-[#FDFDFD] flex items-center justify-center p-4 sm:p-8 lg:p-20">
+      <div className="max-w-6xl w-full grid lg:grid-cols-2 gap-0 items-center bg-white rounded-[32px] sm:rounded-[40px] overflow-hidden">
 
         {/* ── LADO ESQUERDO: IMAGEM ── */}
         <div className="relative h-[600px] hidden lg:block m-6">
@@ -239,12 +239,12 @@ export default function Login() {
         </div>
 
         {/* ── LADO DIREITO: FORMULÁRIO ── */}
-        <div className="lg:pr-20 py-10">
-          <div className="flex flex-col items-center lg:items-start">
-            <img src="/logo-biscoite.svg" alt="Logo Biscoitê" className="h-20 mb-8" />
+        <div className="px-6 py-8 sm:px-8 sm:py-10 lg:pr-20 lg:pl-12">
+          <div className="flex flex-col items-center">
+            <img src="/logo-biscoite.svg" alt="Logo Biscoitê" className="h-14 sm:h-20 mb-6 sm:mb-8" />
 
             {/* Toggle Login / Registrar */}
-            <div className="bg-[#B8C6DA] p-1 rounded-full flex gap-1 mb-10 w-64">
+            <div className="bg-[#B8C6DA] p-1 rounded-full flex gap-1 mb-8 w-full max-w-xs">
               <button
                 type="button"
                 className="flex-1 py-2 text-center text-sm font-bold text-white bg-[#6385B7] rounded-full shadow-md"
