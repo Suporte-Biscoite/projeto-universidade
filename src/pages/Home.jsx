@@ -70,7 +70,7 @@ export default function Home() {
     <div className="max-w-[1200px] mx-auto space-y-16 sm:space-y-20 pb-20">
 
       {/* 0. BANNER HERO */}
-      <section className="-mx-8" style={{ position:'relative', overflow:'hidden', minHeight:'300px', display:'flex', alignItems:'stretch' }}>
+      <section style={{ position:'relative', overflow:'hidden', minHeight:'300px', display:'flex', alignItems:'stretch', borderRadius:'32px', width:'calc(100vw - var(--scrollbar-width, 0px))', marginLeft:'calc(-50vw + 50%)', marginRight:'calc(-50vw + 50%)' }}>
         {/* Fundo */}
         <div style={{ position:'absolute', inset:0, background:'#001A26' }} />
         <div style={{ position:'absolute', right:0, top:0, bottom:0, width:'42%', background:'#0a2d42', clipPath:'polygon(12% 0, 100% 0, 100% 100%, 0% 100%)' }} />
