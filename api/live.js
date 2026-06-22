@@ -34,10 +34,12 @@ export default async function handler(req, res) {
       if (action === 'messages') {
         if (!liveId) return send(res, 400, { error: 'liveId obrigatório' });
         const { rows } = await pool.query(
-          `SELECT id, user_id, user_name, text, created_at
-           FROM live_messages
-           WHERE live_id = $1 ${after ? 'AND created_at > $2' : ''}
-           ORDER BY created_at ASC LIMIT 100`,
+          `SELECT m.id, m.user_id, m.user_name, m.text, m.created_at,
+                  u.avatar_url
+           FROM live_messages m
+           LEFT JOIN users u ON u.id = m.user_id
+           WHERE m.live_id = $1 ${after ? 'AND m.created_at > $2' : ''}
+           ORDER BY m.created_at ASC LIMIT 100`,
           after ? [liveId, after] : [liveId]
         );
         return send(res, 200, rows);
@@ -74,13 +76,17 @@ export default async function handler(req, res) {
 }
 
 async function getLive(res) {
-  const { rows } = await pool.query(
-    `SELECT id, title, is_active, stream_url, started_at
-     FROM live_sessions
-     ORDER BY created_at DESC LIMIT 1`
-  );
-  if (!rows.length) return send(res, 200, { is_active: false });
-  return send(res, 200, rows[0]);
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, title, is_active, stream_url, started_at
+       FROM live_sessions
+       ORDER BY created_at DESC LIMIT 1`
+    );
+    if (!rows.length || !rows[0].is_active) return send(res, 200, { is_active: false });
+    return send(res, 200, rows[0]);
+  } catch (e) {
+    return send(res, 200, { is_active: false });
+  }
 }
 
 async function controlLive(req, res) {
@@ -93,18 +99,31 @@ async function controlLive(req, res) {
   const { title, stream_url } = req.body ?? {};
 
   if (action === 'start') {
-    const { rows } = await pool.query(
-      `UPDATE live_sessions SET
-         is_active  = true,
-         title      = COALESCE($1, title),
-         stream_url = $2,
-         started_by = $3,
-         started_at = now(),
-         ended_at   = null
-       WHERE id = (SELECT id FROM live_sessions ORDER BY created_at DESC LIMIT 1)
-       RETURNING *`,
-      [title || 'Live Biscoitê', stream_url || null, auth.sub]
+    // Verifica se existe alguma sessão
+    const { rows: existing } = await pool.query(
+      'SELECT id FROM live_sessions ORDER BY created_at DESC LIMIT 1'
     );
+
+    let rows;
+    if (existing.length > 0) {
+      // Atualiza a existente
+      const res2 = await pool.query(
+        `UPDATE live_sessions SET
+           is_active = true, title = $1, stream_url = $2,
+           started_by = $3, started_at = now(), ended_at = null
+         WHERE id = $4 RETURNING *`,
+        [title || 'Live Biscoitê', stream_url || null, auth.sub, existing[0].id]
+      );
+      rows = res2.rows;
+    } else {
+      // Cria nova sessão
+      const res2 = await pool.query(
+        `INSERT INTO live_sessions (is_active, title, stream_url, started_by, started_at)
+         VALUES (true, $1, $2, $3, now()) RETURNING *`,
+        [title || 'Live Biscoitê', stream_url || null, auth.sub]
+      );
+      rows = res2.rows;
+    }
     // Notifica todos sobre a live
     await createNotification({
       title: `🔴 Live ao vivo agora: ${title || 'Live Biscoitê'}`,

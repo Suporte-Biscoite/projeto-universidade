@@ -95,6 +95,7 @@ export default function LiveChat() {
           setMessages(prev => {
             const ids = new Set(prev.map(m => m.id));
             const newMsgs = data.filter(m => !ids.has(m.id));
+            if (newMsgs.length === 0) return prev; // sem mudança, sem re-render
             return [...prev, ...newMsgs];
           });
           lastMsgTime.current = data[data.length - 1].created_at;
@@ -107,28 +108,36 @@ export default function LiveChat() {
     return () => clearInterval(pollRef.current);
   }, [live?.id]);
 
-  // Scroll para última mensagem
+  // Scroll para última mensagem apenas quando chegam novas
+  const prevMsgCount = useRef(0);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > prevMsgCount.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      prevMsgCount.current = messages.length;
+    }
   }, [messages]);
 
   const sendMessage = async () => {
     if (!message.trim() || !live?.id || sending) return;
     setSending(true);
-    const tempMsg = {
-      id: `temp-${Date.now()}`,
-      user_name: userData?.name || 'Você',
-      text: message,
-      created_at: new Date().toISOString(),
-      own: true,
-    };
-    setMessages(prev => [...prev, tempMsg]);
+    const text = message.trim();
     setMessage('');
     try {
-      await authFetch('/api/live?action=message', {
+      const res = await authFetch('/api/live?action=message', {
         method: 'POST',
-        body: JSON.stringify({ liveId: live.id, text: tempMsg.text }),
+        body: JSON.stringify({ liveId: live.id, text }),
       });
+      if (res.ok) {
+        const newMsg = await res.json();
+        // Adiciona direto sem esperar o polling
+        setMessages(prev => {
+          if (prev.find(m => m.id === newMsg.id)) return prev;
+          return [...prev, { ...newMsg, own: true }];
+        });
+        if (lastMsgTime.current === null || newMsg.created_at > lastMsgTime.current) {
+          lastMsgTime.current = newMsg.created_at;
+        }
+      }
     } catch {}
     setSending(false);
   };
@@ -223,21 +232,32 @@ export default function LiveChat() {
                 ) : (
                   messages.map((msg) => {
                     const isOwn = msg.own || msg.user_name === userData?.name;
+                    const initials = (msg.user_name || 'U').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
                     return (
-                      <div key={msg.id}>
+                      <div key={msg.id} className={`flex gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                        {/* Avatar */}
                         {!isOwn && (
-                          <p className="text-[10px] text-slate-400 font-bold mb-1 ml-1">{msg.user_name}</p>
+                          <div className="w-7 h-7 rounded-full bg-[#4A72B2] flex items-center justify-center text-white text-[9px] font-black flex-shrink-0 mt-1 overflow-hidden">
+                            {msg.avatar_url
+                              ? <img src={msg.avatar_url} className="w-full h-full object-cover" alt={msg.user_name} />
+                              : initials}
+                          </div>
                         )}
-                        <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed font-medium max-w-[88%] ${
-                          isOwn
-                            ? 'bg-[#4A72B2] text-white ml-auto rounded-tr-none'
-                            : 'bg-slate-100 text-slate-600 rounded-tl-none'
-                        }`}>
-                          {msg.text}
+                        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                          {!isOwn && (
+                            <p className="text-[10px] text-slate-400 font-bold mb-0.5 ml-1">{msg.user_name}</p>
+                          )}
+                          <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed font-medium ${
+                            isOwn
+                              ? 'bg-[#4A72B2] text-white rounded-tr-none'
+                              : 'bg-slate-100 text-slate-600 rounded-tl-none'
+                          }`}>
+                            {msg.text}
+                          </div>
+                          <p className="text-[9px] text-slate-300 mt-0.5 mx-1">
+                            {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
                         </div>
-                        <p className={`text-[9px] text-slate-300 mt-0.5 ${isOwn ? 'text-right' : ''}`}>
-                          {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
                       </div>
                     );
                   })
