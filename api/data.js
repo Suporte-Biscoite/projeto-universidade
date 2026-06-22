@@ -190,6 +190,39 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── CERTIFICATES ──────────────────────────────────────────────────────────
+    // GET /api/data?resource=certificates          — lista do usuário
+    // GET /api/data?resource=certificates&id=uuid  — busca por ID (público)
+    if (resource === 'certificates') {
+      if (req.method === 'GET') {
+        // Busca por ID — validação pública sem auth
+        if (id) {
+          const { rows } = await pool.query(
+            `SELECT c.id, c.user_name, c.course_title, c.issued_at,
+                    u.avatar_url
+             FROM certificates c
+             JOIN users u ON u.id = c.user_id
+             WHERE c.id = $1`,
+            [id]
+          );
+          if (!rows.length) return send(res, 404, { error: 'Certificado não encontrado' });
+          return send(res, 200, rows[0]);
+        }
+        // Lista do usuário logado
+        if (!auth) return send(res, 401, { error: 'Não autorizado' });
+        const { rows } = await pool.query(
+          `SELECT c.id, c.course_id, c.user_name, c.course_title, c.issued_at,
+                  co.thumbnail_url, co.category, co.level, co.duration
+           FROM certificates c
+           LEFT JOIN courses co ON co.id = c.course_id
+           WHERE c.user_id = $1
+           ORDER BY c.issued_at DESC`,
+          [auth.sub]
+        );
+        return send(res, 200, rows);
+      }
+    }
+
     return send(res, 400, { error: 'resource inválido' });
   } catch (err) {
     console.error('[data]', err);
