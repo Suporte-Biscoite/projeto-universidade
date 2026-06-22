@@ -72,12 +72,6 @@ export default async function handler(req, res) {
     return send(res, 500, { error: err.message });
   }
 }
-    return send(res, 405, { error: 'Método não permitido' });
-  } catch (err) {
-    console.error('[live]', err);
-    return send(res, 500, { error: err.message });
-  }
-}
 
 async function getLive(res) {
   const { rows } = await pool.query(
