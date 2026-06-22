@@ -70,7 +70,7 @@ export default function Home() {
     <div className="max-w-[1200px] mx-auto space-y-16 sm:space-y-20 pb-20">
 
       {/* 0. BANNER HERO */}
-      <section style={{ position:'relative', borderRadius:'32px', overflow:'hidden', minHeight:'300px', display:'flex', alignItems:'stretch' }}>
+      <section className="-mx-8" style={{ position:'relative', overflow:'hidden', minHeight:'300px', display:'flex', alignItems:'stretch' }}>
         {/* Fundo */}
         <div style={{ position:'absolute', inset:0, background:'#001A26' }} />
         <div style={{ position:'absolute', right:0, top:0, bottom:0, width:'42%', background:'#0a2d42', clipPath:'polygon(12% 0, 100% 0, 100% 100%, 0% 100%)' }} />
@@ -91,7 +91,7 @@ export default function Home() {
         <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:'linear-gradient(90deg,#4A72B2 0%,#b9d2eb 50%,transparent 100%)' }} />
 
         {/* Conteúdo */}
-        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'32px', padding:'48px 52px', width:'100%', flexWrap:'wrap' }}>
+        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'24px', padding:'40px 32px', width:'100%', flexWrap:'wrap' }} className="sm:!p-12">
 
           {/* Esquerda */}
           <div style={{ flex:1, maxWidth:'560px', minWidth:'260px' }}>
