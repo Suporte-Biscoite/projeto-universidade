@@ -57,7 +57,7 @@ function StreamPlayer({ streamUrl, title }) {
 
 // ─── LiveChat ─────────────────────────────────────────────────────────────────
 export default function LiveChat() {
-  const { userData } = useProfile();
+  const { userData, profileImage } = useProfile();
 
   const [live, setLive]           = useState(null);
   const [loadingLive, setLoadingLive] = useState(true);
@@ -67,6 +67,7 @@ export default function LiveChat() {
   const [chatOpen, setChatOpen]   = useState(true);
   const lastMsgTime               = useRef(null);
   const messagesEndRef            = useRef(null);
+  const messagesContainerRef      = useRef(null);
   const pollRef                   = useRef(null);
 
   // Busca live ativa
@@ -112,8 +113,11 @@ export default function LiveChat() {
   const prevMsgCount = useRef(0);
   useEffect(() => {
     if (messages.length > prevMsgCount.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       prevMsgCount.current = messages.length;
+      // Scroll só dentro do container do chat, não da página inteira
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
     }
   }, [messages]);
 
@@ -223,7 +227,7 @@ export default function LiveChat() {
               </div>
 
               {/* Mensagens */}
-              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3">
+              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-2 py-8">
                     <MessageCircle size={28} />
@@ -234,19 +238,22 @@ export default function LiveChat() {
                     const isOwn = msg.own || msg.user_name === userData?.name;
                     const initials = (msg.user_name || 'U').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
                     return (
-                      <div key={msg.id} className={`flex gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div key={msg.id} className={`flex gap-2 items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
                         {/* Avatar */}
-                        {!isOwn && (
-                          <div className="w-7 h-7 rounded-full bg-[#4A72B2] flex items-center justify-center text-white text-[9px] font-black flex-shrink-0 mt-1 overflow-hidden">
-                            {msg.avatar_url
-                              ? <img src={msg.avatar_url} className="w-full h-full object-cover" alt={msg.user_name} />
-                              : initials}
-                          </div>
-                        )}
-                        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[80%]`}>
-                          {!isOwn && (
-                            <p className="text-[10px] text-slate-400 font-bold mb-0.5 ml-1">{msg.user_name}</p>
-                          )}
+                        <div className="w-7 h-7 rounded-full bg-[#4A72B2] flex items-center justify-center text-white text-[9px] font-black flex-shrink-0 overflow-hidden">
+                          {isOwn
+                            ? (profileImage
+                                ? <img src={profileImage} className="w-full h-full object-cover" alt={userData?.name} />
+                                : <span>{(userData?.name || 'U').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()}</span>)
+                            : (msg.avatar_url
+                                ? <img src={msg.avatar_url} className="w-full h-full object-cover" alt={msg.user_name} />
+                                : <span>{initials}</span>)
+                          }
+                        </div>
+                        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                          <p className={`text-[10px] font-bold mb-0.5 ${isOwn ? 'text-slate-300 mr-1' : 'text-slate-400 ml-1'}`}>
+                            {isOwn ? 'Você' : msg.user_name}
+                          </p>
                           <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed font-medium ${
                             isOwn
                               ? 'bg-[#4A72B2] text-white rounded-tr-none'
@@ -262,7 +269,7 @@ export default function LiveChat() {
                     );
                   })
                 )}
-                <div ref={messagesEndRef} />
+
               </div>
 
               {/* Input */}
