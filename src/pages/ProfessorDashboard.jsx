@@ -2235,7 +2235,7 @@ function ReelsView() {
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 w-full max-w-[900px]">
+    <div className="space-y-6 sm:space-y-8 w-full">
 
       {/* Header */}
       <div className="flex items-center justify-between">
