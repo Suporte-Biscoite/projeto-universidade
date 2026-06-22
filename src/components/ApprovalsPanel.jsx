@@ -35,7 +35,7 @@ export default function ApprovalsPanel() {
   const fetchPending = async () => {
     try {
       setLoading(true);
-      const res = await authFetch('/api/approvals');
+      const res = await authFetch('/api/users?action=approvals');
       const data = await res.json();
       if (res.ok) setPending(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -50,7 +50,7 @@ export default function ApprovalsPanel() {
   const handleApprove = async (user) => {
     setActing(user.id);
     try {
-      const res = await authFetch(`/api/approvals?action=approve&id=${user.id}`, {
+      const res = await authFetch(`/api/users?action=approve&id=${user.id}`, {
         method: 'POST',
       });
       if (res.ok) {
@@ -66,7 +66,7 @@ export default function ApprovalsPanel() {
     if (!rejectModal) return;
     setActing(rejectModal.id);
     try {
-      const res = await authFetch(`/api/approvals?action=reject&id=${rejectModal.id}`, {
+      const res = await authFetch(`/api/users?action=reject&id=${rejectModal.id}`, {
         method: 'POST',
         body: JSON.stringify({ reason: rejectReason || 'Cadastro não autorizado.' }),
       });

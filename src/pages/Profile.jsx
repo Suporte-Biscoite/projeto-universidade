@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useProfile, DEFAULT_COURSE_IMAGES, CURRENT_INSTRUCTOR_ID } from '../context/ProfileContext';
 import { useNavigate } from 'react-router-dom';
+import { LOJAS_PROPRIAS, LOJAS_FRANQUIA } from '../utils/stores';
 
 
 
@@ -413,7 +414,7 @@ export default function Profile() {
     const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
     // Cargos
-    fetch('/api/config?type=job_titles', { headers })
+    fetch('/api/data?resource=job_titles', { headers })
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (Array.isArray(data)) setJobTitles(data); })
       .catch(() => {});

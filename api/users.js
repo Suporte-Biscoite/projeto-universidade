@@ -8,6 +8,7 @@
 import pool from './db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { createNotification } from './data.js';
 
 function authenticate(req) {
   const header = req.headers.authorization;
@@ -166,7 +167,6 @@ async function deleteUser(req, res, auth, id) {
 // POST   /api/users?action=approve&id=uuid   — aprova
 // POST   /api/users?action=reject&id=uuid    — rejeita
 
-import { createNotification } from './data.js';
 
 const FRONTEND_URL = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
