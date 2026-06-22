@@ -36,6 +36,7 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const notifCloseTimer = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -215,7 +216,17 @@ export default function Navbar() {
           {/* NOTIFICATIONS */}
           <div className="relative">
             <button
-              onClick={() => { setIsNotifOpen(!isNotifOpen); setIsSearchOpen(false); setIsOpen(false); }}
+              onClick={() => {
+                const opening = !isNotifOpen;
+                setIsNotifOpen(opening);
+                setIsSearchOpen(false);
+                setIsOpen(false);
+                // Auto-fecha após 8s
+                if (opening) {
+                  if (notifCloseTimer.current) clearTimeout(notifCloseTimer.current);
+                  notifCloseTimer.current = setTimeout(() => setIsNotifOpen(false), 8000);
+                }
+              }}
               className={`relative p-2 rounded-xl transition-all ${isNotifOpen ? 'bg-[#e2eef9] text-[#4A72B2]' : 'text-slate-400 hover:text-[#00263B] hover:bg-slate-50'}`}
             >
               <Bell size={20} />
@@ -225,7 +236,12 @@ export default function Navbar() {
             </button>
             {isNotifOpen && (
               <>
-                <div className="fixed inset-0 z-[-1]" onClick={() => setIsNotifOpen(false)} />
+                <div className="fixed inset-0 z-[-1]" onClick={() => {
+                  setIsNotifOpen(false);
+                  if (notifCloseTimer.current) clearTimeout(notifCloseTimer.current);
+                  // Marca todas como lidas ao fechar
+                  if (unreadCount > 0) markAllRead();
+                }} />
                 <div className="absolute right-0 top-14 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
                   <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
                     <div className="flex items-center gap-2">

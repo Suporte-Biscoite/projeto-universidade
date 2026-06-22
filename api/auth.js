@@ -113,7 +113,7 @@ async function login(req, res) {
   );
 
   const destinations = {
-    admin:     '/admin',
+    admin:     '/',
     professor: '/professor',
     gestor:    '/gestor',
     aluno:     '/',
