@@ -198,10 +198,13 @@ export default async function handler(req, res) {
         // Busca por ID — validação pública sem auth
         if (id) {
           const { rows } = await pool.query(
-            `SELECT c.id, c.user_name, c.course_title, c.issued_at,
+            `SELECT c.id, c.issued_at,
+                    COALESCE(NULLIF(c.user_name,''), u.name, 'Colaborador') as user_name,
+                    COALESCE(NULLIF(c.course_title,''), co.title, 'Curso') as course_title,
                     u.avatar_url
              FROM certificates c
              JOIN users u ON u.id = c.user_id
+             LEFT JOIN courses co ON co.id = c.course_id
              WHERE c.id = $1`,
             [id]
           );
@@ -211,10 +214,13 @@ export default async function handler(req, res) {
         // Lista do usuário logado
         if (!auth) return send(res, 401, { error: 'Não autorizado' });
         const { rows } = await pool.query(
-          `SELECT c.id, c.course_id, c.user_name, c.course_title, c.issued_at,
+          `SELECT c.id, c.course_id, c.issued_at,
+                  COALESCE(NULLIF(c.user_name,''), u.name, 'Colaborador') as user_name,
+                  COALESCE(NULLIF(c.course_title,''), co.title, 'Curso') as course_title,
                   co.thumbnail_url, co.category, co.level, co.duration
            FROM certificates c
            LEFT JOIN courses co ON co.id = c.course_id
+           LEFT JOIN users u ON u.id = c.user_id
            WHERE c.user_id = $1
            ORDER BY c.issued_at DESC`,
           [auth.sub]
