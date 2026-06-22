@@ -43,12 +43,11 @@ export default async function handler(req, res) {
       if (req.method === 'GET') {
         const { rows } = await pool.query(
           `SELECT id, title, description, type, read, link, created_at
-           FROM notifications WHERE user_id = $1
+           FROM notifications WHERE user_id = $1 AND read = false
            ORDER BY created_at DESC LIMIT 30`,
           [auth.sub]
         );
-        const unread = rows.filter(n => !n.read).length;
-        return send(res, 200, { notifications: rows, unread });
+        return send(res, 200, { notifications: rows, unread: rows.length });
       }
 
       if (req.method === 'POST') {
@@ -61,6 +60,14 @@ export default async function handler(req, res) {
         }
         if (action === 'read-all') {
           await pool.query('UPDATE notifications SET read = true WHERE user_id = $1', [auth.sub]);
+          return send(res, 200, { ok: true });
+        }
+        if (action === 'delete' && id) {
+          await pool.query('DELETE FROM notifications WHERE id = $1 AND user_id = $2', [id, auth.sub]);
+          return send(res, 200, { ok: true });
+        }
+        if (action === 'delete-all') {
+          await pool.query('DELETE FROM notifications WHERE user_id = $1', [auth.sub]);
           return send(res, 200, { ok: true });
         }
         if (action === 'create') {

@@ -101,11 +101,21 @@ export default function Navbar() {
   };
 
   const markAllRead = async () => {
+    setNotifications([]);
     setUnreadCount(0);
-    // Remove notificações lidas da lista após marcar
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setTimeout(() => setNotifications([]), 300); // limpa lista após animação
     try { await authFetch('/api/data?resource=notifications&action=read-all', { method: 'POST' }); } catch {}
+  };
+
+  const deleteNotif = async (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    try { await authFetch(`/api/data?resource=notifications&action=delete&id=${id}`, { method: 'POST' }); } catch {}
+  };
+
+  const deleteAllNotifs = async () => {
+    setNotifications([]);
+    setUnreadCount(0);
+    try { await authFetch('/api/data?resource=notifications&action=delete-all', { method: 'POST' }); } catch {}
   };
 
   useEffect(() => {
@@ -241,8 +251,6 @@ export default function Navbar() {
                 <div className="fixed inset-0 z-[-1]" onClick={() => {
                   setIsNotifOpen(false);
                   if (notifCloseTimer.current) clearTimeout(notifCloseTimer.current);
-                  // Marca todas como lidas ao fechar
-                  if (unreadCount > 0) markAllRead();
                 }} />
                 <div className="absolute right-0 top-14 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
                   <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
@@ -252,9 +260,14 @@ export default function Navbar() {
                         <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
                       )}
                     </div>
-                    {unreadCount > 0 && (
-                      <button onClick={markAllRead} className="text-[10px] font-bold text-[#4A72B2] hover:underline">Marcar todas como lidas</button>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {unreadCount > 0 && (
+                        <button onClick={markAllRead} className="text-[10px] font-bold text-[#4A72B2] hover:underline">Marcar lidas</button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button onClick={deleteAllNotifs} className="text-[10px] font-bold text-red-400 hover:underline">Excluir todas</button>
+                      )}
+                    </div>
                   </div>
                   <div className="divide-y divide-slate-50 max-h-80 overflow-y-auto">
                     {notifications.length === 0 && (
@@ -266,22 +279,26 @@ export default function Navbar() {
                     {notifications.map(notif => (
                       <div
                         key={notif.id}
-                        className={`flex gap-3 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.read ? 'bg-blue-50/40' : ''}`}
-                        onClick={async () => {
-          setNotifications(prev => prev.filter(n => n.id !== notif.id));
-          setUnreadCount(prev => Math.max(0, prev - 1));
-          try { await authFetch(`/api/data?resource=notifications&action=read&id=${notif.id}`, { method: 'POST' }); } catch {}
-          setIsNotifOpen(false);
-          if (notif.link) navigate(notif.link);
-        }}
+                        className="flex gap-3 px-5 py-4 hover:bg-slate-50 transition-colors group bg-blue-50/40"
                       >
                         <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${TYPE_COLOR[notif.type] || TYPE_COLOR.info}`}></div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm leading-tight ${!notif.read ? 'font-bold text-[#001A26]' : 'font-medium text-slate-600'}`}>{notif.title}</p>
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={async () => {
+                          setNotifications(prev => prev.filter(n => n.id !== notif.id));
+                          setUnreadCount(prev => Math.max(0, prev - 1));
+                          try { await authFetch(`/api/data?resource=notifications&action=read&id=${notif.id}`, { method: 'POST' }); } catch {}
+                          setIsNotifOpen(false);
+                          if (notif.link) navigate(notif.link);
+                        }}>
+                          <p className="text-sm leading-tight font-bold text-[#001A26]">{notif.title}</p>
                           <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{notif.description}</p>
-                          <p className="text-[10px] text-slate-300 mt-1">{notif.time}</p>
                         </div>
-                        {!notif.read && <div className="w-1.5 h-1.5 bg-[#4A72B2] rounded-full mt-2 shrink-0"></div>}
+                        <button
+                          onClick={() => deleteNotif(notif.id)}
+                          className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all flex-shrink-0 mt-1"
+                          title="Excluir notificação"
+                        >
+                          <X size={13} />
+                        </button>
                       </div>
                     ))}
                   </div>
