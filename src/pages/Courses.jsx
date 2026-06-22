@@ -189,7 +189,11 @@ export default function Courses() {
 
         <div className="relative hidden lg:flex flex-col items-center gap-6">
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl px-8 py-5 text-center">
-            <p className="text-5xl font-black text-white">{courses.length}</p>
+            {loading ? (
+              <div className="w-16 h-12 bg-white/20 rounded-xl animate-pulse mx-auto" />
+            ) : (
+              <p className="text-5xl font-black text-white">{courses.length}</p>
+            )}
             <p className="text-white/60 text-xs font-bold uppercase tracking-wider mt-1">Cursos disponíveis</p>
           </div>
         </div>
