@@ -150,7 +150,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 1. MEUS CURSOS */}}
+      {/* 1. MEUS CURSOS */}
       <section className="bg-[#e2eef9] -mx-4 sm:-mx-8 px-4 sm:px-8 py-10 sm:py-16 rounded-[32px] sm:rounded-[48px] space-y-6 sm:space-y-8">
         <div className="flex justify-between items-center">
           <h2 className="text-xl sm:text-2xl font-black text-[#001A26]">Meus Cursos</h2>
