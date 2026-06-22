@@ -58,6 +58,13 @@ function StreamPlayer({ streamUrl, title }) {
 // ─── LiveChat ─────────────────────────────────────────────────────────────────
 export default function LiveChat() {
   const { userData, profileImage } = useProfile();
+  // ID do usuário logado para identificar mensagens próprias
+  const loggedUserId = (() => {
+    try {
+      const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+      return raw ? JSON.parse(raw)?.id : null;
+    } catch { return null; }
+  })();
 
   const [live, setLive]           = useState(null);
   const [loadingLive, setLoadingLive] = useState(true);
@@ -75,7 +82,12 @@ export default function LiveChat() {
     authFetch('/api/live')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data?.is_active) setLive(data);
+        if (data?.is_active) {
+          setLive(data);
+          // Inicia lastMsgTime com o started_at da live para não pegar msgs antigas
+          lastMsgTime.current = null;
+          setMessages([]);
+        }
       })
       .finally(() => setLoadingLive(false));
   }, []);
@@ -86,9 +98,9 @@ export default function LiveChat() {
 
     const fetchMessages = async () => {
       try {
-        const url = lastMsgTime.current
-          ? `/api/live?action=messages&liveId=${live.id}&after=${encodeURIComponent(lastMsgTime.current)}`
-          : `/api/live?action=messages&liveId=${live.id}`;
+        // Usa started_at como after inicial para ignorar msgs de lives anteriores
+        const after = lastMsgTime.current || live.started_at;
+        const url = `/api/live?action=messages&liveId=${live.id}&after=${encodeURIComponent(after)}`;
         const res = await authFetch(url);
         if (!res.ok) return;
         const data = await res.json();
@@ -133,10 +145,10 @@ export default function LiveChat() {
       });
       if (res.ok) {
         const newMsg = await res.json();
-        // Adiciona direto sem esperar o polling
+        // Adiciona direto com user_id para isOwn funcionar corretamente
         setMessages(prev => {
           if (prev.find(m => m.id === newMsg.id)) return prev;
-          return [...prev, { ...newMsg, own: true }];
+          return [...prev, { ...newMsg, own: true, user_id: loggedUserId }];
         });
         if (lastMsgTime.current === null || newMsg.created_at > lastMsgTime.current) {
           lastMsgTime.current = newMsg.created_at;
@@ -235,7 +247,7 @@ export default function LiveChat() {
                   </div>
                 ) : (
                   messages.map((msg) => {
-                    const isOwn = msg.own || msg.user_name === userData?.name;
+                    const isOwn = msg.own || (loggedUserId && msg.user_id === loggedUserId);
                     const initials = (msg.user_name || 'U').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
                     return (
                       <div key={msg.id} className={`flex gap-2 items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
