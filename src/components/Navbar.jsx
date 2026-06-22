@@ -260,14 +260,9 @@ export default function Navbar() {
                         <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
-                      {unreadCount > 0 && (
-                        <button onClick={markAllRead} className="text-[10px] font-bold text-[#4A72B2] hover:underline">Marcar lidas</button>
-                      )}
-                      {notifications.length > 0 && (
-                        <button onClick={deleteAllNotifs} className="text-[10px] font-bold text-red-400 hover:underline">Excluir todas</button>
-                      )}
-                    </div>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-[10px] font-bold text-[#4A72B2] hover:underline">Marcar todas como lidas</button>
+                    )}
                   </div>
                   <div className="divide-y divide-slate-50 max-h-80 overflow-y-auto">
                     {notifications.length === 0 && (
@@ -293,9 +288,13 @@ export default function Navbar() {
                           <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{notif.description}</p>
                         </div>
                         <button
-                          onClick={() => deleteNotif(notif.id)}
-                          className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all flex-shrink-0 mt-1"
-                          title="Excluir notificação"
+                          onClick={async () => {
+                            setNotifications(prev => prev.filter(n => n.id !== notif.id));
+                            setUnreadCount(prev => Math.max(0, prev - 1));
+                            try { await authFetch(`/api/data?resource=notifications&action=read&id=${notif.id}`, { method: 'POST' }); } catch {}
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-slate-500 transition-all flex-shrink-0 mt-1"
+                          title="Fechar notificação"
                         >
                           <X size={13} />
                         </button>
