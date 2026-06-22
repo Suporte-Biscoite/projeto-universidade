@@ -101,8 +101,10 @@ export default function Navbar() {
   };
 
   const markAllRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     setUnreadCount(0);
+    // Remove notificações lidas da lista após marcar
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setTimeout(() => setNotifications([]), 300); // limpa lista após animação
     try { await authFetch('/api/data?resource=notifications&action=read-all', { method: 'POST' }); } catch {}
   };
 
@@ -266,9 +268,10 @@ export default function Navbar() {
                         key={notif.id}
                         className={`flex gap-3 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.read ? 'bg-blue-50/40' : ''}`}
                         onClick={async () => {
-          setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+          setNotifications(prev => prev.filter(n => n.id !== notif.id));
           setUnreadCount(prev => Math.max(0, prev - 1));
           try { await authFetch(`/api/data?resource=notifications&action=read&id=${notif.id}`, { method: 'POST' }); } catch {}
+          setIsNotifOpen(false);
           if (notif.link) navigate(notif.link);
         }}
                       >
