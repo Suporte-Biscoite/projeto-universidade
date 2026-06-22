@@ -1,189 +1,263 @@
-import { useState, useRef } from 'react';
-import { Send, Mic, Video, Monitor, Hand, PhoneOff, Settings, X, ChevronLeft, MessageCircle, Menu, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send, X, ChevronLeft, MessageCircle, Radio, Loader, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { authFetch } from '../utils/authFetch';
+import { useProfile } from '../context/ProfileContext';
 
-const MESSAGES = [
-  { id: 1, time: '11:20', text: 'Olá, tenho uma dúvida sobre a gestão de funcionários durante o processo?', own: false },
-  { id: 2, time: '11:20', text: 'Olá, tenho uma dúvida sobre a gestão de funcionários durante o processo?', own: false },
-  { id: 3, time: '11:20', text: 'Olá, tenho uma dúvida sobre a gestão de funcionários durante o processo?', own: true },
-  { id: 4, time: '11:20', text: 'Olá, tenho uma dúvida sobre a gestão de funcionários durante o processo?', own: false },
-  { id: 5, time: '11:20', text: 'Olá, tenho uma dúvida sobre a gestão de funcionários durante o processo?', own: false },
-];
+// ─── Detecta tipo de stream e renderiza player correto ───────────────────────
+function StreamPlayer({ streamUrl, title }) {
+  if (!streamUrl) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-white/40">
+        <Radio size={48} />
+        <p className="font-bold text-sm">Aguardando stream...</p>
+        <p className="text-xs">O professor ainda não configurou a URL do stream.</p>
+      </div>
+    );
+  }
 
-const PARTICIPANTS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200',
-  'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=200',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200',
-];
+  // Vimeo
+  const vimeoMatch = streamUrl.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vimeoMatch) {
+    return (
+      <iframe
+        src={`https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&title=0&byline=0`}
+        className="absolute inset-0 w-full h-full"
+        allow="autoplay; fullscreen; picture-in-picture"
+        title={title}
+      />
+    );
+  }
 
+  // YouTube
+  const ytMatch = streamUrl.match(/(?:youtube\.com\/(?:watch\?v=|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) {
+    return (
+      <iframe
+        src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`}
+        className="absolute inset-0 w-full h-full"
+        allow="autoplay; fullscreen"
+        title={title}
+      />
+    );
+  }
+
+  // URL genérica (Google Meet, Zoom, etc) — abre em nova aba
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-white/60">
+      <Radio size={48} className="text-red-400 animate-pulse" />
+      <p className="font-bold text-sm text-white">Live em andamento</p>
+      <a href={streamUrl} target="_blank" rel="noreferrer"
+        className="px-6 py-3 bg-[#4A72B2] text-white rounded-xl font-bold text-sm hover:bg-white hover:text-[#001A26] transition-colors">
+        Acessar stream externo ↗
+      </a>
+    </div>
+  );
+}
+
+// ─── LiveChat ─────────────────────────────────────────────────────────────────
 export default function LiveChat() {
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState(MESSAGES);
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
-  const [chatOpen, setChatOpen] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { userData } = useProfile();
 
-  const sendMessage = () => {
-    if (!message.trim()) return;
-    setMessages(prev => [...prev, {
-      id: Date.now(),
-      time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+  const [live, setLive]           = useState(null);
+  const [loadingLive, setLoadingLive] = useState(true);
+  const [messages, setMessages]   = useState([]);
+  const [message, setMessage]     = useState('');
+  const [sending, setSending]     = useState(false);
+  const [chatOpen, setChatOpen]   = useState(true);
+  const lastMsgTime               = useRef(null);
+  const messagesEndRef            = useRef(null);
+  const pollRef                   = useRef(null);
+
+  // Busca live ativa
+  useEffect(() => {
+    authFetch('/api/live')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.is_active) setLive(data);
+      })
+      .finally(() => setLoadingLive(false));
+  }, []);
+
+  // Busca mensagens e faz polling a cada 5s
+  useEffect(() => {
+    if (!live?.id) return;
+
+    const fetchMessages = async () => {
+      try {
+        const url = lastMsgTime.current
+          ? `/api/live?action=messages&liveId=${live.id}&after=${encodeURIComponent(lastMsgTime.current)}`
+          : `/api/live?action=messages&liveId=${live.id}`;
+        const res = await authFetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.length > 0) {
+          setMessages(prev => {
+            const ids = new Set(prev.map(m => m.id));
+            const newMsgs = data.filter(m => !ids.has(m.id));
+            return [...prev, ...newMsgs];
+          });
+          lastMsgTime.current = data[data.length - 1].created_at;
+        }
+      } catch {}
+    };
+
+    fetchMessages();
+    pollRef.current = setInterval(fetchMessages, 5000);
+    return () => clearInterval(pollRef.current);
+  }, [live?.id]);
+
+  // Scroll para última mensagem
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!message.trim() || !live?.id || sending) return;
+    setSending(true);
+    const tempMsg = {
+      id: `temp-${Date.now()}`,
+      user_name: userData?.name || 'Você',
       text: message,
+      created_at: new Date().toISOString(),
       own: true,
-    }]);
+    };
+    setMessages(prev => [...prev, tempMsg]);
     setMessage('');
+    try {
+      await authFetch('/api/live?action=message', {
+        method: 'POST',
+        body: JSON.stringify({ liveId: live.id, text: tempMsg.text }),
+      });
+    } catch {}
+    setSending(false);
   };
 
+  // Loading
+  if (loadingLive) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader size={32} className="animate-spin text-[#4A72B2]" />
+    </div>
+  );
+
+  // Sem live ativa
+  if (!live) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4 max-w-sm">
+        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+          <Radio size={28} className="text-slate-300" />
+        </div>
+        <h2 className="text-xl font-black text-[#001A26]">Nenhuma live ativa</h2>
+        <p className="text-sm text-slate-400">Quando uma live for iniciada, ela aparecerá aqui automaticamente.</p>
+        <Link to="/" className="inline-flex items-center gap-2 px-6 py-3 bg-[#001A26] text-white rounded-xl font-bold text-sm hover:bg-[#4A72B2] transition-colors">
+          <ChevronLeft size={16} /> Voltar para home
+        </Link>
+      </div>
+    </div>
+  );
+
+  const startedAt = new Date(live.started_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] relative">
+    <div className="min-h-screen bg-[#F8FAFC]">
 
       {/* HEADER */}
-      <div className="px-8 pt-6 pb-4 flex items-center gap-4">
-        <Link
-          to="/"
-          className="w-10 h-10 bg-[#b9d2eb] rounded-xl flex items-center justify-center text-[#001A26] hover:bg-[#4A72B2] hover:text-white transition-colors flex-shrink-0"
-        >
+      <div className="px-4 sm:px-8 pt-6 pb-4 flex items-center gap-4">
+        <Link to="/" className="w-10 h-10 bg-[#b9d2eb] rounded-xl flex items-center justify-center text-[#001A26] hover:bg-[#4A72B2] hover:text-white transition-colors flex-shrink-0">
           <ChevronLeft size={20} />
         </Link>
-        <div className="flex-1 bg-white rounded-[20px] border border-slate-100 shadow-sm px-6 py-4 flex justify-between items-center">
+        <div className="flex-1 bg-white rounded-[20px] border border-slate-100 shadow-sm px-4 sm:px-6 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-lg font-black text-[#001A26]">Live sobre operação de loja</h1>
-            <div className="flex gap-4 text-xs text-slate-400 font-semibold mt-0.5">
-              <span>Iniciada: 11:30</span>
-              <span>Previsão de término: 15:30</span>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <h1 className="text-base sm:text-lg font-black text-[#001A26]">{live.title || 'Live Biscoitê'}</h1>
             </div>
+            <p className="text-xs text-slate-400 font-semibold mt-0.5">Iniciada às {startedAt}</p>
           </div>
-          <button className="text-slate-300 hover:text-slate-500 transition-colors">
-            <Settings size={20} />
-          </button>
+          <span className="text-[10px] font-black text-red-500 bg-red-50 border border-red-100 px-3 py-1.5 rounded-full hidden sm:block">
+            🔴 AO VIVO
+          </span>
         </div>
       </div>
 
-      {/* FLOATING CHAT TOGGLE BUTTON */}
+      {/* CHAT TOGGLE — mobile */}
       {!chatOpen && (
-        <button
-          onClick={() => setChatOpen(true)}
-          className="fixed bottom-6 right-6 w-12 h-12 bg-[#001A26] rounded-full flex items-center justify-center text-white shadow-lg hover:bg-[#4A72B2] transition-colors z-50"
-        >
+        <button onClick={() => setChatOpen(true)}
+          className="fixed bottom-6 right-6 w-12 h-12 bg-[#001A26] rounded-full flex items-center justify-center text-white shadow-lg hover:bg-[#4A72B2] transition-colors z-50">
           <MessageCircle size={18} />
         </button>
       )}
 
       {/* MAIN CONTENT */}
-      <div className="px-8 pb-8">
-        <div className={`grid gap-6 ${chatOpen ? 'grid-cols-[1fr_360px]' : 'grid-cols-1'}`}>
+      <div className="px-4 sm:px-8 pb-8">
+        <div className={`grid gap-4 sm:gap-6 ${chatOpen ? 'grid-cols-1 lg:grid-cols-[1fr_360px]' : 'grid-cols-1'}`}>
 
-          {/* VIDEO AREA */}
-          <div className="relative rounded-[32px] overflow-hidden bg-slate-200" style={{ minHeight: '520px' }}>
-            
-            {/* Vídeo principal — trocar src pelo iframe do Google Meet futuramente */}
-            <img
-              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1400"
-              className="w-full h-full object-cover absolute inset-0"
-              alt="Palestrante"
-              style={{ minHeight: '520px' }}
-            />
-
-            {/* PARTICIPANTES — lateral direita sobre o vídeo */}
-            <div className="absolute right-5 top-5 flex flex-col gap-3 z-10">
-              {PARTICIPANTS.map((src, i) => (
-                <div
-                  key={i}
-                  className="w-[100px] h-[80px] rounded-2xl overflow-hidden border-2 border-white shadow-lg"
-                >
-                  <img src={src} className="w-full h-full object-cover" alt={`Participante ${i + 1}`} />
-                </div>
-              ))}
-            </div>
-
-            {/* CONTROLES — barra flutuante inferior */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
-              <div className="bg-white/90 backdrop-blur-md px-8 py-3 rounded-full flex items-center gap-5 shadow-2xl border border-white/60">
-                
-                <button
-                  onClick={() => setCamOn(!camOn)}
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-                    camOn ? 'bg-[#001A26] text-white' : 'bg-slate-100 text-slate-400'
-                  }`}
-                >
-                  <Video size={18} />
-                </button>
-
-                <button
-                  onClick={() => setMicOn(!micOn)}
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center border transition-all ${
-                    micOn ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-100 border-transparent text-slate-400'
-                  }`}
-                >
-                  <Mic size={18} />
-                </button>
-
-                <button className="w-11 h-11 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
-                  <Monitor size={18} />
-                </button>
-
-                <button className="w-11 h-11 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
-                  <Hand size={18} />
-                </button>
-
-                <div className="w-px h-6 bg-slate-200 mx-1" />
-
-                <button className="w-11 h-11 rounded-xl flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-all">
-                  <PhoneOff size={18} />
-                </button>
-              </div>
-            </div>
+          {/* PLAYER */}
+          <div className="relative rounded-[24px] sm:rounded-[32px] overflow-hidden bg-[#001A26]" style={{ minHeight: '400px' }}>
+            <StreamPlayer streamUrl={live.stream_url} title={live.title} />
           </div>
 
           {/* CHAT */}
           {chatOpen && (
-            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm flex flex-col overflow-hidden" style={{ minHeight: '520px' }}>
-              
+            <div className="bg-white rounded-[24px] sm:rounded-[32px] border border-slate-100 shadow-sm flex flex-col overflow-hidden" style={{ minHeight: '400px', maxHeight: '600px' }}>
+
               {/* Chat header */}
-              <div className="px-6 py-5 flex justify-between items-center border-b border-slate-50">
-                <h3 className="text-lg font-black text-[#001A26]">Chat</h3>
-                <button
-                  onClick={() => setChatOpen(false)}
-                  className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors"
-                >
+              <div className="px-5 sm:px-6 py-4 sm:py-5 flex justify-between items-center border-b border-slate-50 flex-shrink-0">
+                <div>
+                  <h3 className="text-base font-black text-[#001A26]">Chat ao vivo</h3>
+                  <p className="text-[10px] text-slate-400 font-medium">{messages.length} mensagens</p>
+                </div>
+                <button onClick={() => setChatOpen(false)}
+                  className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">
                   <X size={15} />
                 </button>
               </div>
 
               {/* Mensagens */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                {messages.map((msg) => (
-                  <div key={msg.id}>
-                    <p className="text-[10px] text-slate-300 font-semibold mb-1">{msg.time}</p>
-                    <div
-                      className={`px-4 py-3 rounded-2xl text-sm leading-relaxed font-medium max-w-[90%] ${
-                        msg.own
-                          ? 'bg-white border border-slate-100 shadow-sm text-slate-600 ml-auto rounded-tr-none'
-                          : 'bg-slate-100 text-slate-600 rounded-tl-none'
-                      }`}
-                    >
-                      {msg.text}
-                    </div>
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3">
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-2 py-8">
+                    <MessageCircle size={28} />
+                    <p className="text-xs font-bold">Seja o primeiro a comentar!</p>
                   </div>
-                ))}
+                ) : (
+                  messages.map((msg) => {
+                    const isOwn = msg.own || msg.user_name === userData?.name;
+                    return (
+                      <div key={msg.id}>
+                        {!isOwn && (
+                          <p className="text-[10px] text-slate-400 font-bold mb-1 ml-1">{msg.user_name}</p>
+                        )}
+                        <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed font-medium max-w-[88%] ${
+                          isOwn
+                            ? 'bg-[#4A72B2] text-white ml-auto rounded-tr-none'
+                            : 'bg-slate-100 text-slate-600 rounded-tl-none'
+                        }`}>
+                          {msg.text}
+                        </div>
+                        <p className={`text-[9px] text-slate-300 mt-0.5 ${isOwn ? 'text-right' : ''}`}>
+                          {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Input */}
-              <div className="px-4 py-4 border-t border-slate-50">
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-full px-5 py-2.5">
+              <div className="px-4 py-4 border-t border-slate-50 flex-shrink-0">
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-full px-4 py-2.5">
                   <input
                     type="text"
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder="Enviar uma mensagem"
+                    onChange={e => setMessage(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                    placeholder="Enviar mensagem..."
                     className="flex-1 bg-transparent text-sm outline-none text-slate-600 placeholder:text-slate-300"
                   />
-                  <button
-                    onClick={sendMessage}
-                    className="w-8 h-8 bg-[#001A26] rounded-full flex items-center justify-center text-white hover:bg-[#4A72B2] transition-colors flex-shrink-0"
-                  >
+                  <button onClick={sendMessage} disabled={!message.trim() || sending}
+                    className="w-8 h-8 bg-[#001A26] rounded-full flex items-center justify-center text-white hover:bg-[#4A72B2] transition-colors flex-shrink-0 disabled:opacity-40">
                     <Send size={13} />
                   </button>
                 </div>
@@ -191,20 +265,6 @@ export default function LiveChat() {
             </div>
           )}
         </div>
-
-        {/* NOTA SOBRE INTEGRAÇÃO COM GOOGLE MEET */}
-        {/* 
-          Para integrar com Google Meet no futuro, substitua a <img> do vídeo principal por:
-          
-          <iframe
-            src="https://meet.google.com/xxx-xxxx-xxx?embedded=true"
-            allow="camera; microphone; fullscreen; display-capture"
-            className="w-full h-full absolute inset-0"
-            style={{ border: 'none', minHeight: '520px' }}
-          />
-          
-          Lembre de configurar o domínio no Google Workspace para permitir embeds.
-        */}
       </div>
     </div>
   );
