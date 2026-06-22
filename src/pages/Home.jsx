@@ -20,6 +20,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { reels: reelsData } = useProfile();
   const [myCourses, setMyCourses]     = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const [courseIndex, setCourseIndex] = useState(0);
   const [hoveredReel, setHoveredReel] = useState(null);
   const coursesPerPage = 3;
@@ -53,6 +54,7 @@ export default function Home() {
           };
         }));
       } catch {}
+      finally { setLoadingCourses(false); }
     };
     loadCourses();
   }, []);
@@ -76,7 +78,21 @@ export default function Home() {
           </button>
         </div>
 
-        {myCourses.length === 0 ? (
+        {loadingCourses ? (
+          /* Skeleton cards */
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white/60 rounded-2xl overflow-hidden animate-pulse">
+                <div className="aspect-video bg-[#b9d2eb]/50 w-full" />
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-[#b9d2eb]/50 rounded-full w-3/4" />
+                  <div className="h-3 bg-[#b9d2eb]/40 rounded-full w-1/2" />
+                  <div className="h-2 bg-[#b9d2eb]/30 rounded-full w-full mt-2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : myCourses.length === 0 ? (
           <div className="text-center py-10 text-slate-400">
             <p className="font-bold">Nenhum curso disponível ainda.</p>
             <p className="text-sm mt-1">Novos conteúdos em breve!</p>
