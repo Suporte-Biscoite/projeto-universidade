@@ -24,40 +24,54 @@ function send(res, status, body) {
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
+  const { action, liveId, after } = req.query;
+  const auth = authenticate(req);
+
   try {
-    if (req.method === 'GET')  return await getLive(res);
-    if (req.method === 'POST') return await controlLive(req, res);
-    // ── MENSAGENS DO CHAT ────────────────────────────────────────────────────
-    // GET  /api/live?action=messages&liveId=uuid&after=iso  — busca mensagens
-    // POST /api/live?action=message                         — envia mensagem
-    if (action === 'messages') {
-      const { liveId, after } = req.query;
-      if (!liveId) return send(res, 400, { error: 'liveId obrigatório' });
-      const { rows } = await pool.query(
-        `SELECT m.id, m.user_id, m.user_name, m.text, m.created_at
-         FROM live_messages m
-         WHERE m.live_id = $1 ${after ? 'AND m.created_at > $2' : ''}
-         ORDER BY m.created_at ASC LIMIT 100`,
-        after ? [liveId, after] : [liveId]
-      );
-      return send(res, 200, rows);
+    // ── GET ──────────────────────────────────────────────────────────────────
+    if (req.method === 'GET') {
+      // Busca mensagens do chat
+      if (action === 'messages') {
+        if (!liveId) return send(res, 400, { error: 'liveId obrigatório' });
+        const { rows } = await pool.query(
+          `SELECT id, user_id, user_name, text, created_at
+           FROM live_messages
+           WHERE live_id = $1 ${after ? 'AND created_at > $2' : ''}
+           ORDER BY created_at ASC LIMIT 100`,
+          after ? [liveId, after] : [liveId]
+        );
+        return send(res, 200, rows);
+      }
+      // Status da live
+      return await getLive(res);
     }
 
-    if (action === 'message') {
-      if (!auth) return send(res, 401, { error: 'Não autorizado' });
-      const { liveId, text } = req.body ?? {};
-      if (!liveId || !text?.trim()) return send(res, 400, { error: 'liveId e text obrigatórios' });
-      // Busca nome do usuário
-      const { rows: userRows } = await pool.query('SELECT name FROM users WHERE id=$1', [auth.sub]);
-      const userName = userRows[0]?.name || 'Usuário';
-      const { rows } = await pool.query(
-        `INSERT INTO live_messages (live_id, user_id, user_name, text)
-         VALUES ($1,$2,$3,$4) RETURNING *`,
-        [liveId, auth.sub, userName, text.trim()]
-      );
-      return send(res, 201, rows[0]);
+    // ── POST ─────────────────────────────────────────────────────────────────
+    if (req.method === 'POST') {
+      // Envia mensagem no chat
+      if (action === 'message') {
+        if (!auth) return send(res, 401, { error: 'Não autorizado' });
+        const { liveId: bodyLiveId, text } = req.body ?? {};
+        if (!bodyLiveId || !text?.trim()) return send(res, 400, { error: 'liveId e text obrigatórios' });
+        const { rows: userRows } = await pool.query('SELECT name FROM users WHERE id=$1', [auth.sub]);
+        const userName = userRows[0]?.name || 'Usuário';
+        const { rows } = await pool.query(
+          `INSERT INTO live_messages (live_id, user_id, user_name, text)
+           VALUES ($1,$2,$3,$4) RETURNING *`,
+          [bodyLiveId, auth.sub, userName, text.trim()]
+        );
+        return send(res, 201, rows[0]);
+      }
+      // Controle de live (start/stop)
+      return await controlLive(req, res);
     }
 
+    return send(res, 405, { error: 'Método não permitido' });
+  } catch (err) {
+    console.error('[live]', err);
+    return send(res, 500, { error: err.message });
+  }
+}
     return send(res, 405, { error: 'Método não permitido' });
   } catch (err) {
     console.error('[live]', err);
