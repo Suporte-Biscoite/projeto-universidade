@@ -69,7 +69,88 @@ export default function Home() {
   return (
     <div className="max-w-[1200px] mx-auto space-y-16 sm:space-y-20 pb-20">
 
-      {/* 1. MEUS CURSOS */}
+      {/* 0. BANNER HERO */}
+      <section style={{ position:'relative', borderRadius:'32px', overflow:'hidden', minHeight:'300px', display:'flex', alignItems:'stretch' }}>
+        {/* Fundo */}
+        <div style={{ position:'absolute', inset:0, background:'#001A26' }} />
+        <div style={{ position:'absolute', right:0, top:0, bottom:0, width:'42%', background:'#0a2d42', clipPath:'polygon(12% 0, 100% 0, 100% 100%, 0% 100%)' }} />
+
+        {/* Círculo decorativo */}
+        <div style={{ position:'absolute', right:'8%', top:'50%', transform:'translateY(-50%)', width:'180px', height:'180px', borderRadius:'50%', border:'36px solid rgba(74,114,178,0.18)' }} />
+        <div style={{ position:'absolute', right:'12%', top:'50%', transform:'translateY(-50%)', width:'100px', height:'100px', borderRadius:'50%', background:'#4A72B2', opacity:0.22 }} />
+
+        {/* Grade de pontos */}
+        <div style={{ position:'absolute', top:0, right:0, width:'45%', height:'100%', opacity:0.06 }}>
+          <svg width="100%" height="100%">
+            <defs><pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.5" fill="#b9d2eb"/></pattern></defs>
+            <rect width="100%" height="100%" fill="url(#dots)"/>
+          </svg>
+        </div>
+
+        {/* Barra de acento topo */}
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:'linear-gradient(90deg,#4A72B2 0%,#b9d2eb 50%,transparent 100%)' }} />
+
+        {/* Conteúdo */}
+        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'32px', padding:'48px 52px', width:'100%', flexWrap:'wrap' }}>
+
+          {/* Esquerda */}
+          <div style={{ flex:1, maxWidth:'560px', minWidth:'260px' }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', marginBottom:'20px' }}>
+              <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:'#4A72B2' }} />
+              <div style={{ width:'32px', height:'2px', background:'#4A72B2', borderRadius:'2px' }} />
+              <span style={{ color:'#4A72B2', fontSize:'11px', fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase' }}>Universidade Biscoitê</span>
+            </div>
+
+            <h1 style={{ fontSize:'clamp(26px,4vw,38px)', fontWeight:700, color:'#ffffff', lineHeight:1.15, margin:'0 0 8px', letterSpacing:'-0.01em' }}>
+              O seu próximo<br/>
+              <span style={{ color:'#b9d2eb' }}>nível começa</span><br/>
+              <span style={{ color:'#b9d2eb' }}>aqui.</span>
+            </h1>
+
+            <div style={{ width:'48px', height:'3px', background:'#4A72B2', borderRadius:'2px', margin:'18px 0' }} />
+
+            <p style={{ fontSize:'14px', color:'rgba(185,210,235,0.7)', lineHeight:1.7, margin:'0 0 28px', maxWidth:'380px' }}>
+              Treinamentos exclusivos para quem transforma o varejo todo dia. Da operação ao atendimento, do básico ao avançado.
+            </p>
+
+            <div style={{ display:'flex', alignItems:'center', gap:'20px', flexWrap:'wrap' }}>
+              <button
+                onClick={() => navigate('/courses')}
+                style={{ display:'inline-flex', alignItems:'center', gap:'10px', background:'#4A72B2', color:'#ffffff', border:'none', borderRadius:'14px', padding:'13px 24px', fontSize:'14px', fontWeight:700, cursor:'pointer', letterSpacing:'0.01em' }}
+              >
+                Começar agora →
+              </button>
+              <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                <div style={{ display:'flex' }}>
+                  {[['BS','#185FA5'],['KL','#4A72B2'],['MR','#0C447C']].map(([init,bg]) => (
+                    <div key={init} style={{ width:'28px', height:'28px', borderRadius:'50%', background:bg, border:'2px solid #001A26', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'9px', fontWeight:700, color:'#b9d2eb', marginRight:'-8px' }}>{init}</div>
+                  ))}
+                </div>
+                <div style={{ marginLeft:'10px' }}>
+                  <p style={{ fontSize:'12px', fontWeight:700, color:'#ffffff', margin:0 }}>+300 colaboradores</p>
+                  <p style={{ fontSize:'11px', color:'rgba(185,210,235,0.5)', margin:0 }}>já estão aprendendo</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats - escondido em mobile pequeno */}
+          <div className="hidden sm:flex" style={{ flexDirection:'column', gap:'4px', flexShrink:0 }}>
+            {[['98%','Satisfação','rgba(255,255,255,0.04)','rgba(185,210,235,0.1)','#ffffff'],
+              ['100%','Gratuito','rgba(74,114,178,0.15)','rgba(74,114,178,0.35)','#b9d2eb'],
+              ['70+','Lojas conectadas','rgba(255,255,255,0.04)','rgba(185,210,235,0.1)','#ffffff']
+            ].map(([num,label,bg,border,color]) => (
+              <div key={label} style={{ background:bg, border:`1px solid ${border}`, borderRadius:'18px', padding:'18px 24px', textAlign:'center', minWidth:'120px' }}>
+                <p style={{ fontSize:'28px', fontWeight:700, color, margin:0, lineHeight:1 }}>{num}</p>
+                <p style={{ fontSize:'10px', color:'rgba(185,210,235,0.5)', margin:'5px 0 0', textTransform:'uppercase', letterSpacing:'0.08em' }}>{label}</p>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* 1. MEUS CURSOS */}}
       <section className="bg-[#e2eef9] -mx-4 sm:-mx-8 px-4 sm:px-8 py-10 sm:py-16 rounded-[32px] sm:rounded-[48px] space-y-6 sm:space-y-8">
         <div className="flex justify-between items-center">
           <h2 className="text-xl sm:text-2xl font-black text-[#001A26]">Meus Cursos</h2>
