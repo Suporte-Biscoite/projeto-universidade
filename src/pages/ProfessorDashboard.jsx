@@ -76,7 +76,7 @@ function ContactModal({ student, onClose, onSent }) {
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-[28px] w-full max-w-md shadow-2xl p-7 space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <img src={student.avatar} className="w-10 h-10 rounded-full object-cover" alt={student.name} />
             <div>
@@ -262,7 +262,7 @@ function Sidebar({ activeView, setActiveView, profileImage, userName, unreadComm
   ];
 
   return (
-    <aside className="w-[200px] min-h-screen bg-white border-r border-slate-100 flex flex-col py-8 px-6 gap-8 flex-shrink-0">
+    <aside className="hidden md:flex w-[200px] min-h-screen bg-white border-r border-slate-100 flex-col py-8 px-6 gap-8 flex-shrink-0">
       <button onClick={() => navigate('/')} className="block mx-auto">
         <img src="/logo-biscoite.svg" alt="Biscoitê" className="h-8 w-auto hover:opacity-75 transition-opacity mx-auto" />
       </button>
@@ -2235,7 +2235,7 @@ function ReelsView() {
   };
 
   return (
-    <div className="space-y-8 max-w-[900px]">
+    <div className="space-y-6 sm:space-y-8 w-full max-w-[900px]">
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -2362,14 +2362,14 @@ function ReelsView() {
           <p className="text-sm text-slate-300">Clique em "Novo Reel" para começar</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {myReels.map(reel => {
             const isHovered = hoveredId === reel.id;
             const thumb = reel.thumbnail || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400';
             return (
               <div
                 key={reel.id}
-                className="relative rounded-[20px] overflow-hidden aspect-[9/14] group cursor-pointer shadow-sm"
+                className="relative rounded-[16px] sm:rounded-[20px] overflow-hidden aspect-[9/14] group cursor-pointer shadow-sm"
                 onMouseEnter={() => setHoveredId(reel.id)}
                 onMouseLeave={() => setHoveredId(null)}
               >
@@ -2442,14 +2442,32 @@ export default function ProfessorDashboard() {
         />
       </div>
 
-      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
-        <main className="flex-1 w-full px-10 py-8 max-w-[1440px]">
+      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden relative">
+        <main className="flex-1 w-full px-4 sm:px-6 md:px-10 py-6 md:py-8 max-w-[1440px] pb-24 md:pb-8">
           <h1 className="text-2xl font-black text-[#00263B] mb-6">{viewTitle}</h1>
           {activeView === 'overview'    && <OverviewView onNewComm={() => setUnreadComm(p => p + 1)} />}
           {activeView === 'cursos'      && <MeusCursosView />}
           {activeView === 'reels'       && <ReelsView />}
           {activeView === 'comunicacao' && <ComunicacaoView onRead={() => setUnreadComm(0)} />}
         </main>
+
+        {/* Mobile bottom nav */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-50 flex justify-around items-center px-2 py-2 shadow-lg">
+          {[
+            { id: 'overview',    label: 'Overview',    icon: LayoutDashboard },
+            { id: 'cursos',      label: 'Cursos',      icon: BookOpen },
+            { id: 'reels',       label: 'Reels',       icon: Clapperboard },
+            { id: 'comunicacao', label: 'Chat',        icon: MessageSquare },
+          ].map(({ id, label, icon: Icon }) => (
+            <button key={id} onClick={() => handleViewChange(id)}
+              className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all ${
+                activeView === id ? 'text-[#4A72B2]' : 'text-slate-400'
+              }`}>
+              <Icon size={20} />
+              <span className="text-[9px] font-bold">{label}</span>
+            </button>
+          ))}
+        </div>
 
         <footer className="bg-[#00263B] text-white pt-12 pb-6 mt-auto">
           <div className="max-w-[1400px] mx-auto px-8 space-y-8">
