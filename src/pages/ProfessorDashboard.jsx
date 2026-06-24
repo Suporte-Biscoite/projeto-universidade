@@ -2092,7 +2092,16 @@ function ReelsView() {
     setReels(prev => prev.filter(r => r.id !== id));
     await authFetch(`/api/data?resource=reels&id=${id}`, { method: 'DELETE' }).catch(() => {});
   };
-  const myReels = reels.filter(r => r.instructorId === CURRENT_INSTRUCTOR_ID);
+  const loggedId = (() => {
+    try {
+      const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+      return raw ? JSON.parse(raw)?.id : null;
+    } catch { return null; }
+  })();
+  // Admin vê todos, professor vê só os seus
+  const myReels = reels.filter(r =>
+    !loggedId || r.instructor_id === loggedId || r.instructorId === loggedId
+  );
 
   const [showForm, setShowForm]       = useState(false);
   const [caption, setCaption]         = useState('');

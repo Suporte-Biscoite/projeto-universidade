@@ -1,16 +1,25 @@
-import { useState, useEffect } from 'react';
-import { MessageCircle, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MessageCircle, X, Send, ChevronLeft, Loader } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authFetch } from '../utils/authFetch';
+import ChatPanel from './ChatPanel';
 
 export default function MessageFloatButton() {
   const [unread, setUnread]   = useState(0);
-  const [visible, setVisible] = useState(false);
-  const navigate  = useNavigate();
+  const [open, setOpen]       = useState(false);
   const location  = useLocation();
+  const navigate  = useNavigate();
 
-  // Não mostrar na página de mensagens ou no painel do professor
+  // Esconde no painel do professor (tem chat próprio) e na página de mensagens
   const hidden = location.pathname === '/mensagens' || location.pathname.startsWith('/professor');
+
+  // Pega userId do storage
+  const currentUserId = (() => {
+    try {
+      const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+      return raw ? JSON.parse(raw)?.id : null;
+    } catch { return null; }
+  })();
 
   useEffect(() => {
     const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
@@ -24,7 +33,6 @@ export default function MessageFloatButton() {
         const total = (Array.isArray(data) ? data : [])
           .reduce((acc, c) => acc + (Number(c.unread) || 0), 0);
         setUnread(total);
-        setVisible(total > 0); // só aparece quando tem não lidas
       } catch {}
     };
 
@@ -33,24 +41,34 @@ export default function MessageFloatButton() {
     return () => clearInterval(interval);
   }, [hidden]);
 
-  if (hidden || !visible) return null;
+  if (hidden || !currentUserId) return null;
 
   return (
-    <button
-      onClick={() => navigate('/mensagens')}
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#001A26] hover:bg-[#4A72B2] text-white px-5 py-3.5 rounded-full shadow-xl transition-all hover:scale-105 active:scale-95"
-    >
-      <div className="relative">
-        <MessageCircle size={20} />
-        {unread > 0 && (
-          <span className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+    <>
+      {/* Mini chat popup */}
+      {open && (
+        <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 shadow-2xl rounded-[24px] overflow-hidden border border-slate-100">
+          <ChatPanel currentUserId={currentUserId} compact />
+        </div>
+      )}
+
+      {/* Botão flutuante */}
+      <button
+        onClick={() => setOpen(p => !p)}
+        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 ${
+          open ? 'bg-slate-600' : 'bg-[#001A26] hover:bg-[#4A72B2]'
+        }`}
+      >
+        {open
+          ? <X size={22} className="text-white" />
+          : <MessageCircle size={22} className="text-white" />
+        }
+        {!open && unread > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
-      </div>
-      <span className="text-sm font-bold">
-        {unread} mensagem{unread !== 1 ? 's' : ''} nova{unread !== 1 ? 's' : ''}
-      </span>
-    </button>
+      </button>
+    </>
   );
 }
