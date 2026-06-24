@@ -81,9 +81,9 @@ function CertificateCard({ cert, onView }) {
         </button>
         <button
           onClick={() => {
-            const text = `🎓 Concluí o curso "${cert.course_title}" pela Universidade Biscoitê! #Biscoitê #Aprendizado`;
-            const url = `https://www.linkedin.com/shareArticle?mini=true&title=${encodeURIComponent('Certificado Biscoitê')}&summary=${encodeURIComponent(text)}&source=Universidade%20Biscoitê`;
-            window.open(url, '_blank');
+            const text = `🎓 Concluí o curso "${cert.course_title}" pela Universidade Biscoite! #Biscoite #Aprendizado`;
+            const url = `https://www.linkedin.com/shareArticle?mini=true&title=${encodeURIComponent('Certificado Biscoite')}&summary=${encodeURIComponent(text)}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
           }}
           className="px-3 py-2.5 bg-[#0A66C2]/10 hover:bg-[#0A66C2]/20 text-[#0A66C2] rounded-xl transition-colors"
           title="Compartilhar no LinkedIn"
@@ -106,99 +106,108 @@ function CertificateModal({ cert, onClose }) {
     try {
       const { default: jsPDF } = await import('jspdf');
 
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const W = pdf.internal.pageSize.getWidth();  // 297
-      const H = pdf.internal.pageSize.getHeight(); // 210
+      // Formato personalizado mais compacto — tipo diploma
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [200, 140] });
+      const W = 200;
+      const H = 140;
+      const cx = W / 2;
 
       // Fundo escuro
-      pdf.setFillColor(0, 26, 38); // #001A26
+      pdf.setFillColor(0, 26, 38);
       pdf.rect(0, 0, W, H, 'F');
 
-      // Círculo decorativo canto superior direito
+      // Círculo decorativo
       pdf.setFillColor(74, 114, 178);
-      pdf.setGState(pdf.GState({ opacity: 0.12 }));
-      pdf.circle(W - 30, 30, 50, 'F');
+      pdf.setGState(pdf.GState({ opacity: 0.1 }));
+      pdf.circle(W - 20, 20, 40, 'F');
+      pdf.setFillColor(185, 210, 235);
+      pdf.setGState(pdf.GState({ opacity: 0.05 }));
+      pdf.circle(20, H - 20, 35, 'F');
       pdf.setGState(pdf.GState({ opacity: 1 }));
 
       // Borda interna
       pdf.setDrawColor(74, 114, 178);
-      pdf.setLineWidth(0.4);
-      pdf.setGState(pdf.GState({ opacity: 0.4 }));
-      pdf.roundedRect(16, 12, W - 32, H - 24, 6, 6, 'S');
+      pdf.setLineWidth(0.3);
+      pdf.setGState(pdf.GState({ opacity: 0.35 }));
+      pdf.roundedRect(8, 6, W - 16, H - 12, 4, 4, 'S');
       pdf.setGState(pdf.GState({ opacity: 1 }));
 
-      // Linha de acento topo
+      // Linha acento topo
       pdf.setFillColor(74, 114, 178);
-      pdf.rect(16, 12, (W - 32) * 0.5, 1, 'F');
+      pdf.rect(8, 6, (W - 16) * 0.55, 0.8, 'F');
 
-      // Tag superior
+      // Header — tag
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8);
+      pdf.setFontSize(6.5);
       pdf.setTextColor(185, 210, 235);
       pdf.setGState(pdf.GState({ opacity: 0.6 }));
-      pdf.text('UNIVERSIDADE BISCOITÊ', W / 2, 28, { align: 'center', charSpace: 2 });
-      pdf.text('CERTIFICADO DE CONCLUSÃO', W / 2, 34, { align: 'center', charSpace: 1.5 });
+      // Evita acentos problemáticos usando texto ASCII
+      pdf.text('UNIVERSIDADE BISCOITE', cx, 18, { align: 'center', charSpace: 1.5 });
+      pdf.setFontSize(6);
+      pdf.text('CERTIFICADO DE CONCLUSAO', cx, 23, { align: 'center', charSpace: 1 });
       pdf.setGState(pdf.GState({ opacity: 1 }));
 
-      // Linha divisória
+      // Divisor fino
       pdf.setDrawColor(74, 114, 178);
-      pdf.setLineWidth(0.3);
-      pdf.setGState(pdf.GState({ opacity: 0.3 }));
-      pdf.line(W / 2 - 30, 38, W / 2 + 30, 38);
+      pdf.setLineWidth(0.2);
+      pdf.setGState(pdf.GState({ opacity: 0.25 }));
+      pdf.line(cx - 20, 26, cx + 20, 26);
       pdf.setGState(pdf.GState({ opacity: 1 }));
 
       // "Certificamos que"
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
+      pdf.setFontSize(8);
       pdf.setTextColor(255, 255, 255);
-      pdf.setGState(pdf.GState({ opacity: 0.5 }));
-      pdf.text('Certificamos que', W / 2, 55, { align: 'center' });
+      pdf.setGState(pdf.GState({ opacity: 0.45 }));
+      pdf.text('Certificamos que', cx, 38, { align: 'center' });
       pdf.setGState(pdf.GState({ opacity: 1 }));
 
       // Nome do aluno
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(28);
+      pdf.setFontSize(22);
       pdf.setTextColor(255, 255, 255);
-      pdf.text(cert.user_name, W / 2, 72, { align: 'center' });
+      pdf.text(cert.user_name, cx, 52, { align: 'center', maxWidth: W - 30 });
 
-      // "concluiu com êxito"
+      // "concluiu com exito"
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      pdf.setTextColor(255, 255, 255);
-      pdf.setGState(pdf.GState({ opacity: 0.5 }));
-      pdf.text('concluiu com êxito o curso', W / 2, 85, { align: 'center' });
+      pdf.setFontSize(8);
+      pdf.setGState(pdf.GState({ opacity: 0.45 }));
+      pdf.text('concluiu com exito o curso', cx, 63, { align: 'center' });
       pdf.setGState(pdf.GState({ opacity: 1 }));
 
       // Título do curso
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(18);
+      pdf.setFontSize(13);
       pdf.setTextColor(185, 210, 235);
-      pdf.text(`"${cert.course_title}"`, W / 2, 98, { align: 'center', maxWidth: W - 60 });
+      const courseText = `"${cert.course_title}"`;
+      pdf.text(courseText, cx, 76, { align: 'center', maxWidth: W - 40 });
 
-      // Linha divisória central
+      // Divisor central decorativo
       pdf.setDrawColor(74, 114, 178);
-      pdf.setLineWidth(0.3);
-      pdf.setGState(pdf.GState({ opacity: 0.3 }));
-      pdf.line(W / 2 - 50, 110, W / 2 - 4, 110);
+      pdf.setLineWidth(0.2);
+      pdf.setGState(pdf.GState({ opacity: 0.25 }));
+      pdf.line(cx - 35, 86, cx - 3, 86);
       pdf.setFillColor(74, 114, 178);
-      pdf.setGState(pdf.GState({ opacity: 0.5 }));
-      pdf.circle(W / 2, 110, 1.5, 'F');
-      pdf.setGState(pdf.GState({ opacity: 0.3 }));
-      pdf.line(W / 2 + 4, 110, W / 2 + 50, 110);
+      pdf.setGState(pdf.GState({ opacity: 0.4 }));
+      pdf.circle(cx, 86, 1, 'F');
+      pdf.setGState(pdf.GState({ opacity: 0.25 }));
+      pdf.line(cx + 3, 86, cx + 35, 86);
       pdf.setGState(pdf.GState({ opacity: 1 }));
 
       // Data
-      const date = new Date(cert.issued_at).toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+      const date = new Date(cert.issued_at).toLocaleDateString('pt-BR', {
+        day: '2-digit', month: 'long', year: 'numeric'
+      });
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(9);
+      pdf.setFontSize(7.5);
       pdf.setTextColor(185, 210, 235);
       pdf.setGState(pdf.GState({ opacity: 0.5 }));
-      pdf.text(`Emitido em ${date}`, W / 2, 122, { align: 'center' });
+      pdf.text(`Emitido em ${date}`, cx, 96, { align: 'center' });
 
-      // ID verificação
-      pdf.setFontSize(7);
-      pdf.setGState(pdf.GState({ opacity: 0.3 }));
-      pdf.text(`ID: ${cert.id}`, W / 2, 132, { align: 'center' });
+      // ID verificacao
+      pdf.setFontSize(6);
+      pdf.setGState(pdf.GState({ opacity: 0.25 }));
+      pdf.text(`ID: ${cert.id}`, cx, 104, { align: 'center' });
       pdf.setGState(pdf.GState({ opacity: 1 }));
 
       pdf.save(`Certificado - ${cert.course_title}.pdf`);
