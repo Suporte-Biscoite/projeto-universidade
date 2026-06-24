@@ -47,6 +47,7 @@ export default function Home() {
   };
   const [courseIndex, setCourseIndex] = useState(0);
   const [hoveredReel, setHoveredReel] = useState(null);
+  const [selectedReel, setSelectedReel] = useState(null);
   const coursesPerPage = 3;
 
   useEffect(() => {
@@ -92,6 +93,33 @@ export default function Home() {
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-16 sm:space-y-20 pb-20">
+      {/* Reel player modal */}
+      {selectedReel && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
+          onClick={() => setSelectedReel(null)}>
+          <div className="relative w-full max-w-xs" style={{ aspectRatio: '9/16' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setSelectedReel(null)}
+              className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-2">
+              ✕ Fechar
+            </button>
+            {selectedReel.vimeo_id ? (
+              <iframe
+                src={`https://player.vimeo.com/video/${selectedReel.vimeo_id}?autoplay=1&title=0&byline=0`}
+                className="w-full h-full rounded-[24px]"
+                allow="autoplay; fullscreen"
+              />
+            ) : (
+              <div className="w-full h-full rounded-[24px] bg-slate-800 flex items-center justify-center text-white/40">
+                <p className="text-sm">Sem vídeo</p>
+              </div>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[24px]">
+              <p className="text-white font-bold text-sm">{selectedReel.caption}</p>
+              <p className="text-white/50 text-xs mt-1">{selectedReel.instructor}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 0. BANNER HERO */}
       <section style={{ position:'relative', overflow:'hidden', minHeight:'300px', display:'flex', alignItems:'stretch', borderRadius:'32px' }}>
@@ -265,7 +293,7 @@ export default function Home() {
             {reelsData.map((item) => {
               const isActive = hoveredReel === item.id;
               return (
-                <button key={item.id} onClick={() => item.vimeo_id ? window.open(`https://vimeo.com/${item.vimeo_id}`, '_blank') : null}
+                <button key={item.id} onClick={() => setSelectedReel(item)}
                   onMouseEnter={() => setHoveredReel(item.id)}
                   onMouseLeave={() => setHoveredReel(null)}
                   className="relative flex-shrink-0 rounded-[24px] overflow-hidden border-2 border-white shadow-sm cursor-pointer text-left"

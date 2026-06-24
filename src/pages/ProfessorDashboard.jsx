@@ -2112,6 +2112,7 @@ function ReelsView() {
   const [thumbnail, setThumbnail]     = useState('');
   const [thumbFile, setThumbFile]     = useState(null);
   const [hoveredId, setHoveredId]     = useState(null);
+  const [selectedReel, setSelectedReel] = useState(null);
   const [toast, setToast]             = useState(null);
   const thumbInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -2263,6 +2264,34 @@ function ReelsView() {
         </div>
       )}
 
+      {/* Player modal */}
+      {selectedReel && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
+          onClick={() => setSelectedReel(null)}>
+          <div className="relative w-full max-w-sm" style={{ aspectRatio: '9/16' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setSelectedReel(null)}
+              className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-1">
+              <X size={16} /> Fechar
+            </button>
+            {selectedReel.vimeo_id ? (
+              <iframe
+                src={`https://player.vimeo.com/video/${selectedReel.vimeo_id}?autoplay=1&title=0&byline=0`}
+                className="w-full h-full rounded-[20px]"
+                allow="autoplay; fullscreen"
+              />
+            ) : (
+              <div className="w-full h-full rounded-[20px] bg-slate-800 flex flex-col items-center justify-center gap-3 text-white/50">
+                <Play size={40} />
+                <p className="text-sm">Nenhum vídeo configurado</p>
+              </div>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[20px]">
+              <p className="text-white font-bold text-sm">{selectedReel.caption}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Grid de reels */}
       {myReels.length === 0 ? (
         <div className="py-24 text-center text-slate-300 space-y-3">
@@ -2281,6 +2310,7 @@ function ReelsView() {
                 className="relative rounded-[16px] sm:rounded-[20px] overflow-hidden aspect-[9/14] group cursor-pointer shadow-sm"
                 onMouseEnter={() => setHoveredId(reel.id)}
                 onMouseLeave={() => setHoveredId(null)}
+                onClick={() => setSelectedReel(reel)}
               >
                 <img src={thumb} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={reel.caption} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
@@ -2292,7 +2322,7 @@ function ReelsView() {
 
                 {/* Delete btn */}
                 <button
-                  onClick={() => deleteReel(reel.id || reel.course_id)}
+                  onClick={e => { e.stopPropagation(); deleteReel(reel.id); }}
                   className="absolute top-3 right-3 w-6 h-6 rounded-full bg-red-500/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                 >
                   <Trash size={10} />
