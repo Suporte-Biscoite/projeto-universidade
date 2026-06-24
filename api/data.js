@@ -424,6 +424,15 @@ export default async function handler(req, res) {
           );
           return send(res, 200, { ok: true });
         }
+
+        // Excluir conversa
+        if (action === 'delete' && id) {
+          await pool.query(
+            `DELETE FROM conversations WHERE id = $1 AND (student_id = $2 OR professor_id = $2)`,
+            [id, auth.sub]
+          );
+          return send(res, 200, { ok: true });
+        }
       }
     }
 

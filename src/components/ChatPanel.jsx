@@ -8,7 +8,7 @@ import { authFetch } from '../utils/authFetch';
 // ─── Bubble de mensagem ───────────────────────────────────────────────────────
 function MessageBubble({ msg, isOwn }) {
   const time = new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const initials = (msg.sender_name || 'U').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const initials = msg.sender_name ? msg.sender_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() : '?';
 
   return (
     <div className={`flex gap-2 items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -33,7 +33,7 @@ function MessageBubble({ msg, isOwn }) {
 }
 
 // ─── Item de conversa na lista ────────────────────────────────────────────────
-function ConversationItem({ conv, isOwn, isSelected, onClick, currentUserId }) {
+function ConversationItem({ conv, isOwn, isSelected, onClick, currentUserId, onDelete }) {
   const other = currentUserId === conv.student_id
     ? { name: conv.professor_name, avatar: conv.professor_avatar }
     : { name: conv.student_name,   avatar: conv.student_avatar  };
@@ -45,9 +45,10 @@ function ConversationItem({ conv, isOwn, isSelected, onClick, currentUserId }) {
     : '';
 
   return (
-    <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-left ${
+    <div className={`flex items-center gap-1 rounded-2xl transition-all group ${
       isSelected ? 'bg-[#e2eef9]' : 'hover:bg-slate-50'
     }`}>
+    <button onClick={onClick} className="flex-1 flex items-center gap-3 px-4 py-3 text-left">
       <div className="w-10 h-10 rounded-full bg-[#4A72B2] flex items-center justify-center text-white text-xs font-black flex-shrink-0 overflow-hidden">
         {other.avatar
           ? <img src={other.avatar} className="w-full h-full object-cover" alt={other.name} />
@@ -71,6 +72,14 @@ function ConversationItem({ conv, isOwn, isSelected, onClick, currentUserId }) {
         </span>
       )}
     </button>
+    {onDelete && (
+      <button onClick={e => { e.stopPropagation(); onDelete(conv.id); }}
+        className="opacity-0 group-hover:opacity-100 pr-3 text-slate-300 hover:text-red-400 transition-all flex-shrink-0"
+        title="Excluir conversa">
+        <X size={14} />
+      </button>
+    )}
+    </div>
   );
 }
 
@@ -170,6 +179,14 @@ export default function ChatPanel({ currentUserId, compact = false }) {
     setSending(false);
   };
 
+  const deleteConversation = async (convId) => {
+    setConversations(prev => prev.filter(c => c.id !== convId));
+    if (selectedConv?.id === convId) { setSelectedConv(null); setMessages([]); }
+    try {
+      await authFetch(`/api/data?resource=conversations&action=delete&id=${convId}`, { method: 'POST' });
+    } catch {}
+  };
+
   const filteredConvs = conversations.filter(c => {
     const other = currentUserId === c.student_id ? c.professor_name : c.student_name;
     return (other || '').toLowerCase().includes(search.toLowerCase());
@@ -213,6 +230,7 @@ export default function ChatPanel({ currentUserId, compact = false }) {
               currentUserId={currentUserId}
               isSelected={selectedConv?.id === conv.id}
               onClick={() => { setSelectedConv(conv); setShowList(false); }}
+              onDelete={deleteConversation}
             />
           ))}
         </div>

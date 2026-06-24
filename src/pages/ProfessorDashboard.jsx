@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useProfile, CURRENT_INSTRUCTOR_ID, DEFAULT_COURSE_IMAGES } from '../context/ProfileContext';
 import ChatPanel from '../components/ChatPanel';
+import { authFetch } from '../utils/authFetch';
 import VimeoUploader from '../components/VimeoUploader';
 import LiveControl from '../components/LiveControl';
 
@@ -2064,9 +2065,7 @@ function ReelsView() {
   const [reels, setReels] = useState([]);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
-    if (!token) return;
-    fetch('/api/data?resource=reels', { headers: { Authorization: `Bearer ${token}` } })
+    authFetch('/api/data?resource=reels')
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (Array.isArray(data)) setReels(data); })
       .catch(() => {});
