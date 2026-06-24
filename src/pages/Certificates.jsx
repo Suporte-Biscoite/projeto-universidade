@@ -141,10 +141,9 @@ function CertificateModal({ cert, onClose }) {
       pdf.setFontSize(6.5);
       pdf.setTextColor(185, 210, 235);
       pdf.setGState(pdf.GState({ opacity: 0.6 }));
-      // Evita acentos problemáticos usando texto ASCII
-      pdf.text('UNIVERSIDADE BISCOITE', cx, 18, { align: 'center', charSpace: 1.5 });
+      pdf.text('UNIVERSIDADE BISCOITE', cx, 18, { align: 'center' });
       pdf.setFontSize(6);
-      pdf.text('CERTIFICADO DE CONCLUSAO', cx, 23, { align: 'center', charSpace: 1 });
+      pdf.text('CERTIFICADO DE CONCLUSAO', cx, 23, { align: 'center' });
       pdf.setGState(pdf.GState({ opacity: 1 }));
 
       // Divisor fino
