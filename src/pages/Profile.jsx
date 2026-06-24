@@ -1197,7 +1197,7 @@ export default function Profile() {
       {/* ── COMUNICAÇÃO ── */}
       {(userRole === 'aluno' || userRole === 'franqueado') && (
         <div className="max-w-7xl mx-auto px-10 mt-8">
-          <ComunicacaoAluno userRole={userRole} />
+
         </div>
       )}
 

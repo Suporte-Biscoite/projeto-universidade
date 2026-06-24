@@ -24,7 +24,7 @@ export default function MessageFloatButton() {
         const total = (Array.isArray(data) ? data : [])
           .reduce((acc, c) => acc + (Number(c.unread) || 0), 0);
         setUnread(total);
-        setVisible(total > 0);
+        setVisible(total > 0); // só aparece quando tem não lidas
       } catch {}
     };
 

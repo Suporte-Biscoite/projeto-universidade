@@ -221,6 +221,10 @@ export function ProfileProvider({ children }) {
     if (!isAuth) return;
     const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
     if (!token) return;
+    // Só busca lista completa de usuários se for admin
+    const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+    const logged = raw ? JSON.parse(raw).catch?.(() => null) || JSON.parse(raw) : null;
+    if (logged?.role !== 'admin') return;
     fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {

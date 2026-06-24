@@ -2061,7 +2061,7 @@ function extractVimeoId(url) {
 }
 
 function ReelsView() {
-  const { addReel, deleteReel, profileImage } = useProfile();
+  const { profileImage } = useProfile();
   const [reels, setReels] = useState([]);
 
   useEffect(() => {
@@ -2070,6 +2070,28 @@ function ReelsView() {
       .then(data => { if (Array.isArray(data)) setReels(data); })
       .catch(() => {});
   }, []);
+
+  const addReel = async (data) => {
+    const res = await authFetch('/api/data?resource=reels', {
+      method: 'POST',
+      body: JSON.stringify({
+        caption:       data.caption,
+        tag:           data.tag || 'Dica',
+        thumbnail_url: data.thumbnail || null,
+        vimeo_id:      data.vimeoId   || null,
+      }),
+    });
+    if (res.ok) {
+      const newReel = await res.json();
+      setReels(prev => [newReel, ...prev]);
+    }
+  };
+
+  const deleteReel = async (id) => {
+    if (!window.confirm('Excluir este reel?')) return;
+    setReels(prev => prev.filter(r => r.id !== id));
+    await authFetch(`/api/data?resource=reels&id=${id}`, { method: 'DELETE' }).catch(() => {});
+  };
   const myReels = reels.filter(r => r.instructorId === CURRENT_INSTRUCTOR_ID);
 
   const [showForm, setShowForm]       = useState(false);
@@ -2261,7 +2283,7 @@ function ReelsView() {
 
                 {/* Delete btn */}
                 <button
-                  onClick={() => deleteReel(reel.id)}
+                  onClick={() => deleteReel(reel.id || reel.course_id)}
                   className="absolute top-3 right-3 w-6 h-6 rounded-full bg-red-500/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                 >
                   <Trash size={10} />

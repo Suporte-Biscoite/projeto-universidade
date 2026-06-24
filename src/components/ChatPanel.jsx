@@ -6,16 +6,20 @@ import { Send, MessageCircle, ChevronLeft, Search, Loader, X } from 'lucide-reac
 import { authFetch } from '../utils/authFetch';
 
 // ─── Bubble de mensagem ───────────────────────────────────────────────────────
-function MessageBubble({ msg, isOwn }) {
+function MessageBubble({ msg, isOwn, ownAvatar, ownName }) {
   const time = new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const initials = msg.sender_name ? msg.sender_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() : '?';
+  const avatar = isOwn ? ownAvatar : msg.sender_avatar;
+  const displayInitials = isOwn
+    ? (ownName || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+    : initials;
 
   return (
     <div className={`flex gap-2 items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
       <div className="w-7 h-7 rounded-full bg-[#4A72B2] flex items-center justify-center text-white text-[9px] font-black flex-shrink-0 overflow-hidden">
-        {msg.sender_avatar
-          ? <img src={msg.sender_avatar} className="w-full h-full object-cover" alt={msg.sender_name} />
-          : <span>{initials}</span>}
+        {avatar
+          ? <img src={avatar} className="w-full h-full object-cover" alt={msg.sender_name} />
+          : <span>{displayInitials}</span>}
       </div>
       <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[75%]`}>
         <p className={`text-[10px] font-bold mb-0.5 ${isOwn ? 'text-slate-300 mr-1' : 'text-slate-400 ml-1'}`}>
@@ -73,7 +77,12 @@ function ConversationItem({ conv, isOwn, isSelected, onClick, currentUserId, onD
       )}
     </button>
     {onDelete && (
-      <button onClick={e => { e.stopPropagation(); onDelete(conv.id); }}
+      <button onClick={e => {
+        e.stopPropagation();
+        if (window.confirm('Excluir esta conversa? As mensagens serão perdidas permanentemente.')) {
+          onDelete(conv.id);
+        }
+      }}
         className="opacity-0 group-hover:opacity-100 pr-3 text-slate-300 hover:text-red-400 transition-all flex-shrink-0"
         title="Excluir conversa">
         <X size={14} />
@@ -93,6 +102,11 @@ export default function ChatPanel({ currentUserId, compact = false }) {
   const [loading, setLoading]             = useState(true);
   const [sending, setSending]             = useState(false);
   const [showList, setShowList]           = useState(true);
+  // Avatar e nome próprios para exibir imediatamente sem esperar a API
+  const ownRaw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+  const ownUser = ownRaw ? (() => { try { return JSON.parse(ownRaw); } catch { return {}; } })() : {};
+  const ownAvatar = ownUser.avatar_url || null;
+  const ownName   = ownUser.name || 'Você';
   const messagesContainerRef              = useRef(null);
   const pollRef                           = useRef(null);
   const lastMsgTime                       = useRef(null);
@@ -280,7 +294,7 @@ export default function ChatPanel({ currentUserId, compact = false }) {
                   <p className="text-xs font-bold">Nenhuma mensagem ainda. Diga olá!</p>
                 </div>
               ) : messages.map(msg => (
-                <MessageBubble key={msg.id} msg={msg} isOwn={msg.sender_id === currentUserId} />
+                <MessageBubble key={msg.id} msg={msg} isOwn={msg.sender_id === currentUserId} ownAvatar={ownAvatar} ownName={ownName} />
               ))}
             </div>
 
