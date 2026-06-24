@@ -124,10 +124,11 @@ export function ProfileProvider({ children }) {
         return {
           name:    logged.name         || 'Usuário',
           unit:    logged.unit         || logged.store_name || '',
-          role:    '',  // sempre carregado do banco via fetchFreshData
-          time:    logged.company_time || '',
-          pronoun: logged.pronoun      || '',
-          bio:     logged.bio          || '',
+          role:     '',  // sempre carregado do banco via fetchFreshData
+          time:     logged.company_time || '',
+          pronoun:  logged.pronoun      || '',
+          bio:      logged.bio          || '',
+          contacts: logged.contacts     || { phone: '', email: '', linkedin: '', website: '' },
           avatar_url:  logged.avatar_url  || null,
           banner_url:  logged.banner_url  || null,
           certificates: INITIAL_CERTIFICATES,
@@ -310,12 +311,13 @@ export function ProfileProvider({ children }) {
         // Atualiza estado imediatamente com dados do banco
         setUserData(prev => ({
           ...prev,
-          name:    user.name         || prev.name,
-          unit:    user.unit         || user.store_name || prev.unit,
-          pronoun: user.pronoun      || prev.pronoun || '',
-          role:    user.position     || '',          // sempre usa o banco, não o cache
-          time:    user.company_time || prev.time    || '',
-          bio:     user.bio          || prev.bio     || '',
+          name:     user.name         || prev.name,
+          unit:     user.unit         || user.store_name || prev.unit,
+          pronoun:  user.pronoun      || prev.pronoun || '',
+          role:     user.position     || '',
+          time:     user.company_time || prev.time    || '',
+          bio:      user.bio          || prev.bio     || '',
+          contacts: user.contacts     || prev.contacts || { phone: '', email: '', linkedin: '', website: '' },
         }));
         if (user.avatar_url && !user.avatar_url.startsWith('blob:')) {
           setProfileImage(user.avatar_url);

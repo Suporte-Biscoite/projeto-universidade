@@ -146,7 +146,7 @@ async function updateUser(req, res, auth, id) {
   const { rows } = await pool.query(
     `UPDATE users SET ${updates.join(', ')}, updated_at = now()
      WHERE id = $${i}
-     RETURNING id, name, email, role, unit, store_id, active, instructor_id, avatar_url, banner_url, pronoun, position, company_time, skills, bio`,
+     RETURNING id, name, email, role, unit, store_id, active, instructor_id, avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts`,
     values
   );
   if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });
