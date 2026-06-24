@@ -11,6 +11,7 @@ import {
   Clapperboard, Trash,
 } from 'lucide-react';
 import { useProfile, CURRENT_INSTRUCTOR_ID, DEFAULT_COURSE_IMAGES } from '../context/ProfileContext';
+import ChatPanel from '../components/ChatPanel';
 import VimeoUploader from '../components/VimeoUploader';
 import LiveControl from '../components/LiveControl';
 
@@ -2035,240 +2036,19 @@ function RelatoriosView() {
 // VIEW: COMUNICAÇÃO
 // ═══════════════════════════════════════════════════════════════════════════
 function ComunicacaoView({ onRead }) {
-  const { conversations, sendMessage, markConvReadProf, announcements, addAnnouncement } = useProfile();
-  const [commTab, setCommTab] = useState('conversas');
-  const [selectedConvId, setSelectedConvId] = useState(null);
-  const [msgInput, setMsgInput] = useState('');
-  const [newAnn, setNewAnn] = useState({ titulo: '', corpo: '', destino: 'todos' });
-  const [annSent, setAnnSent] = useState(false);
-  const [toast, setToast] = useState(null);
-
-  const [duvidas, setDuvidas] = useState([
-    { id: 1, aluno: 'João Silva',   aula: 'Aula de Precificação', tempo: '5 min',  texto: 'Não entendi o cálculo de margem de lucro na aula 3.', status: 'pendente' },
-    { id: 2, aluno: 'Ana Lima',     aula: 'Operação de Máquinas', tempo: '8 min',  texto: 'Como opero a máquina no modo manual?', status: 'pendente' },
-    { id: 3, aluno: 'Carlos Matos', aula: 'Quiz — Módulo 2',      tempo: '12 min', texto: 'A questão 3 parece ter duas respostas corretas.', status: 'pendente' },
-    { id: 4, aluno: 'Pedro Costa',  aula: 'Aula de Vendas',       tempo: '1h',     texto: 'Qual a diferença entre venda ativa e receptiva?', status: 'respondida' },
-  ]);
-  const [activeDuvida, setActiveDuvida] = useState(null);
-
-  const selectedConv = conversations.find(c => c.id === selectedConvId) || null;
-
-  const selectConv = (conv) => {
-    setSelectedConvId(conv.id);
-    markConvReadProf(conv.id);
-    onRead();
-  };
-
-  const sendMsg = () => {
-    if (!msgInput.trim() || !selectedConvId) return;
-    sendMessage(selectedConvId, msgInput, 'prof');
-    setMsgInput('');
-  };
-
-  const sendAnn = () => {
-    if (!newAnn.titulo.trim() || !newAnn.corpo.trim()) return;
-    addAnnouncement(newAnn);
-    setNewAnn({ titulo: '', corpo: '', destino: 'todos' });
-    setAnnSent(true);
-    setTimeout(() => setAnnSent(false), 2500);
-    setToast('Aviso publicado com sucesso!');
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  const resolveDoubt = (id) => {
-    setDuvidas(prev => prev.map(d => d.id === id ? { ...d, status: 'respondida' } : d));
-    setActiveDuvida(null);
-    setToast('Dúvida marcada como resolvida');
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  const DEST_LABELS = { todos: 'Todos', alunos: 'Alunos', franqueados: 'Franqueados', pendentes: 'Pendentes', risco: 'Em risco' };
-
-  const pendenteDuvidas = duvidas.filter(d => d.status === 'pendente');
+  const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+  const currentUserId = (() => { try { return raw ? JSON.parse(raw)?.id : null; } catch { return null; } })();
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex gap-6 border-b border-slate-100">
-        {[
-          { id: 'conversas', label: 'Conversas',    badge: conversations.reduce((s, c) => s + c.unreadProf, 0) },
-          { id: 'avisos',    label: 'Avisos',        badge: 0 },
-          { id: 'duvidas',   label: 'Dúvidas',       badge: pendenteDuvidas.length },
-        ].map(t => (
-          <button key={t.id} onClick={() => setCommTab(t.id)}
-            className={`pb-3 text-sm font-black transition-all border-b-2 -mb-px flex items-center gap-2 ${
-              commTab === t.id ? 'text-[#00263B] border-[#4A72B2]' : 'text-slate-400 border-transparent hover:text-[#00263B]'
-            }`}>
-            {t.label}
-            {t.badge > 0 && <span className="w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{t.badge}</span>}
-          </button>
-        ))}
+      <div>
+        <h2 className="text-lg font-black text-[#001A26]">Comunicação</h2>
+        <p className="text-sm text-slate-400 mt-1">Converse com seus alunos diretamente pela plataforma.</p>
       </div>
-
-      {/* ── TAB: Conversas ── */}
-      {commTab === 'conversas' && (
-        <div className="flex gap-5 h-[520px]">
-          {/* Lista */}
-          <div className="w-64 flex-shrink-0 space-y-2 overflow-y-auto">
-            {conversations.map(conv => (
-              <button key={conv.id} onClick={() => selectConv(conv)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all ${
-                  selectedConv?.id === conv.id ? 'bg-[#E2F0FF]' : 'bg-white border border-slate-100 hover:border-[#4A72B2]/30'
-                }`}>
-                <div className="relative flex-shrink-0">
-                  <img src={conv.avatar} className="w-10 h-10 rounded-full object-cover" alt={conv.name} />
-                  {conv.unreadProf > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center">{conv.unreadProf}</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-black text-[#00263B] truncate">{conv.name}</p>
-                    <span className="text-[8px] text-slate-300 flex-shrink-0 ml-1">{conv.lastTime}</span>
-                  </div>
-                  <p className="text-[9px] text-slate-400 font-medium truncate">{conv.lastMsg}</p>
-                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${conv.role === 'franqueado' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>{conv.role === 'franqueado' ? 'Franqueado' : 'Aluno'}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Thread */}
-          {selectedConv ? (
-            <div className="flex-1 bg-white rounded-[24px] border border-slate-100 flex flex-col overflow-hidden">
-              <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100">
-                <img src={selectedConv.avatar} className="w-9 h-9 rounded-full object-cover" alt={selectedConv.name} />
-                <div>
-                  <p className="font-black text-[#00263B] text-sm">{selectedConv.name}</p>
-                  <p className="text-[10px] text-slate-400 font-medium">{selectedConv.role}</p>
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-                {selectedConv.messages.map((msg) => (
-                  <div key={msg.id} className={`flex ${msg.from === 'prof' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${msg.from === 'prof' ? 'bg-[#4A72B2] text-white' : 'bg-slate-100 text-[#00263B]'}`}>
-                      <p className="text-xs font-medium">{msg.text}</p>
-                      <p className={`text-[9px] mt-1 ${msg.from === 'prof' ? 'text-blue-200' : 'text-slate-400'}`}>{msg.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
-                <input value={msgInput} onChange={e => setMsgInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && sendMsg()}
-                  placeholder="Escreva uma mensagem..."
-                  className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#4A72B2] font-medium placeholder-slate-300" />
-                <button onClick={sendMsg} disabled={!msgInput.trim()}
-                  className="w-10 h-10 bg-[#4A72B2] text-white rounded-xl flex items-center justify-center hover:bg-[#00263B] transition-all disabled:opacity-40">
-                  <Send size={14} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 bg-white rounded-[24px] border border-slate-100 flex flex-col items-center justify-center text-slate-300 gap-3">
-              <MessageSquare size={40} />
-              <p className="font-black text-sm">Selecione uma conversa</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── TAB: Avisos ── */}
-      {commTab === 'avisos' && (
-        <div className="grid grid-cols-2 gap-6">
-          {/* Composer */}
-          <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-4">
-            <h3 className="font-black text-[#00263B] text-sm">Novo Aviso</h3>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Destinatários</label>
-              <select value={newAnn.destino} onChange={e => setNewAnn(p => ({ ...p, destino: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-[#00263B] outline-none focus:border-[#4A72B2] font-medium bg-white">
-                <option value="todos">Todos os alunos</option>
-                <option value="alunos">Apenas Alunos</option>
-                <option value="franqueados">Apenas Franqueados</option>
-                <option value="pendentes">Alunos com módulo pendente</option>
-                <option value="risco">Alunos em risco</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Título</label>
-              <input value={newAnn.titulo} onChange={e => setNewAnn(p => ({ ...p, titulo: e.target.value }))}
-                placeholder="Ex: Novo conteúdo disponível"
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-[#00263B] outline-none focus:border-[#4A72B2] font-medium placeholder-slate-300" />
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Mensagem</label>
-              <textarea value={newAnn.corpo} onChange={e => setNewAnn(p => ({ ...p, corpo: e.target.value }))} rows={4}
-                placeholder="Escreva o conteúdo do aviso..."
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#00263B] outline-none focus:border-[#4A72B2] resize-none font-medium placeholder-slate-300" />
-            </div>
-            <button onClick={sendAnn} disabled={!newAnn.titulo.trim() || !newAnn.corpo.trim()}
-              className={`w-full py-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-40 ${
-                annSent ? 'bg-emerald-500 text-white' : 'bg-[#4A72B2] hover:bg-[#00263B] text-white'
-              }`}>
-              {annSent ? <><Check size={13} /> Publicado!</> : <><Send size={13} /> Publicar Aviso</>}
-            </button>
-          </div>
-
-          {/* Histórico */}
-          <div className="space-y-3">
-            <h3 className="font-black text-[#00263B] text-sm">Histórico de Avisos</h3>
-            {announcements.map(ann => (
-              <div key={ann.id} className="bg-white rounded-2xl border border-slate-100 px-5 py-4 space-y-2 hover:shadow-sm transition-shadow">
-                <div className="flex items-center justify-between">
-                  <p className="font-black text-[#00263B] text-sm">{ann.titulo}</p>
-                  <span className="text-[9px] text-slate-400">{ann.time}</span>
-                </div>
-                <p className="text-xs text-slate-400 font-medium leading-relaxed">{ann.corpo}</p>
-                <div className="flex items-center gap-3">
-                  <span className="text-[9px] font-black px-2 py-0.5 bg-[#E2F0FF] text-[#4A72B2] rounded-full">{DEST_LABELS[ann.destino] || ann.destino}</span>
-                  <span className="text-[9px] text-slate-400 font-medium">{ann.lidos} lidos</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB: Dúvidas ── */}
-      {commTab === 'duvidas' && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-xs font-black text-slate-400">{pendenteDuvidas.length} pendente{pendenteDuvidas.length !== 1 ? 's' : ''}</span>
-            <span className="text-slate-200">·</span>
-            <span className="text-xs font-black text-emerald-500">{duvidas.filter(d => d.status === 'respondida').length} respondidas</span>
-          </div>
-          {duvidas.map(d => (
-            <div key={d.id} className={`bg-white rounded-2xl border px-6 py-4 flex items-center gap-4 hover:shadow-sm transition-shadow ${d.status === 'respondida' ? 'border-emerald-100 opacity-60' : 'border-slate-100'}`}>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-black text-[#00263B] text-sm">{d.aluno}</p>
-                  <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${d.status === 'respondida' ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-500'}`}>
-                    {d.status === 'respondida' ? 'Respondida' : 'Pendente'}
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 font-medium">{d.aula} · {d.tempo}</p>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-1">{d.texto}</p>
-              </div>
-              {d.status === 'pendente' && (
-                <button onClick={() => setActiveDuvida(d)}
-                  className="flex-shrink-0 px-4 py-2 bg-[#4A72B2] text-white text-[10px] font-black rounded-xl hover:bg-[#00263B] transition-all flex items-center gap-1.5">
-                  <MessageSquare size={11} /> Responder
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeDuvida && (
-        <DuvidaModal duvida={activeDuvida} onClose={() => setActiveDuvida(null)} onResolve={resolveDoubt} />
-      )}
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      <ChatPanel currentUserId={currentUserId} />
     </div>
   );
 }
-
 // ═══════════════════════════════════════════════════════════════════════════
 // VIEW: REELS
 // ═══════════════════════════════════════════════════════════════════════════

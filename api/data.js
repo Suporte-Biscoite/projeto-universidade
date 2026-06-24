@@ -321,6 +321,112 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── CONVERSATIONS ─────────────────────────────────────────────────────────
+    // GET  /api/data?resource=conversations               — lista do usuário
+    // POST /api/data?resource=conversations               — cria ou abre conversa
+    // GET  /api/data?resource=conversations&id=uuid       — mensagens de uma conversa
+    // POST /api/data?resource=conversations&action=message — envia mensagem
+    // POST /api/data?resource=conversations&action=read&id=uuid — marca lidas
+    // GET  /api/data?resource=professors                  — lista professores/admins
+    if (resource === 'professors') {
+      if (req.method === 'GET') {
+        const { rows } = await pool.query(
+          `SELECT id, name, avatar_url, role FROM users
+           WHERE role IN ('professor','admin') AND active = true AND status = 'approved'
+           ORDER BY name ASC`
+        );
+        return send(res, 200, rows);
+      }
+    }
+
+    if (resource === 'conversations') {
+      if (!auth) return send(res, 401, { error: 'Não autorizado' });
+
+      // Lista conversas do usuário
+      if (req.method === 'GET' && !id && !action) {
+        const { rows } = await pool.query(
+          `SELECT c.id, c.student_id, c.professor_id, c.course_id,
+                  c.last_message, c.last_at, c.created_at,
+                  s.name as student_name, s.avatar_url as student_avatar,
+                  p.name as professor_name, p.avatar_url as professor_avatar,
+                  co.title as course_title,
+                  COUNT(cm.id) FILTER (WHERE cm.read = false AND cm.sender_id != $1) as unread
+           FROM conversations c
+           JOIN users s ON s.id = c.student_id
+           JOIN users p ON p.id = c.professor_id
+           LEFT JOIN courses co ON co.id = c.course_id
+           LEFT JOIN chat_messages cm ON cm.conversation_id = c.id
+           WHERE c.student_id = $1 OR c.professor_id = $1
+           GROUP BY c.id, s.name, s.avatar_url, p.name, p.avatar_url, co.title
+           ORDER BY c.last_at DESC NULLS LAST`,
+          [auth.sub]
+        );
+        return send(res, 200, rows);
+      }
+
+      // Mensagens de uma conversa específica
+      if (req.method === 'GET' && id) {
+        const { rows } = await pool.query(
+          `SELECT cm.id, cm.sender_id, cm.text, cm.read, cm.created_at,
+                  u.name as sender_name, u.avatar_url as sender_avatar
+           FROM chat_messages cm
+           JOIN users u ON u.id = cm.sender_id
+           WHERE cm.conversation_id = $1
+           ORDER BY cm.created_at ASC`,
+          [id]
+        );
+        return send(res, 200, rows);
+      }
+
+      if (req.method === 'POST') {
+        // Criar/abrir conversa
+        if (!action) {
+          const { professorId, courseId } = req.body ?? {};
+          if (!professorId) return send(res, 400, { error: 'professorId obrigatório' });
+
+          // Cria ou retorna conversa existente
+          const { rows } = await pool.query(
+            `INSERT INTO conversations (student_id, professor_id, course_id)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (student_id, professor_id, course_id) DO UPDATE SET created_at = conversations.created_at
+             RETURNING *`,
+            [auth.sub, professorId, courseId || null]
+          );
+          return send(res, 200, rows[0]);
+        }
+
+        // Enviar mensagem
+        if (action === 'message') {
+          const { conversationId, text } = req.body ?? {};
+          if (!conversationId || !text?.trim()) return send(res, 400, { error: 'conversationId e text obrigatórios' });
+
+          const { rows } = await pool.query(
+            `INSERT INTO chat_messages (conversation_id, sender_id, text)
+             VALUES ($1, $2, $3) RETURNING *`,
+            [conversationId, auth.sub, text.trim()]
+          );
+
+          // Atualiza last_message na conversa
+          await pool.query(
+            `UPDATE conversations SET last_message = $1, last_at = now() WHERE id = $2`,
+            [text.trim().slice(0, 100), conversationId]
+          );
+
+          return send(res, 201, rows[0]);
+        }
+
+        // Marcar mensagens como lidas
+        if (action === 'read' && id) {
+          await pool.query(
+            `UPDATE chat_messages SET read = true
+             WHERE conversation_id = $1 AND sender_id != $2`,
+            [id, auth.sub]
+          );
+          return send(res, 200, { ok: true });
+        }
+      }
+    }
+
     return send(res, 400, { error: 'resource inválido' });
   } catch (err) {
     console.error('[data]', err);

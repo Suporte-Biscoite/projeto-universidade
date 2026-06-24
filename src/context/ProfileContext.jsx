@@ -63,9 +63,10 @@ const INITIAL_MENU_ITEMS = [
   { id: 'courses',       label: 'Cursos',          path: '/courses',        group: 'nav',      visible: true, order: 2 },
   { id: 'certificados',  label: 'Certificados',    path: '/certificados',   group: 'nav',      visible: true, order: 3 },
   { id: 'favoritos',     label: 'Favoritos',       path: '/favoritos',      group: 'dropdown', visible: true, order: 4 },
-  { id: 'carreira',      label: 'Carreira (Beta)',        path: '/carreira',       group: 'dropdown', visible: true, order: 5 },
-  { id: 'live',          label: 'Live',            path: '/live',           group: 'dropdown', visible: true, order: 6 },
-  { id: 'configuracoes', label: 'Configurações',   path: '/configuracoes',  group: 'dropdown', visible: true, order: 7 },
+  { id: 'mensagens',     label: 'Mensagens',       path: '/mensagens',      group: 'dropdown', visible: true, order: 5 },
+  { id: 'carreira',      label: 'Carreira (Beta)', path: '/carreira',       group: 'dropdown', visible: true, order: 6 },
+  { id: 'live',          label: 'Live',            path: '/live',           group: 'dropdown', visible: true, order: 7 },
+  { id: 'configuracoes', label: 'Configurações',   path: '/configuracoes',  group: 'dropdown', visible: true, order: 8 },
 ];
 
 const INITIAL_USERS = [];

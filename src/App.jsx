@@ -16,6 +16,7 @@ const LiveChat         = lazy(() => import('./pages/LiveChat'));
 const Profile          = lazy(() => import('./pages/Profile'));
 const Certificates     = lazy(() => import('./pages/Certificates'));
 const Favoritos        = lazy(() => import('./pages/Favoritos'));
+const Mensagens        = lazy(() => import('./pages/Mensagens'));
 const Settings         = lazy(() => import('./pages/Settings'));
 const InstructorProfile = lazy(() => import('./pages/InstructorProfile'));
 const ProfessorDashboard = lazy(() => import('./pages/ProfessorDashboard'));
@@ -134,6 +135,7 @@ function AppRoutes() {
             <Route path="profile"         element={<Profile />} />
             <Route path="certificados"    element={<Certificates />} />
             <Route path="favoritos"       element={<Favoritos />} />
+            <Route path="mensagens"       element={<Mensagens />} />
             <Route path="carreira"        element={<PlaceholderPage title="Minha Carreira" emoji="🚀" />} />
             <Route path="configuracoes"   element={<Settings />} />
             <Route path="instructor/:instructorId" element={<InstructorProfile />} />

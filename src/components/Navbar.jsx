@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Search, Bell, Pencil, X, Heart, Briefcase, Settings, LogOut, Home, BookOpen, Award, Menu, Radio, Shield, Store, BarChart2, Users } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Bell, Pencil, X, Heart, Briefcase, Settings, LogOut, Home, BookOpen, Award, Menu, Radio, Shield, Store, BarChart2, Users, MessageCircle } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { authFetch } from '../utils/authFetch';
@@ -78,7 +78,7 @@ export default function Navbar() {
 
   // Mapeamento de id do menu para ícone
   const MENU_ID_TO_ICON = {
-    home: Home, courses: BookOpen, certificados: Award,
+    home: Home, courses: BookOpen, certificados: Award, mensagens: MessageCircle,
     favoritos: Heart, carreira: Briefcase, live: Radio, configuracoes: Settings,
   };
 
