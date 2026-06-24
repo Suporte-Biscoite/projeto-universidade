@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Award, Download, Share2, ExternalLink, Loader, CheckCircle2, Calendar, Clock, Tag } from 'lucide-react';
+import { Award, Download, Share2, ExternalLink, Loader, CheckCircle2, Calendar, Clock, Tag, Linkedin } from 'lucide-react';
 import { authFetch } from '../utils/authFetch';
 import { useProfile } from '../context/ProfileContext';
 
@@ -81,13 +81,13 @@ function CertificateCard({ cert, onView }) {
         </button>
         <button
           onClick={() => {
-            const url = `${window.location.origin}/certificado/${cert.id}`;
-            navigator.clipboard?.writeText(url);
+            const text = encodeURIComponent(`🎓 Concluí o curso "${cert.course_title}" pela Universidade Biscoitê! #Biscoitê #Aprendizado`);
+            window.open(`https://www.linkedin.com/sharing/share-offsite/?summary=${text}`, '_blank', 'width=600,height=600');
           }}
-          className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl transition-colors"
-          title="Copiar link"
+          className="px-3 py-2.5 bg-[#0A66C2]/10 hover:bg-[#0A66C2]/20 text-[#0A66C2] rounded-xl transition-colors"
+          title="Compartilhar no LinkedIn"
         >
-          <Share2 size={14} />
+          <Linkedin size={14} />
         </button>
       </div>
     </div>
@@ -101,7 +101,48 @@ function CertificateModal({ cert, onClose }) {
     day: '2-digit', month: 'long', year: 'numeric'
   });
 
-  const handlePrint = () => window.print();
+  const handleDownloadPDF = async () => {
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const { default: jsPDF } = await import('jspdf');
+
+      const el = printRef.current;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#001A26',
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, (pdf.internal.pageSize.getHeight() - pdfH) / 2, pdfW, pdfH);
+      pdf.save(`Certificado - ${cert.course_title}.pdf`);
+    } catch (e) {
+      console.error('PDF error:', e);
+      window.print();
+    }
+  };
+
+  const handleLinkedIn = () => {
+    const text = encodeURIComponent(
+      `🎓 Acabei de concluir o curso "${cert.course_title}" pela Universidade Biscoitê!
+
+Um passo importante na minha jornada de desenvolvimento profissional. Muito orgulhoso dessa conquista! 🚀
+
+#UniversidadeBiscoitê #Biscoitê #Desenvolvimento #Aprendizado`
+    );
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}&summary=${text}`;
+    window.open(url, '_blank', 'width=600,height=600');
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={onClose}>
@@ -116,9 +157,18 @@ function CertificateModal({ cert, onClose }) {
 
           {/* Borda interna decorativa */}
           <div className="relative border border-[#4A72B2]/30 rounded-[24px] p-8 sm:p-12 space-y-6">
-            {/* Logo / ícone */}
-            <div className="w-16 h-16 bg-[#4A72B2]/20 rounded-full flex items-center justify-center mx-auto border border-[#4A72B2]/40">
-              <Award size={32} className="text-[#b9d2eb]" />
+            {/* Logo Biscoitê */}
+            <div className="flex flex-col items-center gap-3">
+              <img
+                src="/logo-biscoite.svg"
+                alt="Universidade Biscoitê"
+                className="h-12 w-auto"
+                style={{ filter: 'brightness(0) invert(1)', opacity: 0.9 }}
+                crossOrigin="anonymous"
+              />
+              <div className="w-10 h-10 bg-[#4A72B2]/20 rounded-full flex items-center justify-center border border-[#4A72B2]/40">
+                <Award size={20} className="text-[#b9d2eb]" />
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -157,14 +207,18 @@ function CertificateModal({ cert, onClose }) {
         </div>
 
         {/* Botões */}
-        <div className="p-6 flex gap-3">
+        <div className="p-4 flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button onClick={onClose}
-            className="flex-1 py-3 rounded-2xl border border-slate-200 text-slate-500 font-bold text-sm hover:bg-slate-50 transition-colors">
+            className="py-3 px-5 rounded-2xl border border-slate-200 text-slate-500 font-bold text-sm hover:bg-slate-50 transition-colors">
             Fechar
           </button>
-          <button onClick={handlePrint}
+          <button onClick={handleLinkedIn}
+            className="flex-1 py-3 rounded-2xl bg-[#0A66C2] text-white font-bold text-sm hover:bg-[#0958a8] transition-colors flex items-center justify-center gap-2">
+            <Linkedin size={15} /> Compartilhar no LinkedIn
+          </button>
+          <button onClick={handleDownloadPDF}
             className="flex-1 py-3 rounded-2xl bg-[#001A26] text-white font-bold text-sm hover:bg-[#4A72B2] transition-colors flex items-center justify-center gap-2">
-            <Download size={15} /> Imprimir / Salvar PDF
+            <Download size={15} /> Baixar PDF
           </button>
         </div>
       </div>
