@@ -879,16 +879,14 @@ function CourseFormModal({ initial, onSave, onClose, systemRole }) {
           <FieldSelect label="Formato"    value={form.format}   onChange={v => setForm(p => ({ ...p, format: v }))}     options={FMTS} />
           <FieldInput  label="Duração"    value={form.duration} onChange={v => setForm(p => ({ ...p, duration: v }))}   placeholder="Ex: 2h 30min" maxLength={20} />
         </div>
-        {systemRole === 'admin' && (
-          {/* Dropdown de instrutores (professores e admins) */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Instrutor</label>
-            <InstructorDropdown
-              value={form.instructor}
-              onChange={v => setForm(p => ({ ...p, instructor: v }))}
-            />
-          </div>
-        )}
+        {/* Dropdown de instrutores */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Instrutor</label>
+          <InstructorDropdown
+            value={form.instructor}
+            onChange={v => setForm(p => ({ ...p, instructor: v }))}
+          />
+        </div>
         {/* ── VISIBILIDADE POR PERFIL ── */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Visível para</label>
