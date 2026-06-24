@@ -10,11 +10,38 @@ export default function Favoritos() {
   const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
-    authFetch('/api/data?resource=favorites')
-      .then(r => r.ok ? r.json() : [])
-      .then(data => { if (Array.isArray(data)) setFavorites(data); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const loadFavorites = async () => {
+      try {
+        const res = await authFetch('/api/data?resource=favorites');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+
+        // Busca progresso de cada curso favorito
+        const withProgress = await Promise.all(
+          data.map(async (fav) => {
+            try {
+              const pr = await authFetch(`/api/courses?sub=progress&courseId=${fav.course_id}`);
+              if (!pr.ok) return { ...fav, progress: 0 };
+              const pd = await pr.json();
+              // Busca total de aulas do curso
+              const cr = await authFetch(`/api/courses?id=${fav.course_id}`);
+              if (!cr.ok) return { ...fav, progress: 0 };
+              const cd = await cr.json();
+              const total = (cd.modules || []).flatMap(m => m.lessons || []).length;
+              const done  = pd.count || 0;
+              const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+              return { ...fav, progress: pct };
+            } catch {
+              return { ...fav, progress: 0 };
+            }
+          })
+        );
+        setFavorites(withProgress);
+      } catch {}
+      finally { setLoading(false); }
+    };
+    loadFavorites();
   }, []);
 
   const toggleFav = async (courseId) => {
@@ -79,7 +106,7 @@ export default function Favoritos() {
               id={fav.course_id}
               title={fav.title}
               instructor={fav.instructor_name || '—'}
-              progress={0}
+              progress={fav.progress || 0}
               image={fav.thumbnail_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400'}
               category={fav.category}
               duration={fav.duration}

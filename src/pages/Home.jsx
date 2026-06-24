@@ -21,6 +21,30 @@ export default function Home() {
   const { reels: reelsData } = useProfile();
   const [myCourses, setMyCourses]     = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [favorites, setFavorites] = useState([]);
+
+  // Carrega favoritos do banco
+  useEffect(() => {
+    authFetch('/api/data?resource=favorites')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setFavorites(data.map(f => f.course_id)); })
+      .catch(() => {});
+  }, []);
+
+  const toggleFav = async (id) => {
+    const isFav = favorites.includes(id);
+    setFavorites(prev => isFav ? prev.filter(f => f !== id) : [...prev, id]);
+    try {
+      if (isFav) {
+        await authFetch(`/api/data?resource=favorites&id=${id}`, { method: 'DELETE' });
+      } else {
+        await authFetch('/api/data?resource=favorites', {
+          method: 'POST',
+          body: JSON.stringify({ courseId: id }),
+        });
+      }
+    } catch {}
+  };
   const [courseIndex, setCourseIndex] = useState(0);
   const [hoveredReel, setHoveredReel] = useState(null);
   const coursesPerPage = 3;
@@ -191,6 +215,8 @@ export default function Home() {
                   image={course.thumbnail_url || course.image}
                   category={course.category}
                   duration={course.duration}
+                  isFavorite={favorites.includes(course.id)}
+                  onToggleFavorite={toggleFav}
                 />
               ))}
             </div>
@@ -328,6 +354,8 @@ export default function Home() {
                 image={course.thumbnail_url || course.image}
                 category={course.category}
                 duration={course.duration}
+                isFavorite={favorites.includes(course.id)}
+                onToggleFavorite={toggleFav}
               />
             </div>
           ))}
