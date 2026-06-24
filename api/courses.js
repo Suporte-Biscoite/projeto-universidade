@@ -350,11 +350,28 @@ async function markProgress(req, res, auth) {
     );
     const courseCompleted = Number(done[0].count) >= Number(total[0].count);
     if (courseCompleted) {
-      const { rows: c } = await pool.query('SELECT title FROM courses WHERE id=$1', [courseId]);
+      const { rows: c } = await pool.query(
+        'SELECT title FROM courses WHERE id=$1', [courseId]
+      );
+      const { rows: u } = await pool.query(
+        'SELECT name FROM users WHERE id=$1', [auth.sub]
+      );
+      const courseTitle = c[0]?.title || 'Curso';
+      const userName   = u[0]?.name   || 'Colaborador';
+
+      // Gera certificado automaticamente
+      await pool.query(
+        `INSERT INTO certificates (user_id, course_id, user_name, course_title)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (user_id, course_id) DO NOTHING`,
+        [auth.sub, courseId, userName, courseTitle]
+      );
+
+      // Notifica o aluno
       await createNotification({
         user_id: auth.sub,
-        title: `Parabéns! Você concluiu "${c[0]?.title || 'curso'}" 🎉`,
-        description: 'Seu progresso foi registrado. Continue aprendendo!',
+        title: `Certificado disponível! 🎓`,
+        description: `Você concluiu "${courseTitle}". Acesse seus certificados.`,
         type: 'certificate',
         link: '/certificados',
       });
