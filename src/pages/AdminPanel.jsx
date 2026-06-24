@@ -270,30 +270,28 @@ export default function AdminPanel() {
     <div className="min-h-screen bg-[#f6f9fd] flex">
 
       {/* SIDEBAR */}
-      <aside className="w-64 min-h-screen bg-[#001A26] flex flex-col py-8 px-6 fixed left-0 top-0 bottom-0 z-30">
+      <aside className="w-64 min-h-screen bg-white border-r border-slate-100 flex flex-col py-8 px-6 fixed left-0 top-0 bottom-0 z-30">
         <div className="mb-10 text-center">
-          <img src="/logo-biscoite.svg" alt="Logo" className="h-8 mx-auto mb-1 brightness-0 invert" />
-          <div className="mt-3 inline-flex items-center gap-1.5 bg-purple-500/20 text-purple-300 text-[10px] font-black px-2.5 py-1 rounded-full border border-purple-500/30">
-            <Shield size={10} /> PAINEL ADMIN
-          </div>
+          <img src="/logo-biscoite.svg" alt="Logo" className="h-8 mx-auto mb-1" />
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">Painel Admin</p>
         </div>
         <nav className="space-y-1 flex-1">
           {navItems.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActiveTab(id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
-                activeTab === id ? 'bg-white/10 text-white' : 'text-white/40 hover:bg-white/5 hover:text-white/70'
+                activeTab === id ? 'bg-[#e2eef9] text-[#4A72B2]' : 'text-slate-400 hover:bg-slate-50 hover:text-[#001A26]'
               }`}>
               <Icon size={18} /> {label}
             </button>
           ))}
         </nav>
-        <div className="space-y-2 mt-8 pt-8 border-t border-white/10">
+        <div className="space-y-2 mt-8 pt-8 border-t border-slate-100">
           <button onClick={() => navigate('/')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-white/40 hover:bg-white/5 hover:text-white/70 transition-all">
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-400 hover:bg-slate-50 hover:text-[#001A26] transition-all">
             <Home size={18} /> Ir para Home
           </button>
           <button onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-red-400/60 hover:bg-red-500/10 hover:text-red-400 transition-all">
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-400 hover:bg-red-50 hover:text-red-400 transition-all">
             <LogOut size={18} /> Sair
           </button>
         </div>
@@ -301,20 +299,30 @@ export default function AdminPanel() {
 
       {/* CONTEÚDO */}
       <main className="ml-64 flex-1 p-10 space-y-8">
-        <div>
-          <h1 className="text-3xl font-black text-[#001A26]">Painel Administrativo</h1>
-          <p className="text-slate-400 text-sm mt-1">Gerencie usuários, aprovações e configurações da plataforma.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black text-[#001A26]">Painel Administrativo</h1>
+            <p className="text-slate-400 text-sm mt-1">Gerencie usuários, aprovações e configurações da plataforma.</p>
+          </div>
+          <div className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-600 text-[10px] font-black px-3 py-1.5 rounded-full border border-purple-100">
+            <Shield size={11} /> ADMIN
+          </div>
         </div>
 
         {/* Stats por role */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Object.entries(ROLE_CONFIG).map(([role, cfg]) => (
             <button key={role} onClick={() => setFilterRole(prev => prev === role ? null : role)}
-              className={`p-4 rounded-[18px] border-2 text-center transition-all ${
-                filterRole === role ? 'border-[#4A72B2] bg-[#e2eef9]' : 'border-slate-100 bg-white hover:border-slate-200'
+              className={`bg-white rounded-[24px] p-6 flex items-start gap-4 shadow-sm border-2 transition-all ${
+                filterRole === role ? 'border-[#4A72B2]' : 'border-slate-100 hover:border-[#4A72B2]/40'
               }`}>
-              <p className="text-xl font-black text-[#001A26]">{countByRole[role] || 0}</p>
-              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full mt-1 inline-block ${cfg.color}`}>{cfg.label}</span>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
+                <Users size={18} />
+              </div>
+              <div className="text-left">
+                <p className="text-2xl font-black text-[#001A26]">{countByRole[role] || 0}</p>
+                <p className="text-xs font-bold text-slate-400 mt-0.5">{cfg.label}</p>
+              </div>
             </button>
           ))}
         </div>
