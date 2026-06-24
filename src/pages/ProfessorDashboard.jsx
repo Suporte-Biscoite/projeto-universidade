@@ -747,6 +747,37 @@ function extractYouTubeId(url) {
   return m ? m[1] : null;
 }
 
+function InstructorDropdown({ value, onChange }) {
+  const [instructors, setInstructors] = React.useState([]);
+
+  React.useEffect(() => {
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data.users || []);
+        setInstructors(list.filter(u => u.role === 'professor' || u.role === 'admin'));
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div className="relative">
+      <select
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm text-[#001A26] outline-none focus:border-[#4A72B2] bg-white font-medium appearance-none"
+      >
+        <option value="">Selecione o instrutor</option>
+        {instructors.map(u => (
+          <option key={u.id} value={u.name}>{u.name} ({u.role === 'admin' ? 'Admin' : 'Professor'})</option>
+        ))}
+      </select>
+      <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+    </div>
+  );
+}
+
 function CourseFormModal({ initial, onSave, onClose, systemRole }) {
   const [form, setForm] = useState({
     title:       initial?.title       || '',
@@ -849,7 +880,14 @@ function CourseFormModal({ initial, onSave, onClose, systemRole }) {
           <FieldInput  label="Duração"    value={form.duration} onChange={v => setForm(p => ({ ...p, duration: v }))}   placeholder="Ex: 2h 30min" maxLength={20} />
         </div>
         {systemRole === 'admin' && (
-          <FieldInput label="Instrutor" value={form.instructor} onChange={v => setForm(p => ({ ...p, instructor: v }))} placeholder="Nome do instrutor" maxLength={60} />
+          {/* Dropdown de instrutores (professores e admins) */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Instrutor</label>
+            <InstructorDropdown
+              value={form.instructor}
+              onChange={v => setForm(p => ({ ...p, instructor: v }))}
+            />
+          </div>
         )}
         {/* ── VISIBILIDADE POR PERFIL ── */}
         <div className="space-y-2">

@@ -105,7 +105,7 @@ async function updateUser(req, res, auth, id) {
   if (auth.sub !== id && auth.role !== 'admin')
     return send(res, 403, { error: 'Sem permissão' });
 
-  const { name, email, password, role, unit, store_id, active, avatar_url, banner_url, pronoun, position, company_time, bio, skills, instructor_id } = req.body ?? {};
+  const { name, email, password, role, unit, store_id, active, avatar_url, banner_url, pronoun, position, company_time, bio, skills, instructor_id, contacts } = req.body ?? {};
 
   // Apenas admin pode mudar role e active
   const updates = [];
@@ -124,6 +124,7 @@ async function updateUser(req, res, auth, id) {
   if (bio !== undefined)          { updates.push(`bio = $${i++}`);           values.push(bio); }
   if (skills !== undefined)       { updates.push(`skills = $${i++}`);        values.push(skills); }
   if (instructor_id !== undefined) { updates.push(`instructor_id = $${i++}`); values.push(instructor_id); }
+  if (contacts !== undefined)     { updates.push(`contacts = $${i++}`);      values.push(JSON.stringify(contacts)); }
 
   // Só admin muda role e active
   if (auth.role === 'admin') {

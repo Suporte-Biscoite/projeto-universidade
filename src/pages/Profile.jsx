@@ -481,7 +481,6 @@ export default function Profile() {
 
   const handleSave = async () => {
     updateUserData(prev => ({ ...prev, ...tempData }));
-    // Salva no banco os campos que temos colunas
     await saveProfileToApi({
       name:         tempData.name,
       unit:         tempData.unit,
@@ -490,6 +489,7 @@ export default function Profile() {
       company_time: tempData.time,
       bio:          tempData.bio,
       skills:       tempData.skills,
+      contacts:     tempData.contacts,
     });
     setActiveModal(null);
   };
@@ -1118,10 +1118,10 @@ export default function Profile() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
-                    { icon: Users,    label: 'Usuários ativos',   value: users.filter(u => u.active).length, color: 'bg-blue-50 text-blue-500' },
-                    { icon: Store,    label: 'Lojas na rede',     value: '8',                                color: 'bg-teal-50 text-teal-500' },
-                    { icon: BookOpen, label: 'Cursos publicados', value: '12',                               color: 'bg-purple-50 text-purple-500' },
-                    { icon: TrendingUp, label: 'Engajamento',     value: '71%',                              color: 'bg-emerald-50 text-emerald-500' },
+                    { icon: Users,      label: 'Usuários ativos',   value: users.filter(u => u.active).length,                           color: 'bg-blue-50 text-blue-500' },
+                    { icon: Store,      label: 'Pendentes',         value: users.filter(u => u.status === 'pending').length,             color: 'bg-amber-50 text-amber-500' },
+                    { icon: BookOpen,   label: 'Cursos publicados', value: courses.filter(c => c.published).length,                     color: 'bg-purple-50 text-purple-500' },
+                    { icon: TrendingUp, label: 'Total de usuários', value: users.length,                                                 color: 'bg-emerald-50 text-emerald-500' },
                   ].map(({ icon: Icon, label, value, color }) => (
                     <div key={label} className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl">
                       <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${color}`}>
@@ -1144,14 +1144,13 @@ export default function Profile() {
                     { role: 'admin',      label: 'Admin',      color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
                     { role: 'professor',  label: 'Professor',  color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },
                     { role: 'gestor',     label: 'Gestor',     color: 'bg-teal-100 text-teal-700',     dot: 'bg-teal-500' },
-                    { role: 'loja',       label: 'Líder Loja', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
-                    { role: 'franqueado', label: 'Franqueado', color: 'bg-cyan-100 text-cyan-700',     dot: 'bg-cyan-500' },
+
                     { role: 'aluno',      label: 'Aluno',      color: 'bg-slate-100 text-slate-600',   dot: 'bg-slate-400' },
                   ].map(({ role, label, color, dot }) => (
                     <div key={role} className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl ${color}`}>
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
                       <div>
-                        <p className="font-black text-lg leading-none">{users.filter(u => u.systemRole === role).length}</p>
+                        <p className="font-black text-lg leading-none">{users.filter(u => (u.role || u.systemRole) === role).length}</p>
                         <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mt-0.5">{label}</p>
                       </div>
                     </div>
@@ -1174,8 +1173,8 @@ export default function Profile() {
                         <p className="text-sm font-bold text-[#00263B] truncate">{u.name}</p>
                         <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
                       </div>
-                      <span className={`text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0 ${roleColors[u.systemRole] || 'bg-slate-100 text-slate-500'}`}>
-                        {roleLabels[u.systemRole] || u.systemRole}
+                      <span className={`text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0 ${roleColors[u.role || u.systemRole] || 'bg-slate-100 text-slate-500'}`}>
+                        {roleLabels[u.role || u.systemRole] || u.systemRole}
                       </span>
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${u.active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
                         {u.active ? 'Ativo' : 'Inativo'}
