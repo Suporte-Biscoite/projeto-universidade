@@ -53,8 +53,16 @@ export default function MessageFloatButton() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-6 z-[200] w-80 sm:w-96 shadow-2xl rounded-[24px] overflow-hidden border border-slate-200 bg-white"
-          style={{ maxHeight: '520px' }}>
+        <div
+          className="fixed z-[200] shadow-2xl rounded-[24px] overflow-hidden border border-slate-200 bg-white"
+          style={{
+            bottom: '88px',
+            right: '16px',
+            width: 'calc(100vw - 32px)',
+            maxWidth: '400px',
+            height: '480px',
+          }}
+        >
           <ChatPanel currentUserId={userId} compact />
         </div>
       )}

@@ -209,10 +209,10 @@ export default function ChatPanel({ currentUserId, compact = false }) {
   const totalUnread = conversations.reduce((acc, c) => acc + (Number(c.unread) || 0), 0);
 
   return (
-    <div className={`flex bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden ${compact ? 'h-[500px]' : 'h-[600px]'}`}>
+    <div className={`flex bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden ${compact ? 'h-full' : 'h-[600px]'}`}>
 
       {/* LISTA DE CONVERSAS */}
-      <div className={`flex flex-col border-r border-slate-100 ${compact ? 'w-56' : 'w-72'} ${!showList && 'hidden sm:flex'}`}>
+      <div className={`flex flex-col border-r border-slate-100 flex-shrink-0 ${compact ? 'w-44' : 'w-72'} ${!showList ? 'hidden' : 'flex'}`}>
         <div className="px-4 py-4 border-b border-slate-50">
           <div className="flex items-center justify-between mb-3">
             <p className="font-black text-[#001A26] text-sm">Mensagens</p>
@@ -251,7 +251,7 @@ export default function ChatPanel({ currentUserId, compact = false }) {
       </div>
 
       {/* ÁREA DE MENSAGENS */}
-      <div className={`flex-1 flex flex-col ${showList && 'hidden sm:flex'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 ${showList && !selectedConv ? 'hidden' : 'flex'}`}>
         {!selectedConv ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-300">
             <MessageCircle size={40} />
@@ -262,7 +262,7 @@ export default function ChatPanel({ currentUserId, compact = false }) {
             {/* Header da conversa */}
             <div className="px-5 py-4 border-b border-slate-50 flex items-center gap-3 flex-shrink-0">
               <button onClick={() => { setShowList(true); setSelectedConv(null); }}
-                className="sm:hidden w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0">
                 <ChevronLeft size={16} />
               </button>
               {(() => {
