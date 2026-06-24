@@ -213,6 +213,21 @@ export function ProfileProvider({ children }) {
   const [reels, setReels] = useState([]);
 
   // ── Persistência no localStorage ──────────────────────────────────────────
+  // ── Busca usuários do banco (para admin) ────────────────────────────────────
+  useEffect(() => {
+    const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
+    if (!isAuth) return;
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    if (!token) return;
+    fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data?.users || []);
+        if (list.length > 0) setUsers(list);
+      })
+      .catch(() => {});
+  }, []);
+
   // ── Busca reels do banco ao inicializar ──────────────────────────────────────
   useEffect(() => {
     const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');

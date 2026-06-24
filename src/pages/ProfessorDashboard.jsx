@@ -748,9 +748,9 @@ function extractYouTubeId(url) {
 }
 
 function InstructorDropdown({ value, onChange }) {
-  const [instructors, setInstructors] = React.useState([]);
+  const [instructors, setInstructors] = useState([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
     fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : [])

@@ -662,7 +662,7 @@ export default function Profile() {
             </div>
 
             {/* Contatos */}
-            <div className="flex gap-3 mt-8">
+            <div className="flex gap-3 mt-8 items-center flex-wrap">
               {[
                 { Icon: Phone, key: 'phone', href: contacts.phone ? `tel:${contacts.phone}` : null },
                 { Icon: Mail, key: 'email', href: contacts.email ? `mailto:${contacts.email}` : null },
@@ -674,13 +674,14 @@ export default function Profile() {
                     className="p-2.5 bg-[#E2F0FF] text-[#6385B7] rounded-full shadow-sm hover:bg-[#6385B7] hover:text-white transition-all">
                     <Icon size={18} />
                   </a>
-                ) : (
-                  <button key={key} onClick={() => openModal('contacts')}
-                    className="p-2.5 bg-slate-100 text-slate-300 rounded-full shadow-sm hover:bg-[#E2F0FF] hover:text-[#6385B7] transition-all">
-                    <Icon size={18} />
-                  </button>
-                )
+                ) : null
               ))}
+              {/* Botão de editar sempre visível */}
+              <button onClick={() => openModal('contacts')}
+                className="p-2.5 bg-slate-100 text-slate-400 rounded-full shadow-sm hover:bg-[#E2F0FF] hover:text-[#6385B7] transition-all"
+                title="Editar contatos">
+                <Pencil size={16} />
+              </button>
             </div>
           </div>
         </div>
