@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Settings, Trash2, Bell, Star,
-  AlertTriangle, Users, TrendingUp, MessageSquare, BarChart2,
+  AlertTriangle, Users, TrendingUp, MessageSquare, BarChart2, Loader,
   Upload, Plus, ChevronRight, ChevronDown, Search, Megaphone,
   FileText, Download, CheckSquare, GripVertical, X,
   Zap, Mail, Send, Check, Radio, ChevronUp, Filter,
@@ -325,9 +325,7 @@ function Sidebar({ activeView, setActiveView, profileImage, userName, unreadComm
         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:bg-slate-50 hover:text-[#00263B] transition-all">
         <Settings size={16} /> Configurações
       </button>
-      <button className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-300 hover:text-red-400 hover:bg-red-50 transition-all">
-        <Trash2 size={16} /> Lixeira
-      </button>
+
     </aside>
   );
 }
@@ -1510,7 +1508,7 @@ function MeusCursosView() {
               ['kanban',       <Layers size={13} />,      'Estrutura Visual'],
               ['cursos',       <BookOpen size={13} />,    'Lista de Cursos'],
               ['modulos',      <FileText size={13} />,    'Módulos & Aulas'],
-              ['certificados', <Download size={13} />,    'Certificados'],
+
             ].map(([id, icon, label]) => (
               <button key={id} onClick={() => setSubTab(id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
@@ -1934,46 +1932,101 @@ function MeusCursosView() {
 // VIEW: RELATÓRIOS
 // ═══════════════════════════════════════════════════════════════════════════
 function RelatoriosView() {
-  const courses = [
-    { title: 'Vendas em quiosques',  stars: 3,   alunos: '+500 alunos',  taxa: '70%', desempenho: '7.5/10', tempo: '2 sem.', area: 'Vendas',    areaColor: 'bg-purple-100 text-purple-700', tagColor: 'bg-purple-500', cardBg: 'bg-purple-50' },
-    { title: 'Operação de máquinas', stars: 3.5, alunos: '+800 alunos',  taxa: '70%', desempenho: '7.5/10', tempo: '4 sem.', area: 'Operações', areaColor: 'bg-teal-100 text-teal-700',    tagColor: 'bg-teal-500',   cardBg: 'bg-teal-50' },
-    { title: 'Marketing Digital',    stars: 5,   alunos: '+1000 alunos', taxa: '70%', desempenho: '7.5/10', tempo: '1 sem.', area: 'Marketing', areaColor: 'bg-orange-100 text-orange-700',tagColor: 'bg-orange-500', cardBg: 'bg-orange-50' },
-    { title: 'Franquias Biscoitê',   stars: 3.5, alunos: '+800 alunos',  taxa: '70%', desempenho: '7.5/10', tempo: '4 sem.', area: 'Operações', areaColor: 'bg-teal-100 text-teal-700',    tagColor: 'bg-teal-400',   cardBg: 'bg-teal-50/60' },
-  ];
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    if (!token) return;
+
+    // Busca cursos + progresso real do banco
+    Promise.all([
+      fetch('/api/courses', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+      fetch('/api/data?resource=certificates', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+    ]).then(([courses, certs]) => {
+      setData({ courses: Array.isArray(courses) ? courses : [], certs: Array.isArray(certs) ? certs : [] });
+    }).catch(() => setData({ courses: [], certs: [] }))
+    .finally(() => setLoading(false));
+  }, []);
+
+  const AREA_COLORS = {
+    'Operações': { area: 'bg-teal-100 text-teal-700', tag: 'bg-teal-500', card: 'bg-teal-50' },
+    'Vendas':    { area: 'bg-purple-100 text-purple-700', tag: 'bg-purple-500', card: 'bg-purple-50' },
+    'Marketing': { area: 'bg-orange-100 text-orange-700', tag: 'bg-orange-500', card: 'bg-orange-50' },
+    'Gestão':    { area: 'bg-blue-100 text-blue-700', tag: 'bg-blue-500', card: 'bg-blue-50' },
+    'default':   { area: 'bg-slate-100 text-slate-600', tag: 'bg-slate-400', card: 'bg-slate-50' },
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader size={28} className="animate-spin text-[#4A72B2]" />
+    </div>
+  );
+
+  const courses = data?.courses || [];
+  const certs   = data?.certs   || [];
+
+  if (courses.length === 0) return (
+    <div className="text-center py-20 text-slate-400">
+      <BarChart2 size={40} className="mx-auto mb-3 text-slate-200" />
+      <p className="font-bold">Nenhum curso publicado ainda.</p>
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
-      {courses.map((c, i) => (
-        <div key={i} className={`${c.cardBg} rounded-[24px] p-6 relative overflow-hidden`}>
-          <div className={`absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 ${c.tagColor} text-white rounded-full text-[10px] font-black uppercase`}>
-            <Megaphone size={10} /> {c.area}
+    <div className="space-y-6">
+      {/* Sumário geral */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: 'Cursos publicados', value: courses.filter(c => c.published).length, color: 'bg-[#e2eef9] text-[#4A72B2]' },
+          { label: 'Certificados emitidos', value: certs.length, color: 'bg-emerald-50 text-emerald-600' },
+          { label: 'Total de aulas', value: courses.flatMap(c => c.modules || []).flatMap(m => m.lessons || []).length, color: 'bg-purple-50 text-purple-600' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`${color} rounded-[20px] p-5 text-center`}>
+            <p className="text-3xl font-black">{value}</p>
+            <p className="text-xs font-bold uppercase tracking-wider mt-1 opacity-70">{label}</p>
           </div>
-          <div className="flex items-center gap-8">
-            <div className="min-w-[180px]">
-              <span className={`text-[9px] font-black px-2 py-1 rounded-full ${c.areaColor} mb-2 inline-block`}>Professor Karla</span>
-              <h4 className="text-base font-black text-[#00263B] leading-tight">{c.title}</h4>
-              <div className="mt-1"><Stars count={c.stars} size={11} /></div>
-              <div className="flex items-center gap-1 mt-2">
-                <div className="flex -space-x-1">
-                  {[...Array(3)].map((_, j) => <div key={j} className="w-5 h-5 rounded-full bg-[#b9d2eb] border-2 border-white" />)}
+        ))}
+      </div>
+
+      {/* Cards por curso */}
+      <div className="space-y-4">
+        {courses.filter(c => c.published).map((c) => {
+          const colors = AREA_COLORS[c.category] || AREA_COLORS.default;
+          const totalAulas = (c.modules || []).flatMap(m => m.lessons || []).length;
+          const certCount  = certs.filter(cert => cert.course_id === c.id).length;
+          const modCount   = (c.modules || []).length;
+
+          return (
+            <div key={c.id} className={`${colors.card} rounded-[24px] p-6 relative overflow-hidden`}>
+              <div className={`absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 ${colors.tag} text-white rounded-full text-[10px] font-black uppercase`}>
+                <Megaphone size={10} /> {c.category || 'Geral'}
+              </div>
+              <div className="flex items-center gap-8 flex-wrap">
+                <div className="min-w-[200px]">
+                  <span className={`text-[9px] font-black px-2 py-1 rounded-full ${colors.area} mb-2 inline-block`}>
+                    {c.instructor_name || 'Instrutor'}
+                  </span>
+                  <h4 className="text-base font-black text-[#00263B] leading-tight">{c.title}</h4>
+                  <p className="text-[10px] text-slate-400 mt-1">{c.level} · {c.format}</p>
                 </div>
-                <span className="text-[10px] font-bold text-slate-500">{c.alunos}</span>
+                <div className="flex gap-8 flex-1 flex-wrap">
+                  {[
+                    { label: 'Módulos',     value: modCount },
+                    { label: 'Aulas',       value: totalAulas },
+                    { label: 'Certificados emitidos', value: certCount },
+                  ].map((m) => (
+                    <div key={m.label} className="text-center">
+                      <p className="text-3xl font-black text-[#00263B]">{m.value}</p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 max-w-[80px] leading-tight">{m.label}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="flex gap-8 flex-1">
-              {[
-                { label: 'Taxa de Conclusão', value: c.taxa },
-                { label: 'Desempenho Médio em Testes', value: c.desempenho },
-                { label: 'Tempo Médio de Conclusão', value: c.tempo },
-              ].map((m, j) => (
-                <div key={j} className="text-center">
-                  <p className="text-3xl font-black text-[#00263B]">{m.value}</p>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 max-w-[80px] leading-tight">{m.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2227,7 +2280,17 @@ function extractVimeoId(url) {
 }
 
 function ReelsView() {
-  const { reels, addReel, deleteReel, profileImage, instructorProfiles } = useProfile();
+  const { addReel, deleteReel, profileImage } = useProfile();
+  const [reels, setReels] = useState([]);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    if (!token) return;
+    fetch('/api/data?resource=reels', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setReels(data); })
+      .catch(() => {});
+  }, []);
   const myReels = reels.filter(r => r.instructorId === CURRENT_INSTRUCTOR_ID);
 
   const [showForm, setShowForm]       = useState(false);
