@@ -272,6 +272,55 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── NEWSLETTER ────────────────────────────────────────────────────────────
+    // POST /api/data?resource=newsletter — inscreve email na newsletter
+    if (resource === 'newsletter') {
+      if (req.method === 'POST') {
+        const { email } = req.body ?? {};
+        if (!email?.includes('@')) return send(res, 400, { error: 'Email inválido' });
+
+        // Salva no banco
+        await pool.query(
+          `CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            email TEXT NOT NULL UNIQUE,
+            subscribed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          )`
+        );
+        await pool.query(
+          `INSERT INTO newsletter_subscribers (email) VALUES ($1)
+           ON CONFLICT (email) DO NOTHING`,
+          [email.toLowerCase().trim()]
+        );
+
+        // Envia email de confirmação via Resend
+        try {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: process.env.RESEND_FROM || 'noreply@biscolab.tech',
+              to: [email],
+              subject: 'Bem-vindo à newsletter da Universidade Biscoitê! 🎓',
+              html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+                <h2 style="color:#001A26;">Obrigado por se inscrever!</h2>
+                <p>Você agora faz parte da newsletter da <strong>Universidade Biscoitê</strong>.</p>
+                <p>Em breve você receberá novidades sobre cursos, lives e muito mais.</p>
+                <div style="background:#e2eef9;border-radius:12px;padding:16px;margin-top:20px;">
+                  <p style="color:#4A72B2;margin:0;font-size:13px;">Acesse a plataforma em <a href="https://projeto-universidade-chi.vercel.app" style="color:#4A72B2;">projeto-universidade-chi.vercel.app</a></p>
+                </div>
+              </div>`,
+            }),
+          });
+        } catch (e) { console.error('newsletter email error:', e); }
+
+        return send(res, 200, { ok: true });
+      }
+    }
+
     return send(res, 400, { error: 'resource inválido' });
   } catch (err) {
     console.error('[data]', err);
