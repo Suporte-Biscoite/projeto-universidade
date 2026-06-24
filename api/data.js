@@ -229,6 +229,49 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── FAVORITES ─────────────────────────────────────────────────────────────
+    // GET    /api/data?resource=favorites          — lista favoritos do usuário
+    // POST   /api/data?resource=favorites          — adiciona favorito
+    // DELETE /api/data?resource=favorites&id=uuid  — remove favorito
+    if (resource === 'favorites') {
+      if (!auth) return send(res, 401, { error: 'Não autorizado' });
+
+      if (req.method === 'GET') {
+        const { rows } = await pool.query(
+          `SELECT f.course_id, c.title, c.description, c.category, c.level,
+                  c.format, c.duration, c.thumbnail_url, c.vimeo_id,
+                  c.published, c.instructor_name, f.created_at
+           FROM user_favorites f
+           JOIN courses c ON c.id = f.course_id
+           WHERE f.user_id = $1
+           ORDER BY f.created_at DESC`,
+          [auth.sub]
+        );
+        return send(res, 200, rows);
+      }
+
+      if (req.method === 'POST') {
+        const { courseId } = req.body ?? {};
+        if (!courseId) return send(res, 400, { error: 'courseId obrigatório' });
+        await pool.query(
+          `INSERT INTO user_favorites (user_id, course_id) VALUES ($1,$2)
+           ON CONFLICT (user_id, course_id) DO NOTHING`,
+          [auth.sub, courseId]
+        );
+        return send(res, 200, { ok: true });
+      }
+
+      if (req.method === 'DELETE') {
+        const courseId = id || req.body?.courseId;
+        if (!courseId) return send(res, 400, { error: 'courseId obrigatório' });
+        await pool.query(
+          'DELETE FROM user_favorites WHERE user_id=$1 AND course_id=$2',
+          [auth.sub, courseId]
+        );
+        return send(res, 200, { ok: true });
+      }
+    }
+
     return send(res, 400, { error: 'resource inválido' });
   } catch (err) {
     console.error('[data]', err);

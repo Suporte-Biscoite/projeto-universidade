@@ -79,6 +79,16 @@ export default function Courses() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters]   = useState({ area: null, nivel: null, formato: null, instructor: null });
   const [favorites, setFavorites] = useState([]);
+
+  // Carrega favoritos do banco
+  useEffect(() => {
+    authFetch('/api/data?resource=favorites')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) setFavorites(data.map(f => f.course_id));
+      })
+      .catch(() => {});
+  }, []);
   const [modal, setModal]       = useState(null);
 
   // Busca cursos + progresso da API
@@ -132,7 +142,22 @@ export default function Courses() {
 
   const setFilter    = (key, val) => setFilters(prev => ({ ...prev, [key]: val }));
   const handleSearch = () => setSearchQuery(search.trim().toLowerCase());
-  const toggleFav    = (id) => setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+  const toggleFav = async (id) => {
+    const isFav = favorites.includes(id);
+    // Atualiza estado local imediatamente
+    setFavorites(prev => isFav ? prev.filter(f => f !== id) : [...prev, id]);
+    // Persiste no banco
+    try {
+      if (isFav) {
+        await authFetch(`/api/data?resource=favorites&id=${id}`, { method: 'DELETE' });
+      } else {
+        await authFetch('/api/data?resource=favorites', {
+          method: 'POST',
+          body: JSON.stringify({ courseId: id }),
+        });
+      }
+    } catch {}
+  };
 
   const hasActiveFilters = Object.values(filters).some(v => v !== null) || !!searchQuery;
 
