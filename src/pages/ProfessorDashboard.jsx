@@ -6,9 +6,9 @@ import {
   Upload, Plus, ChevronRight, ChevronDown, Search, Megaphone,
   FileText, Download, CheckSquare, GripVertical, X,
   Zap, Mail, Send, Check, Radio, ChevronUp, Filter,
-  Pencil, Eye, EyeOff, Layers, Award, Home,
+  Pencil, Eye, EyeOff, Layers, Award, Home, LogOut,
   Image as ImageIcon, Video, HardDrive, Film, Link, Play,
-  Clapperboard, Trash,
+  Clapperboard, Trash, CheckCircle2,
 } from 'lucide-react';
 import { useProfile, CURRENT_INSTRUCTOR_ID, DEFAULT_COURSE_IMAGES } from '../context/ProfileContext';
 import ChatPanel from '../components/ChatPanel';
@@ -336,366 +336,226 @@ function Sidebar({ activeView, setActiveView, profileImage, userName, unreadComm
 // VIEW: OVERVIEW — totalmente interativo
 // ═══════════════════════════════════════════════════════════════════════════
 function OverviewView({ onNewComm }) {
-  // ── filtros ──
-  const [period, setPeriod] = useState('semana');
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [engMode, setEngMode] = useState('modulo');
-  const [hoveredBar, setHoveredBar] = useState(null);
+  const [stats, setStats]     = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // ── modais ──
-  const [contactStudent, setContactStudent] = useState(null);
-  const [activeDuvida, setActiveDuvida] = useState(null);
-  const [notifType, setNotifType] = useState(null);
-  const [toast, setToast] = useState(null);
+  // Pega instructor_id do usuário logado
+  const loggedId = (() => {
+    try {
+      const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+      return raw ? JSON.parse(raw)?.id : null;
+    } catch { return null; }
+  })();
 
-  // ── dúvidas ──
-  const [duvidas, setDuvidas] = useState([
-    { id: 1, aluno: 'João Silva',    aula: 'Dúvida na Aula de Precificação', tempo: '5 min atrás',  texto: 'Professor, não entendi o cálculo de precificação da aula 3. Como funciona a margem?' },
-    { id: 2, aluno: 'Ana Lima',      aula: 'Dúvida na Aula de Operação',    tempo: '8 min atrás',  texto: 'Como faço para operar a máquina no modo manual?' },
-    { id: 3, aluno: 'Carlos Matos',  aula: 'Dúvida sobre o Quiz',           tempo: '12 min atrás', texto: 'A questão 3 do quiz parece ter duas respostas corretas.' },
-    { id: 4, aluno: 'Pedro Costa',   aula: 'Dúvida na Aula de Vendas',      tempo: '1h atrás',     texto: 'Qual a diferença entre venda ativa e receptiva?' },
-  ]);
+  useEffect(() => {
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    if (!token) return;
 
-  // ── métricas por período ──
-  const METRICS = {
-    hoje:      { conclusao: 72, nota: 4.6, ativos: 23,   dias: 22, feedbacks: 45,   crescimento: '+2%' },
-    semana:    { conclusao: 78, nota: 4.8, ativos: 154,  dias: 24, feedbacks: 890,  crescimento: '+8%' },
-    mes:       { conclusao: 81, nota: 4.9, ativos: 892,  dias: 21, feedbacks: 3240, crescimento: '+15%' },
-    trimestre: { conclusao: 79, nota: 4.7, ativos: 2341, dias: 25, feedbacks: 8970, crescimento: '+22%' },
-  };
-  const PERIOD_LABELS = { hoje: 'Hoje', semana: 'Esta semana', mes: 'Este mês', trimestre: 'Este trimestre' };
-  const m = METRICS[period];
+    const headers = { Authorization: `Bearer ${token}` };
 
-  const ratingBars = [
-    { stars: 5, count: Math.round(m.feedbacks * 0.72) },
-    { stars: 4, count: Math.round(m.feedbacks * 0.13) },
-    { stars: 3, count: Math.round(m.feedbacks * 0.06) },
-    { stars: 2, count: Math.round(m.feedbacks * 0.02) },
-    { stars: 1, count: 0 },
-  ];
+    Promise.all([
+      fetch('/api/courses', { headers }).then(r => r.ok ? r.json() : []),
+      fetch('/api/data?resource=certificates', { headers }).then(r => r.ok ? r.json() : []),
+      fetch('/api/users', { headers }).then(r => r.ok ? r.json() : []),
+    ]).then(async ([allCourses, certs, users]) => {
+      // Filtra cursos do professor logado
+      const myCourses = Array.isArray(allCourses)
+        ? allCourses.filter(c => c.instructor_id === loggedId || c.instructorId === loggedId)
+        : [];
 
-  // ── dados de engajamento por modo ──
-  const ENG_DATA = {
-    modulo: [
-      { label: 'Módulo 1 — Intro',    value: 80, color: 'bg-[#4A72B2]' },
-      { label: 'Módulo 2 — Operações', value: 55, color: 'bg-[#6385B7]' },
-      { label: 'Módulo 3 — Vendas',    value: 30, color: 'bg-[#b9d2eb]' },
-    ],
-    curso: [
-      { label: 'Marketing Digital',   value: 80, color: 'bg-[#4A72B2]' },
-      { label: 'Vendas em Quiosques', value: 55, color: 'bg-[#6385B7]' },
-      { label: 'Operação Máquinas',   value: 30, color: 'bg-[#b9d2eb]' },
-    ],
-  };
-  const barData = ENG_DATA[engMode];
+      // Total de aulas nos meus cursos
+      const totalLessons = myCourses.flatMap(c => (c.modules || []).flatMap(m => m.lessons || [])).length;
 
-  const atRisk = [
-    { name: 'Maria Souza', info: 'Sem acesso há 14 dias', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200' },
-    { name: 'João Gomes',  info: 'Parou há 3 dias · Fora do Prazo', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200' },
-  ];
+      // Certificados emitidos nos meus cursos
+      const myCourseIds = new Set(myCourses.map(c => c.id));
+      const myCerts = Array.isArray(certs) ? certs.filter(c => myCourseIds.has(c.course_id)) : [];
 
-  // barras de onde alunos param — pico na posição 7
-  const stopBars = [40,70,55,90,60,85,45,30,50,65,80,35,55,70,40,60,75,50,45,65,30,55,80,45,60,70,40,55];
+      // Alunos únicos com progresso nos meus cursos
+      const studentIds = new Set(myCerts.map(c => c.user_id));
+      const activeStudents = Array.isArray(users) ? users.filter(u => u.role === 'aluno' && u.active).length : 0;
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
+      // Busca ratings dos meus cursos
+      let avgRating = 0;
+      let totalRatings = 0;
+      let ratingDist = [0,0,0,0,0]; // 1-5
+      for (const course of myCourses) {
+        try {
+          const res = await fetch(`/api/data?resource=ratings&courseId=${course.id}`, { headers });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.avg_rating) {
+              avgRating += Number(data.avg_rating) * Number(data.total);
+              totalRatings += Number(data.total);
+            }
+          }
+        } catch {}
+      }
+      const finalAvg = totalRatings > 0 ? (avgRating / totalRatings).toFixed(1) : null;
 
-  const resolveDoubt = (id) => {
-    setDuvidas(prev => prev.filter(d => d.id !== id));
-    showToast('Dúvida marcada como resolvida');
-  };
+      // Taxa de conclusão: cursos concluídos / total cursos publicados * 100
+      const publishedCourses = myCourses.filter(c => c.published);
+      const completionRate = publishedCourses.length > 0
+        ? Math.round((myCerts.length / (publishedCourses.length * Math.max(1, studentIds.size))) * 100)
+        : 0;
+
+      setStats({
+        courses:        myCourses.length,
+        published:      publishedCourses.length,
+        activeStudents,
+        certs:          myCerts.length,
+        avgRating:      finalAvg,
+        totalRatings,
+        completionRate: Math.min(completionRate, 100),
+        totalLessons,
+      });
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [loggedId]);
+
+  const StarDisplay = ({ value }) => (
+    <div className="flex items-center gap-0.5">
+      {[1,2,3,4,5].map(s => (
+        <Star key={s} size={14}
+          fill={value >= s ? '#F59E0B' : value >= s - 0.5 ? '#F59E0B' : 'none'}
+          className={value >= s ? 'text-amber-400' : 'text-slate-200'}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-8">
-      {/* ── Controle de Live ── */}
+      {/* Controle de Live */}
       <LiveControl />
 
-      {/* ── Cabeçalho com filtro de período ── */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-slate-400">Visão geral · <span className="text-[#4A72B2]">{PERIOD_LABELS[period]}</span></p>
-        <div className="relative">
-          <button onClick={() => setFilterOpen(!filterOpen)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-500 hover:border-[#4A72B2] hover:text-[#4A72B2] transition-all">
-            <Filter size={12} /> {PERIOD_LABELS[period]}
-            {filterOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          </button>
-          {filterOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
-              <div className="absolute right-0 top-10 z-20 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 min-w-[160px]">
-                {Object.entries(PERIOD_LABELS).map(([key, label]) => (
-                  <button key={key} onClick={() => { setPeriod(key); setFilterOpen(false); }}
-                    className={`w-full text-left px-5 py-2.5 text-xs font-black transition-colors ${period === key ? 'text-[#4A72B2] bg-[#E2F0FF]' : 'text-slate-500 hover:bg-slate-50'}`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+      {/* Stats cards */}
+      {loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <div key={i} className="bg-white rounded-[24px] h-32 animate-pulse border border-slate-100" />)}
         </div>
-      </div>
-
-      {/* ROW 1: 4 métricas */}
-      <div className="grid grid-cols-4 gap-5">
-
-        {/* Taxa de Conclusão */}
-        <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-4 hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa de Conclusão</p>
-          <div className="flex justify-center">
-            <CircularProgress value={m.conclusao} size={90} stroke={8} />
-          </div>
-          <div className="space-y-1 text-center">
-            <p className="text-[10px] text-slate-400 font-medium">76% média da plataforma</p>
-            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black ${m.conclusao >= 76 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
-              {m.conclusao >= 76 ? <TrendingUp size={9} /> : <AlertTriangle size={9} />}
-              {m.conclusao >= 76 ? 'Acima da média' : 'Abaixo da média'}
-            </div>
-          </div>
-        </div>
-
-        {/* Nota Média */}
-        <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-3 hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nota Média de Avaliação</p>
-          <div className="flex items-center gap-2">
-            <Stars count={m.nota} size={14} />
-            <span className="text-2xl font-black text-[#00263B]">{m.nota}</span>
-          </div>
-          <p className="text-[9px] text-slate-300 font-semibold">Baseado em {m.feedbacks.toLocaleString('pt-BR')} feedbacks</p>
-          <div className="space-y-1.5 mt-2">
-            {ratingBars.map(b => <RatingBar key={b.stars} stars={b.stars} count={b.count} max={ratingBars[0].count || 1} />)}
-          </div>
-        </div>
-
-        {/* Desempenho em Testes */}
-        <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-3 hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Desempenho em Testes</p>
-          <div className="flex items-end gap-1.5 h-20 mt-2">
-            {barData.map((b, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1 relative group cursor-pointer"
-                onMouseEnter={() => setHoveredBar(i)} onMouseLeave={() => setHoveredBar(null)}>
-                <div className={`w-full rounded-t-lg transition-all duration-300 ${b.color} ${hoveredBar === i ? 'opacity-100 scale-y-105' : 'opacity-80'}`}
-                  style={{ height: `${b.value}%` }} />
-                {hoveredBar === i && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#00263B] text-white text-[9px] font-black px-2 py-1 rounded-lg whitespace-nowrap z-10">
-                    {b.value}%
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {barData.map((b, i) => (
-              <span key={i} className="text-[8px] font-bold text-slate-400 flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${b.color}`} />{b.label.split(' ')[0]}
-              </span>
-            ))}
-          </div>
-          <div className="flex items-center gap-1 bg-orange-50 rounded-xl px-3 py-2">
-            <AlertTriangle size={11} className="text-orange-400 flex-shrink-0" />
-            <p className="text-[9px] font-bold text-orange-500">Módulo 2 precisa de atenção.</p>
-          </div>
-        </div>
-
-        {/* Tempo Médio de Conclusão */}
-        <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-3 hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tempo Médio de Conclusão</p>
-          <div className="flex items-center gap-3 mt-2">
-            <div className="w-10 h-10 bg-[#E2F0FF] rounded-xl flex items-center justify-center flex-shrink-0">
-              <BarChart2 size={18} className="text-[#4A72B2]" />
-            </div>
-            <p className="text-4xl font-black text-[#00263B]">{m.dias} <span className="text-lg">dias</span></p>
-          </div>
-          <p className="text-[9px] text-slate-400 font-semibold">Média de todas as turmas</p>
-          <div className="flex items-center gap-1 bg-emerald-50 rounded-xl px-3 py-2">
-            <TrendingUp size={11} className="text-emerald-500 flex-shrink-0" />
-            <p className="text-[9px] font-bold text-emerald-600">Crescimento {m.crescimento} vs. período anterior</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ROW 2: Engajamento */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-base font-black text-[#00263B]">Engajamento</h3>
-          <div className="flex gap-2">
-            {['modulo', 'curso'].map(mode => (
-              <button key={mode} onClick={() => setEngMode(mode)}
-                className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${engMode === mode ? 'bg-[#4A72B2] text-white' : 'border border-slate-200 text-slate-400 hover:border-[#4A72B2] hover:text-[#4A72B2]'}`}>
-                {mode === 'modulo' ? 'Por módulo' : 'Por curso'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-5">
-          {/* Alunos ativos */}
-          <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-3 hover:shadow-md transition-shadow">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alunos Ativos Agora</p>
-            <div className="flex items-center gap-3">
-              <p className="text-5xl font-black text-[#00263B]">{m.ativos.toLocaleString('pt-BR')}</p>
-              <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center">
-                <TrendingUp size={16} className="text-emerald-500" />
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Taxa de conclusão */}
+          <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa de Conclusão</p>
+              <div className="w-8 h-8 bg-[#e2eef9] rounded-xl flex items-center justify-center">
+                <CheckCircle2 size={16} className="text-[#4A72B2]" />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-              <p className="text-[10px] text-slate-400 font-medium">Fazendo cursos com você agora</p>
-            </div>
+            <p className="text-3xl font-black text-[#001A26]">{stats?.completionRate ?? 0}%</p>
+            <p className="text-xs text-slate-400">{stats?.certs ?? 0} certificados emitidos</p>
           </div>
 
-          {/* Onde os alunos param */}
-          <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-3 hover:shadow-md transition-shadow">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Onde os Alunos Param</p>
-            <div className="flex items-end gap-0.5 h-16 mt-2">
-              {stopBars.map((h, i) => (
-                <div key={i}
-                  className={`flex-1 rounded-sm cursor-pointer transition-all ${i === 7 ? 'bg-red-400' : 'bg-[#b9d2eb] hover:bg-[#4A72B2]'}`}
-                  style={{ height: `${h}%` }}
-                  title={`Minuto ${(i * 1.5).toFixed(1)} — ${h}% saíram`}
-                />
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-red-400 rounded-full" />
-              <p className="text-[9px] font-bold text-red-400">Minuto 10:30 — Grande queda de retenção</p>
-            </div>
-          </div>
-
-          {/* Alerta de risco */}
-          <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-3 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alunos em Risco</p>
-              <Bell size={14} className="text-slate-300" />
-            </div>
-            <div className="space-y-3">
-              {atRisk.map((a, i) => (
-                <div key={i} className="flex items-center gap-2.5">
-                  <img src={a.avatar} className="w-8 h-8 rounded-full object-cover flex-shrink-0" alt={a.name} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-[#00263B] truncate">{a.name}</p>
-                    <p className="text-[9px] text-orange-400 font-semibold truncate">{a.info}</p>
-                  </div>
-                  <button onClick={() => setContactStudent(a)}
-                    className="flex-shrink-0 px-3 py-1 bg-[#4A72B2] text-white text-[9px] font-black rounded-lg hover:bg-[#00263B] transition-all">
-                    Contatar
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ROW 3: Gestão de Interação */}
-      <div>
-        <h3 className="text-base font-black text-[#00263B] mb-4">Gestão de Interação</h3>
-        <div className="grid grid-cols-4 gap-5">
-
-          {/* Fila de dúvidas */}
-          <div className="bg-white rounded-[24px] border border-slate-100 p-5 space-y-3">
-            <div className="flex justify-between items-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fila de Dúvidas</p>
-              {duvidas.length > 0 && (
-                <span className="w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{duvidas.length}</span>
-              )}
-            </div>
-            {duvidas.length === 0 ? (
-              <div className="text-center py-4">
-                <Check size={24} className="text-emerald-400 mx-auto mb-1" />
-                <p className="text-[10px] text-slate-400 font-bold">Todas resolvidas!</p>
+          {/* Nota média */}
+          <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nota Média</p>
+              <div className="w-8 h-8 bg-amber-50 rounded-xl flex items-center justify-center">
+                <Star size={16} className="text-amber-400" fill="#F59E0B" />
               </div>
+            </div>
+            {stats?.avgRating ? (
+              <>
+                <p className="text-3xl font-black text-[#001A26]">{stats.avgRating}</p>
+                <StarDisplay value={Number(stats.avgRating)} />
+                <p className="text-xs text-slate-400">{stats.totalRatings} avaliações</p>
+              </>
             ) : (
-              <div className="space-y-2">
-                {duvidas.slice(0, 4).map(d => (
-                  <div key={d.id} className="flex items-start gap-2 p-2 bg-slate-50 rounded-xl hover:bg-[#E2F0FF] transition-colors cursor-pointer"
-                    onClick={() => setActiveDuvida(d)}>
-                    <MessageSquare size={12} className="text-[#4A72B2] mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[9px] font-black text-[#00263B] truncate">{d.aluno} — {d.aula}</p>
-                      <p className="text-[8px] text-slate-300">{d.tempo}</p>
-                    </div>
-                    <button className="text-[8px] font-black text-[#4A72B2] flex-shrink-0 hover:underline">Abrir</button>
-                  </div>
-                ))}
-              </div>
+              <>
+                <p className="text-3xl font-black text-slate-300">—</p>
+                <p className="text-xs text-slate-400">Sem avaliações ainda</p>
+              </>
             )}
           </div>
 
-          {/* Nível de Absorção */}
-          <div className="bg-white rounded-[24px] border border-slate-100 p-5 space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nível de Absorção</p>
-            <div className="flex items-end gap-3 h-20">
-              {[{ label: 'Franqueado', pct: 60, color: 'bg-[#b9d2eb]' }, { label: 'Funcionário', pct: 85, color: 'bg-[#4A72B2]' }].map((b, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1 group cursor-default">
-                  <div className="relative w-full">
-                    <span className="absolute -top-5 w-full text-center text-[9px] font-black text-[#00263B] opacity-0 group-hover:opacity-100 transition-opacity">{b.pct}%</span>
-                    <div className={`w-full ${b.color} rounded-t-lg transition-all`} style={{ height: `${b.pct * 0.8}px` }} />
-                  </div>
-                  <p className="text-[8px] font-bold text-slate-400">{b.label}</p>
-                </div>
-              ))}
+          {/* Alunos ativos */}
+          <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alunos Ativos</p>
+              <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center">
+                <Users size={16} className="text-emerald-500" />
+              </div>
             </div>
-            <p className="text-[9px] text-slate-400 font-medium">Comparativo entre perfis</p>
+            <p className="text-3xl font-black text-[#001A26]">{stats?.activeStudents ?? 0}</p>
+            <p className="text-xs text-slate-400">colaboradores na plataforma</p>
           </div>
 
-          {/* Notificar Alunos */}
-          <div className="bg-white rounded-[24px] border border-slate-100 p-5 space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notificações</p>
-            <button onClick={() => setNotifType('pendentes')}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-[#4A72B2] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#00263B] transition-all">
-              <Bell size={13} /> Notificar Pendentes
-            </button>
-            <div className="space-y-2">
-              <button onClick={() => setNotifType('push')}
-                className="w-full flex items-center gap-2 p-2 bg-slate-50 rounded-xl text-[9px] font-black text-slate-500 hover:bg-[#E2F0FF] hover:text-[#4A72B2] transition-all">
-                <Zap size={11} className="text-[#4A72B2]" /> Push / E-mail de Lançamento
-              </button>
-              <button onClick={() => setNotifType('avisos')}
-                className="w-full flex items-center gap-2 p-2 bg-slate-50 rounded-xl text-[9px] font-black text-slate-500 hover:bg-[#E2F0FF] hover:text-[#4A72B2] transition-all">
-                <Mail size={11} className="text-[#4A72B2]" /> Disparar Aviso de Atualização
-              </button>
+          {/* Cursos publicados */}
+          <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cursos Publicados</p>
+              <div className="w-8 h-8 bg-purple-50 rounded-xl flex items-center justify-center">
+                <BookOpen size={16} className="text-purple-500" />
+              </div>
             </div>
-          </div>
-
-          {/* Exportação */}
-          <div className="bg-white rounded-[24px] border border-slate-100 p-5 space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exportação para RH</p>
-            <div className="space-y-2">
-              <button onClick={() => showToast('PDF gerado com sucesso!')}
-                className="w-full flex items-center gap-2 p-3 bg-slate-50 rounded-xl text-[10px] font-black text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all">
-                <FileText size={13} className="text-red-400" /> Gerar PDF
-              </button>
-              <button onClick={() => showToast('Excel exportado com sucesso!')}
-                className="w-full flex items-center gap-2 p-3 bg-slate-50 rounded-xl text-[10px] font-black text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all">
-                <Download size={13} className="text-emerald-500" /> Gerar Excel
-              </button>
-            </div>
-            <button onClick={() => showToast('Relatório de crescimento enviado para a Diretoria!')}
-              className="w-full py-2 border border-dashed border-slate-200 rounded-xl text-[9px] font-black text-slate-300 hover:border-[#4A72B2] hover:text-[#4A72B2] transition-all">
-              Enviar para Diretoria
-            </button>
+            <p className="text-3xl font-black text-[#001A26]">{stats?.published ?? 0}</p>
+            <p className="text-xs text-slate-400">{stats?.totalLessons ?? 0} aulas no total</p>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ── Modais ── */}
-      {contactStudent && (
-        <ContactModal student={contactStudent} onClose={() => setContactStudent(null)}
-          onSent={() => { showToast(`Mensagem enviada para ${contactStudent.name}`); onNewComm(); }} />
+      {/* Cursos com ratings */}
+      {!loading && stats && stats.published > 0 && (
+        <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 space-y-4">
+          <h3 className="font-black text-[#001A26] text-sm">Avaliações por curso</h3>
+          <CourseRatingsList loggedId={loggedId} />
+        </div>
       )}
-      {activeDuvida && (
-        <DuvidaModal duvida={activeDuvida} onClose={() => setActiveDuvida(null)} onResolve={resolveDoubt} />
-      )}
-      {notifType && (
-        <NotifModal type={notifType} onClose={() => setNotifType(null)}
-          onSent={({ titulo }) => { showToast(`"${titulo}" disparado com sucesso!`); onNewComm(); }} />
-      )}
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }
+
+function CourseRatingsList({ loggedId }) {
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    if (!token) return;
+    const headers = { Authorization: `Bearer ${token}` };
+    fetch('/api/courses', { headers }).then(r => r.ok ? r.json() : []).then(async courses => {
+      const mine = Array.isArray(courses) ? courses.filter(c => c.instructor_id === loggedId || c.instructorId === loggedId) : [];
+      const withRatings = await Promise.all(mine.filter(c => c.published).map(async c => {
+        try {
+          const res = await fetch(`/api/data?resource=ratings&courseId=${c.id}`, { headers });
+          const data = res.ok ? await res.json() : {};
+          return { ...c, avg_rating: data.avg_rating || null, total_ratings: data.total || 0 };
+        } catch { return { ...c, avg_rating: null, total_ratings: 0 }; }
+      }));
+      setItems(withRatings);
+    }).catch(() => {});
+  }, [loggedId]);
+
+  if (items.length === 0) return <p className="text-sm text-slate-400">Nenhum curso publicado ainda.</p>;
+
+  return (
+    <div className="space-y-3">
+      {items.map(c => (
+        <div key={c.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-[#001A26] text-sm truncate">{c.title}</p>
+            <p className="text-xs text-slate-400">{c.category} · {c.level}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {c.avg_rating ? (
+              <>
+                <div className="flex items-center gap-0.5">
+                  {[1,2,3,4,5].map(s => (
+                    <Star key={s} size={12} fill={Number(c.avg_rating) >= s ? '#F59E0B' : 'none'} className={Number(c.avg_rating) >= s ? 'text-amber-400' : 'text-slate-200'} />
+                  ))}
+                </div>
+                <span className="text-sm font-black text-[#001A26]">{Number(c.avg_rating).toFixed(1)}</span>
+                <span className="text-xs text-slate-400">({c.total_ratings})</span>
+              </>
+            ) : (
+              <span className="text-xs text-slate-400">Sem avaliações</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // VIEW: MEUS CURSOS — componentes auxiliares

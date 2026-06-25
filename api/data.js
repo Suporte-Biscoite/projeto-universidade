@@ -436,6 +436,40 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── RATINGS ───────────────────────────────────────────────────────────────
+    // GET  /api/data?resource=ratings&courseId=uuid  — nota média do curso
+    // POST /api/data?resource=ratings                — avalia curso
+    if (resource === 'ratings') {
+      if (!auth) return send(res, 401, { error: 'Não autorizado' });
+
+      if (req.method === 'GET') {
+        const { courseId } = req.query;
+        if (!courseId) return send(res, 400, { error: 'courseId obrigatório' });
+        const { rows } = await pool.query(
+          `SELECT
+             ROUND(AVG(rating)::numeric, 1) as avg_rating,
+             COUNT(*) as total,
+             COUNT(*) FILTER (WHERE user_id = $2) as user_rated
+           FROM course_ratings WHERE course_id = $1`,
+          [courseId, auth.sub]
+        );
+        return send(res, 200, rows[0]);
+      }
+
+      if (req.method === 'POST') {
+        const { courseId, rating, comment } = req.body ?? {};
+        if (!courseId || !rating) return send(res, 400, { error: 'courseId e rating obrigatórios' });
+        if (rating < 1 || rating > 5) return send(res, 400, { error: 'rating deve ser entre 1 e 5' });
+        await pool.query(
+          `INSERT INTO course_ratings (user_id, course_id, rating, comment)
+           VALUES ($1,$2,$3,$4)
+           ON CONFLICT (user_id, course_id) DO UPDATE SET rating=$3, comment=$4`,
+          [auth.sub, courseId, rating, comment || null]
+        );
+        return send(res, 200, { ok: true });
+      }
+    }
+
     return send(res, 400, { error: 'resource inválido' });
   } catch (err) {
     console.error('[data]', err);

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ChevronLeft, ChevronRight, Play, Lock, Star, Clock, FileText,
   CheckCircle2, PlayCircle, Maximize2, Minimize2, User, Trophy,
-  Loader, AlertCircle
+  Loader, AlertCircle, Send
 } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
@@ -49,6 +49,11 @@ export default function CoursePlayer() {
   const [activeLesson, setActiveLesson]       = useState(null);
   const [isExpanded, setIsExpanded]           = useState(false);
   const [courseCompleted, setCourseCompleted] = useState(false);
+  const [showRating, setShowRating]           = useState(false);
+  const [ratingValue, setRatingValue]         = useState(0);
+  const [ratingComment, setRatingComment]     = useState('');
+  const [ratingHover, setRatingHover]         = useState(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [toast, setToast]                     = useState(null);
   const [watchedSeconds, setWatchedSeconds]   = useState(0);  // tempo assistido na aula atual
   const [canComplete, setCanComplete]         = useState(false); // habilitado após 80% do tempo
@@ -178,6 +183,7 @@ export default function CoursePlayer() {
     const allDone = allLessons.every(l => newProgress[l.id]);
     if (allDone && !courseCompleted) {
       setCourseCompleted(true);
+      setShowRating(true);
       showToast('Parabéns! Curso concluído! 🎉', 'success');
     } else if (nextLesson) {
       showToast('Aula concluída! Próxima desbloqueada.', 'default');
@@ -186,6 +192,18 @@ export default function CoursePlayer() {
       showToast('Aula concluída!', 'default');
     }
   }, [activeLesson, progress, allLessons, courseCompleted, nextLesson, courseId]);
+
+  const submitRating = async () => {
+    if (!ratingValue) return;
+    try {
+      await authFetch('/api/data?resource=ratings', {
+        method: 'POST',
+        body: JSON.stringify({ courseId, rating: ratingValue, comment: ratingComment }),
+      });
+      setRatingSubmitted(true);
+      setTimeout(() => setShowRating(false), 2000);
+    } catch {}
+  };
 
   // ── Loading / Error states ─────────────────────────────────────────────────
   if (loading) return (
@@ -212,6 +230,70 @@ export default function CoursePlayer() {
 
   return (
     <div className="max-w-[1440px] mx-auto pb-20 px-3 sm:px-4 md:px-6">
+
+      {/* RATING MODAL */}
+      {showRating && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 space-y-6 text-center">
+            {ratingSubmitted ? (
+              <div className="space-y-3">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle2 size={32} className="text-emerald-500" />
+                </div>
+                <h3 className="text-xl font-black text-[#001A26]">Obrigado pela avaliação!</h3>
+              </div>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-[#e2eef9] rounded-full flex items-center justify-center mx-auto">
+                  <Trophy size={28} className="text-[#4A72B2]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#001A26]">Curso concluído! 🎉</h3>
+                  <p className="text-slate-400 text-sm mt-1">Como você avalia este curso?</p>
+                </div>
+                {/* Stars */}
+                <div className="flex items-center justify-center gap-2">
+                  {[1,2,3,4,5].map(s => (
+                    <button key={s}
+                      onMouseEnter={() => setRatingHover(s)}
+                      onMouseLeave={() => setRatingHover(0)}
+                      onClick={() => setRatingValue(s)}
+                      className="transition-transform hover:scale-110">
+                      <Star size={36}
+                        fill={(ratingHover || ratingValue) >= s ? '#F59E0B' : 'none'}
+                        className={(ratingHover || ratingValue) >= s ? 'text-amber-400' : 'text-slate-200'}
+                      />
+                    </button>
+                  ))}
+                </div>
+                {ratingValue > 0 && (
+                  <p className="text-sm font-bold text-amber-500">
+                    {['','Ruim','Regular','Bom','Muito bom','Excelente!'][ratingValue]}
+                  </p>
+                )}
+                {/* Comment */}
+                <textarea
+                  value={ratingComment}
+                  onChange={e => setRatingComment(e.target.value)}
+                  placeholder="Deixe um comentário (opcional)..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2] resize-none"
+                />
+                <div className="flex gap-3">
+                  <button onClick={() => setShowRating(false)}
+                    className="flex-1 py-3 rounded-2xl border border-slate-200 text-slate-500 font-bold text-sm hover:bg-slate-50">
+                    Agora não
+                  </button>
+                  <button onClick={submitRating} disabled={!ratingValue}
+                    className="flex-1 py-3 rounded-2xl bg-[#001A26] text-white font-bold text-sm hover:bg-[#4A72B2] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                    <Send size={14} /> Avaliar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* TOAST */}
       {toast && (
