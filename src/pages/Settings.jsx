@@ -132,6 +132,114 @@ function MenusTab({ menuItems, onToggle, onReorder }) {
 // ─── Tab: Usuários ────────────────────────────────────────────────────────────
 const EMPTY_NEW_USER = { name: '', email: '', systemRole: 'aluno', unit: '', storeId: '' };
 
+// ─── Tab: Minha Conta ─────────────────────────────────────────────────────────
+function MinhaContaTab({ userData, onUpdate, onUpdateImage, profileImage }) {
+  const [form, setForm]       = useState({ name: userData.name || '', unit: userData.unit || '' });
+  const [pwdForm, setPwdForm] = useState({ password: '', confirm: '' });
+  const [showPwd, setShowPwd] = useState(false);
+  const [saving, setSaving]   = useState(false);
+  const [saved, setSaved]     = useState(false);
+  const [error, setError]     = useState('');
+
+  const handleSaveProfile = async () => {
+    if (!form.name.trim()) { setError('Nome é obrigatório'); return; }
+    setSaving(true); setError('');
+    try {
+      await onUpdate({ name: form.name.trim(), unit: form.unit.trim() });
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } catch { setError('Erro ao salvar. Tente novamente.'); }
+    finally { setSaving(false); }
+  };
+
+  const handleSavePassword = async () => {
+    if (pwdForm.password.length < 8) { setError('Senha deve ter no mínimo 8 caracteres'); return; }
+    if (pwdForm.password !== pwdForm.confirm) { setError('As senhas não coincidem'); return; }
+    setSaving(true); setError('');
+    try {
+      await onUpdate({ password: pwdForm.password });
+      setPwdForm({ password: '', confirm: '' });
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } catch { setError('Erro ao salvar senha.'); }
+    finally { setSaving(false); }
+  };
+
+  const handlePhoto = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => onUpdateImage(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-8 max-w-md">
+      {/* Foto de perfil */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Foto de perfil</p>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <img src={profileImage} className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md" alt="Perfil" />
+            <label className="absolute bottom-0 right-0 w-7 h-7 bg-[#4A72B2] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#001A26] transition-colors">
+              <Camera size={13} className="text-white" />
+              <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            </label>
+          </div>
+          <div>
+            <p className="text-sm font-bold text-[#001A26]">Alterar foto</p>
+            <p className="text-xs text-slate-400">JPG, PNG ou GIF. Máx. 2MB.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Dados pessoais */}
+      <div className="space-y-4">
+        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dados pessoais</p>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-bold text-slate-500 mb-1 block">Nome completo</label>
+            <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#4A72B2]" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 mb-1 block">Unidade</label>
+            <input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#4A72B2]" />
+          </div>
+        </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        <button onClick={handleSaveProfile} disabled={saving}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black transition-all disabled:opacity-50 ${saved ? 'bg-emerald-500 text-white' : 'bg-[#001A26] hover:bg-[#4A72B2] text-white'}`}>
+          {saved ? <><Check size={14} /> Salvo!</> : <><Save size={14} /> Salvar dados</>}
+        </button>
+      </div>
+
+      {/* Trocar senha */}
+      <div className="space-y-4 border-t border-slate-200 pt-6">
+        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Trocar senha</p>
+        <div className="space-y-3">
+          <div className="relative">
+            <input type={showPwd ? 'text' : 'password'} value={pwdForm.password}
+              onChange={e => setPwdForm(p => ({ ...p, password: e.target.value }))}
+              placeholder="Nova senha (mín. 8 caracteres)"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#4A72B2]" />
+            <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+              {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+          <input type={showPwd ? 'text' : 'password'} value={pwdForm.confirm}
+            onChange={e => setPwdForm(p => ({ ...p, confirm: e.target.value }))}
+            placeholder="Confirmar nova senha"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#4A72B2]" />
+        </div>
+        <button onClick={handleSavePassword} disabled={saving || !pwdForm.password}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black bg-[#001A26] hover:bg-[#4A72B2] text-white transition-all disabled:opacity-40">
+          <Lock size={14} /> Alterar senha
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function UsuariosTab() {
   const [users, setUsers]         = useState([]);
   const [loading, setLoading]     = useState(true);
