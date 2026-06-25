@@ -29,6 +29,13 @@ function send(res, status, body) {
   res.status(status).json(body);
 }
 
+// Extrai ID do YouTube de qualquer formato de URL
+function extractYouTubeId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|live\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
@@ -154,6 +161,7 @@ export default async function handler(req, res) {
           thumbnail: r.thumbnail_url,
           image: r.thumbnail_url || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400',
           time: new Date(r.created_at).toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }),
+          youtube_id: extractYouTubeId(r.vimeo_id || ''),
         })));
       }
 
@@ -179,12 +187,14 @@ export default async function handler(req, res) {
       if (req.method === 'POST') {
         if (!['professor','admin'].includes(auth.role))
           return send(res, 403, { error: 'Apenas professores e admins' });
-        const { caption, tag='Dica', thumbnail_url, vimeo_id } = req.body ?? {};
+        const { caption, tag='Dica', thumbnail_url, vimeo_id, video_url } = req.body ?? {};
         if (!caption?.trim()) return send(res, 400, { error: 'caption obrigatório' });
+        // Aceita video_url genérico (YouTube, Vimeo ou qualquer link)
+        const finalVideoId = vimeo_id || video_url || null;
         const { rows } = await pool.query(
           `INSERT INTO shorts (instructor_id, caption, tag, thumbnail_url, vimeo_id)
            VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-          [auth.sub, caption.trim(), tag, thumbnail_url || null, vimeo_id || null]
+          [auth.sub, caption.trim(), tag, thumbnail_url || null, finalVideoId]
         );
         const { rows: user } = await pool.query(
           'SELECT name, avatar_url FROM users WHERE id=$1', [auth.sub]

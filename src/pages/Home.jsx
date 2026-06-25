@@ -102,17 +102,33 @@ export default function Home() {
               className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-2">
               ✕ Fechar
             </button>
-            {selectedShort.vimeo_id ? (
-              <iframe
-                src={`https://player.vimeo.com/video/${selectedShort.vimeo_id}?autoplay=1&title=0&byline=0`}
-                className="w-full h-full rounded-[24px]"
-                allow="autoplay; fullscreen"
-              />
-            ) : (
-              <div className="w-full h-full rounded-[24px] bg-slate-800 flex items-center justify-center text-white/40">
-                <p className="text-sm">Sem vídeo</p>
-              </div>
-            )}
+            {(() => {
+              const url = selectedShort.vimeo_id || '';
+              // YouTube
+              const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|live\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+              if (ytMatch) return (
+                <iframe
+                  src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`}
+                  className="w-full h-full rounded-[24px]"
+                  allow="autoplay; fullscreen"
+                />
+              );
+              // Vimeo
+              const vmMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+              if (vmMatch) return (
+                <iframe
+                  src={`https://player.vimeo.com/video/${vmMatch[1]}?autoplay=1&title=0&byline=0`}
+                  className="w-full h-full rounded-[24px]"
+                  allow="autoplay; fullscreen"
+                />
+              );
+              // Sem vídeo
+              return (
+                <div className="w-full h-full rounded-[24px] bg-slate-800 flex items-center justify-center text-white/40">
+                  <p className="text-sm">Sem vídeo</p>
+                </div>
+              );
+            })()}
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[24px]">
               <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
               <p className="text-white/50 text-xs mt-1">{selectedShort.instructor}</p>
