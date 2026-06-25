@@ -53,4 +53,15 @@ function Stars({ count, size = 12 }) {
   );
 }
 
+// ─── Toast ──────────────────────────────────────────────────────────────────
+function Toast({ message, onClose }) {
+  return (
+    <div className="fixed bottom-6 right-6 z-[999] flex items-center gap-3 bg-[#00263B] text-white px-5 py-3.5 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+      <Check size={15} className="text-emerald-400 flex-shrink-0" />
+      <span className="text-sm font-black">{message}</span>
+      <button onClick={onClose} className="ml-2 text-slate-400 hover:text-white"><X size={13} /></button>
+    </div>
+  );
+}
+
 export { getLoggedUser, getLoggedId, CircularProgress, RatingBar, Stars, Toast };
