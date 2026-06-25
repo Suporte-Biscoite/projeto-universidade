@@ -16,6 +16,19 @@ import { authFetch } from '../utils/authFetch';
 import VimeoUploader from '../components/VimeoUploader';
 import LiveControl from '../components/LiveControl';
 
+// ─── Helpers centralizados — substitui todos os acessos diretos ao storage ──
+function getLoggedUser() {
+  try {
+    const raw = sessionStorage.getItem('biscoite_logged_user')
+             || localStorage.getItem('biscoite_logged_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function getLoggedId() {
+  return getLoggedUser()?.id ?? null;
+}
+
 // ─── Gráfico circular SVG ───────────────────────────────────────────────────
 function CircularProgress({ value = 78, size = 100, stroke = 9, color = '#4A72B2' }) {
   const radius = (size - stroke) / 2;
@@ -338,25 +351,13 @@ function Sidebar({ activeView, setActiveView, profileImage, userName, unreadComm
 function OverviewView({ onNewComm }) {
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Pega instructor_id do usuário logado
-  const loggedId = (() => {
-    try {
-      const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
-      return raw ? JSON.parse(raw)?.id : null;
-    } catch { return null; }
-  })();
+  const loggedId = getLoggedId();
 
   useEffect(() => {
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
-    if (!token) return;
-
-    const headers = { Authorization: `Bearer ${token}` };
-
     Promise.all([
-      fetch('/api/courses', { headers }).then(r => r.ok ? r.json() : []),
-      fetch('/api/data?resource=certificates', { headers }).then(r => r.ok ? r.json() : []),
-      fetch('/api/users', { headers }).then(r => r.ok ? r.json() : []),
+      authFetch('/api/courses').then(r => r.ok ? r.json() : []),
+      authFetch('/api/data?resource=certificates').then(r => r.ok ? r.json() : []),
+      authFetch('/api/users').then(r => r.ok ? r.json() : []),
     ]).then(async ([allCourses, certs, users]) => {
       // Filtra cursos do professor logado
       const myCourses = Array.isArray(allCourses)
@@ -380,7 +381,7 @@ function OverviewView({ onNewComm }) {
       let ratingDist = [0,0,0,0,0]; // 1-5
       for (const course of myCourses) {
         try {
-          const res = await fetch(`/api/data?resource=ratings&courseId=${course.id}`, { headers });
+          const res = await authFetch(`/api/data?resource=ratings&courseId=${course.id}`);
           if (res.ok) {
             const data = await res.json();
             if (data.avg_rating) {
@@ -509,14 +510,11 @@ function CourseRatingsList({ loggedId }) {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
-    if (!token) return;
-    const headers = { Authorization: `Bearer ${token}` };
-    fetch('/api/courses', { headers }).then(r => r.ok ? r.json() : []).then(async courses => {
+    authFetch('/api/courses').then(r => r.ok ? r.json() : []).then(async courses => {
       const mine = Array.isArray(courses) ? courses.filter(c => c.instructor_id === loggedId || c.instructorId === loggedId) : [];
       const withRatings = await Promise.all(mine.filter(c => c.published).map(async c => {
         try {
-          const res = await fetch(`/api/data?resource=ratings&courseId=${c.id}`, { headers });
+          const res  = await authFetch(`/api/data?resource=ratings&courseId=${c.id}`);
           const data = res.ok ? await res.json() : {};
           return { ...c, avg_rating: data.avg_rating || null, total_ratings: data.total || 0 };
         } catch { return { ...c, avg_rating: null, total_ratings: 0 }; }
@@ -611,8 +609,7 @@ function InstructorDropdown({ value, onChange }) {
   const [instructors, setInstructors] = useState([]);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
-    fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } })
+    authFetch('/api/users')
       .then(r => r.ok ? r.json() : [])
       .then(data => {
         const list = Array.isArray(data) ? data : (data.users || []);
@@ -1214,12 +1211,7 @@ function CertificadosSubTab({ certTemplates, addCertTemplate, updateCertTemplate
 // VIEW: MEUS CURSOS
 // ═══════════════════════════════════════════════════════════════════════════
 function MeusCursosView() {
-  const loggedId = (() => {
-    try {
-      const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
-      return raw ? JSON.parse(raw)?.id : null;
-    } catch { return null; }
-  })();
+  const loggedId = getLoggedId();
   const {
     courses, modules, systemRole,
     addCourse, updateCourse, deleteCourse,
@@ -1233,9 +1225,7 @@ function MeusCursosView() {
   const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
-    if (!token) return;
-    fetch('/api/courses', { headers: { Authorization: `Bearer ${token}` } })
+    authFetch('/api/courses')
       .then(r => r.ok ? r.json() : [])
       .then(data => {
         if (cancelled || !Array.isArray(data)) return;
@@ -1805,13 +1795,9 @@ function RelatoriosView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
-    if (!token) return;
-
-    // Busca cursos + progresso real do banco
     Promise.all([
-      fetch('/api/courses', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
-      fetch('/api/data?resource=certificates', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+      authFetch('/api/courses').then(r => r.ok ? r.json() : []),
+      authFetch('/api/data?resource=certificates').then(r => r.ok ? r.json() : []),
     ]).then(([courses, certs]) => {
       setData({ courses: Array.isArray(courses) ? courses : [], certs: Array.isArray(certs) ? certs : [] });
     }).catch(() => setData({ courses: [], certs: [] }))
@@ -1904,9 +1890,7 @@ function RelatoriosView() {
 // VIEW: COMUNICAÇÃO
 // ═══════════════════════════════════════════════════════════════════════════
 function ComunicacaoView({ onRead }) {
-  const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
-  const currentUserId = (() => { try { return raw ? JSON.parse(raw)?.id : null; } catch { return null; } })();
-
+  const currentUserId = getLoggedId();
   return (
     <div className="space-y-6">
       <div>
@@ -2005,12 +1989,7 @@ function ShortsView() {
     setShorts(prev => prev.filter(r => r.id !== id));
     await authFetch(`/api/data?resource=shorts&id=${id}`, { method: 'DELETE' }).catch(() => {});
   };
-  const loggedId = (() => {
-    try {
-      const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
-      return raw ? JSON.parse(raw)?.id : null;
-    } catch { return null; }
-  })();
+  const loggedId = getLoggedId();
   // Admin vê todos, professor vê só os seus
   const myShorts = shorts.filter(r =>
     !loggedId || r.instructor_id === loggedId || r.instructorId === loggedId
@@ -2363,19 +2342,15 @@ function AvaliacoesView({ loggedId }) {
   const [comments, setComments] = useState([]);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
-    if (!token) return;
-    const headers = { Authorization: `Bearer ${token}` };
-    fetch('/api/courses', { headers }).then(r => r.ok ? r.json() : []).then(async data => {
+    authFetch('/api/courses').then(r => r.ok ? r.json() : []).then(async data => {
       const mine = Array.isArray(data)
         ? data.filter(c => c.instructor_id === loggedId || c.instructorId === loggedId)
         : [];
       setCourses(mine);
-      // Busca ratings para cada curso
       const ratingsMap = {};
       await Promise.all(mine.map(async c => {
         try {
-          const res = await fetch(`/api/data?resource=ratings&courseId=${c.id}`, { headers });
+          const res = await authFetch(`/api/data?resource=ratings&courseId=${c.id}`);
           if (res.ok) ratingsMap[c.id] = await res.json();
         } catch {}
       }));
@@ -2386,11 +2361,8 @@ function AvaliacoesView({ loggedId }) {
   const loadComments = async (courseId) => {
     setSelected(courseId);
     setComments([]);
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
     try {
-      const res = await fetch(`/api/data?resource=ratings&courseId=${courseId}&comments=true`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await authFetch(`/api/data?resource=ratings&courseId=${courseId}&comments=true`);
       if (res.ok) {
         const data = await res.json();
         setComments(data.comments || []);
