@@ -245,13 +245,7 @@ function UsuariosTab() {
   );
 }
 
-// PLACEHOLDER - substitui o antigo UsuariosTab que tinha o create form
-function _OldUsuariosTabStart() {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 flex gap-3 flex-1 mr-4">
-          <Shield size={16} className="text-slate-400 shrink-0 mt-0.5" />
+
 // ─── Tab: Config Geral ────────────────────────────────────────────────────────
 function ConfigTab() {
   const [form, setForm]   = useState(null);
