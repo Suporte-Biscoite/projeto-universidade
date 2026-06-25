@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Search, Bell, Pencil, X, Heart, Briefcase, Settings, LogOut, Home, BookOpen, Award, Menu, Radio, Shield, Store, BarChart2, Users, MessageCircle } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useProfile, DEFAULT_COURSE_IMAGES } from '../context/ProfileContext';
+import { useProfile } from '../context/ProfileContext';
 import { authFetch } from '../utils/authFetch';
 
 const ROLE_LABEL = {
@@ -45,7 +45,6 @@ export default function Navbar() {
   const { profileImage, updateProfileImage, userData, menuItems = [], systemRole, setSystemRole } = useProfile();
 
 
-  // Busca notificações reais da API
   useEffect(() => {
     const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
     if (!isAuth) return;
@@ -243,7 +242,7 @@ export default function Navbar() {
             {isNotifOpen && (
               <>
                 <div className="fixed inset-0 z-[-1]" onClick={() => { setIsNotifOpen(false); if (notifCloseTimer.current) clearTimeout(notifCloseTimer.current); }} />
-                <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-20 sm:top-14 sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+                <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-20 sm:top-14 sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50">
                   <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
                     <div className="flex items-center gap-2">
                       <h3 className="font-black text-[#001A26] text-sm">Alertas</h3>
@@ -252,7 +251,9 @@ export default function Navbar() {
                       )}
                     </div>
                     {unreadCount > 0 && (
+                      {unreadCount > 0 && (
                       <button onClick={markAllRead} className="text-[10px] font-bold text-[#4A72B2] hover:underline">Marcar todas como lidas</button>
+                    )}
                     )}
                   </div>
                   <div className="divide-y divide-slate-50 max-h-80 overflow-y-auto">
@@ -395,7 +396,7 @@ export default function Navbar() {
       {isMobileMenuOpen && (
         <>
           <div className="fixed inset-0 bg-black/30 z-[90]" onClick={() => setIsMobileMenuOpen(false)} style={{ touchAction: "none" }} />
-          <div className="fixed top-0 right-0 h-full w-72 bg-white z-[95] shadow-2xl flex flex-col overflow-hidden">
+          <div className="fixed top-0 right-0 h-full w-72 bg-white z-[95] shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
               <div className="flex items-center gap-3">
                 <img src={profileImage} className="w-10 h-10 rounded-full object-cover border-2 border-[#e2eef9]" alt="Perfil" />
@@ -407,6 +408,23 @@ export default function Navbar() {
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 text-slate-400"><X size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto py-4">
+              {/* Botão do painel por role */}
+              {ROLE_PANEL[systemRole] && (() => {
+                const panel = ROLE_PANEL[systemRole];
+                const PanelIcon = panel.icon;
+                return (
+                  <div className="px-4 mb-2">
+                    <Link to={panel.path} onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-3 rounded-xl font-black text-sm mb-1 ${panel.color} bg-opacity-10`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${panel.color}`}>
+                        <PanelIcon size={13} />
+                      </div>
+                      {panel.label}
+                    </Link>
+                    <div className="mx-0 h-[1px] bg-slate-100 my-3"></div>
+                  </div>
+                );
+              })()}
               <div className="px-4 mb-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">Navegação</p>
                 {navLinks.map(link => {
