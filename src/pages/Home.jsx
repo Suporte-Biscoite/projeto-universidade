@@ -16,6 +16,41 @@ const categories = [
   { name: 'Franquias',        icon: Store,            color: 'bg-teal-50 text-teal-500',       hoverColor: 'hover:bg-teal-500',    desc: 'Padrões e expansão da rede Biscoitê' },
 ];
 
+
+// Detecta YouTube ou Vimeo de qualquer URL e retorna iframe correto
+function VideoPlayer({ url, className = "w-full h-full rounded-[20px]" }) {
+  if (!url) return (
+    <div className={`${className} bg-slate-800 flex items-center justify-center text-white/40`}>
+      <p className="text-sm">Nenhum vídeo configurado</p>
+    </div>
+  );
+
+  // YouTube — aceita watch, shorts, live, youtu.be
+  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/))([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return (
+    <iframe src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`}
+      className={className} allow="autoplay; fullscreen" />
+  );
+
+  // Vimeo
+  const vmMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vmMatch) return (
+    <iframe src={`https://player.vimeo.com/video/${vmMatch[1]}?autoplay=1&title=0&byline=0`}
+      className={className} allow="autoplay; fullscreen; picture-in-picture" />
+  );
+
+  // URL direta — abre em nova aba
+  return (
+    <div className={`${className} bg-slate-800 flex flex-col items-center justify-center gap-3 text-white/60`}>
+      <p className="text-sm font-bold text-white">Vídeo externo</p>
+      <a href={url} target="_blank" rel="noreferrer"
+        className="px-4 py-2 bg-[#4A72B2] text-white rounded-xl text-sm font-bold hover:bg-white hover:text-[#001A26] transition-colors">
+        Abrir vídeo ↗
+      </a>
+    </div>
+  );
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const { shorts: shortsData } = useProfile();
@@ -102,33 +137,7 @@ export default function Home() {
               className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-2">
               ✕ Fechar
             </button>
-            {(() => {
-              const url = selectedShort.vimeo_id || '';
-              // YouTube
-              const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|live\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-              if (ytMatch) return (
-                <iframe
-                  src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`}
-                  className="w-full h-full rounded-[24px]"
-                  allow="autoplay; fullscreen"
-                />
-              );
-              // Vimeo
-              const vmMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-              if (vmMatch) return (
-                <iframe
-                  src={`https://player.vimeo.com/video/${vmMatch[1]}?autoplay=1&title=0&byline=0`}
-                  className="w-full h-full rounded-[24px]"
-                  allow="autoplay; fullscreen"
-                />
-              );
-              // Sem vídeo
-              return (
-                <div className="w-full h-full rounded-[24px] bg-slate-800 flex items-center justify-center text-white/40">
-                  <p className="text-sm">Sem vídeo</p>
-                </div>
-              );
-            })()}
+<VideoPlayer url={selectedShort.vimeo_id} className="w-full h-full rounded-[24px]" />
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[24px]">
               <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
               <p className="text-white/50 text-xs mt-1">{selectedShort.instructor}</p>

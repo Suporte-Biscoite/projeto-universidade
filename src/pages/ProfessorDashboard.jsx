@@ -1927,6 +1927,41 @@ function extractVimeoId(url) {
   return m ? m[1] : null;
 }
 
+
+// Detecta YouTube ou Vimeo de qualquer URL e retorna iframe correto
+function VideoPlayer({ url, className = "w-full h-full rounded-[20px]" }) {
+  if (!url) return (
+    <div className={`${className} bg-slate-800 flex items-center justify-center text-white/40`}>
+      <p className="text-sm">Nenhum vídeo configurado</p>
+    </div>
+  );
+
+  // YouTube — aceita watch, shorts, live, youtu.be
+  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/))([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return (
+    <iframe src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`}
+      className={className} allow="autoplay; fullscreen" />
+  );
+
+  // Vimeo
+  const vmMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vmMatch) return (
+    <iframe src={`https://player.vimeo.com/video/${vmMatch[1]}?autoplay=1&title=0&byline=0`}
+      className={className} allow="autoplay; fullscreen; picture-in-picture" />
+  );
+
+  // URL direta — abre em nova aba
+  return (
+    <div className={`${className} bg-slate-800 flex flex-col items-center justify-center gap-3 text-white/60`}>
+      <p className="text-sm font-bold text-white">Vídeo externo</p>
+      <a href={url} target="_blank" rel="noreferrer"
+        className="px-4 py-2 bg-[#4A72B2] text-white rounded-xl text-sm font-bold hover:bg-white hover:text-[#001A26] transition-colors">
+        Abrir vídeo ↗
+      </a>
+    </div>
+  );
+}
+
 function ShortsView() {
   const { profileImage } = useProfile();
   const [shorts, setShorts] = useState([]);
