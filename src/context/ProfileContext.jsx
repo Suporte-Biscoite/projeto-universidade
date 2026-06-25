@@ -164,7 +164,7 @@ export function ProfileProvider({ children }) {
       const logged = raw ? JSON.parse(raw) : null;
       if (logged?.role) return logged.role;
     } catch {}
-    return loadFromStorage('biscoite_system_role', 'aluno');
+    return 'aluno';
   });
 
   // ── Courses ───────────────────────────────────────────────────────────────
@@ -177,9 +177,7 @@ export function ProfileProvider({ children }) {
   const [menuItems, setMenuItems] = useState(() => loadMenuItems());
 
   // ── Users ─────────────────────────────────────────────────────────────────
-  const [users, setUsers] = useState(
-    () => loadFromStorage('biscoite_users', INITIAL_USERS)
-  );
+  const [users, setUsers] = useState(INITIAL_USERS);
 
   // ── Platform config ───────────────────────────────────────────────────────
   const [platformConfig, setPlatformConfigState] = useState(
@@ -249,11 +247,11 @@ export function ProfileProvider({ children }) {
 
   // ── Busca cursos do banco ao inicializar ─────────────────────────────────────
   useEffect(() => {
-    // Remove dados falsos do localStorage automaticamente
-    localStorage.removeItem('biscoite_courses');
-    localStorage.removeItem('biscoite_modules');
-    sessionStorage.removeItem('biscoite_courses');
-    sessionStorage.removeItem('biscoite_modules');
+    // Remove chaves stale que não devem mais ser fonte de verdade
+    ['biscoite_courses', 'biscoite_modules', 'biscoite_users', 'biscoite_system_role'].forEach(k => {
+      localStorage.removeItem(k);
+      sessionStorage.removeItem(k);
+    });
 
     const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
     if (!isAuth) return;
@@ -351,11 +349,10 @@ export function ProfileProvider({ children }) {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  useEffect(() => { try { localStorage.setItem('biscoite_system_role', JSON.stringify(systemRole)); } catch {} }, [systemRole]);
-  useEffect(() => { try { localStorage.setItem('biscoite_courses', JSON.stringify(courses)); } catch {} }, [courses]);
-  useEffect(() => { try { localStorage.setItem('biscoite_modules', JSON.stringify(modules)); } catch {} }, [modules]);
+  // ── Persistência no localStorage ──────────────────────────────────────────
+  // Apenas estados que ainda não têm endpoint de leitura consolidado no banco.
+  // courses, modules, users e systemRole vêm do banco — não persistir localmente.
   useEffect(() => { try { localStorage.setItem('biscoite_menu_items', JSON.stringify(menuItems)); } catch {} }, [menuItems]);
-  useEffect(() => { try { localStorage.setItem('biscoite_users', JSON.stringify(users)); } catch {} }, [users]);
   useEffect(() => { try { localStorage.setItem('biscoite_config', JSON.stringify(platformConfig)); } catch {} }, [platformConfig]);
   useEffect(() => { try { localStorage.setItem('biscoite_conversations', JSON.stringify(conversations)); } catch {} }, [conversations]);
   useEffect(() => { try { localStorage.setItem('biscoite_announcements', JSON.stringify(announcements)); } catch {} }, [announcements]);
