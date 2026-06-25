@@ -12,6 +12,21 @@ import { getLoggedId } from './ProfessorHelpers';
 import { FieldInput, FieldSelect, InstructorDropdown, CourseFormModal, CourseDeleteModal } from './CourseModals';
 import CertificadosSubTab from './CertificadosTab';
 
+const CATS  = ['Operações','Vendas','Gestão','Marketing','IA','Franquias','Business'];
+const LVLS  = ['Iniciante','Intermediário','Avançado'];
+const FMTS  = ['Vídeo','Híbrido','Presencial'];
+const L_TYPES = ['video','documento','quiz','ao vivo'];
+const CAT_COLORS = {
+  'Operações':'bg-emerald-100 text-emerald-700','Vendas':'bg-blue-100 text-blue-700',
+  'Gestão':'bg-purple-100 text-purple-700','Marketing':'bg-orange-100 text-orange-700',
+  'IA':'bg-pink-100 text-pink-700','Franquias':'bg-teal-100 text-teal-700','Business':'bg-cyan-100 text-cyan-700',
+};
+const KANBAN_COLORS = [
+  'bg-purple-100 text-purple-700 border-purple-200','bg-teal-100 text-teal-700 border-teal-200',
+  'bg-orange-100 text-orange-700 border-orange-200','bg-pink-100 text-pink-700 border-pink-200',
+  'bg-blue-100 text-blue-700 border-blue-200','bg-emerald-100 text-emerald-700 border-emerald-200',
+];
+
 // ═══════════════════════════════════════════════════════════════════════════
 // VIEW: MEUS CURSOS
 // ═══════════════════════════════════════════════════════════════════════════

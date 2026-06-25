@@ -1,10 +1,11 @@
-
 // src/components/professor/ShortsView.jsx
 import { useState, useRef, useEffect } from 'react';
 import { Plus, X, Check, Pencil, Trash, Play, Link, Image as ImageIcon, Clapperboard } from 'lucide-react';
 import { useProfile } from '../../context/ProfileContext';
 import { authFetch } from '../../utils/authFetch';
 import { Toast, getLoggedId } from './ProfessorHelpers';
+
+const REEL_TAGS = ['Dica', 'Novidade', 'Aviso', 'Evento', 'Vendas', 'Operações', 'IA', 'Motivação'];
 
 function extractVimeoId(url) {
   const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
