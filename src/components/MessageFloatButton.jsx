@@ -27,7 +27,7 @@ export default function MessageFloatButton() {
 
   const hidden = HIDDEN_PATHS.some(p => location.pathname.startsWith(p));
 
-  console.log('[MessageFloat] render — userId:', userId, 'hidden:', hidden, 'path:', location.pathname);
+  console.log('[MessageFloat] render — userId:', userId, 'hidden:', hidden, 'path:', location.pathname || '(empty - router not ready)');
 
   useEffect(() => {
     if (hidden || !userId) return;
