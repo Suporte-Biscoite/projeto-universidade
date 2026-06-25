@@ -13,19 +13,6 @@ const AREA_BADGE = {
   'IA':'bg-pink-100 text-pink-700','Franquias':'bg-teal-100 text-teal-700','Business':'bg-cyan-100 text-cyan-700',
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CERTIFICADOS — sub-tab do Meus Cursos
-// ═══════════════════════════════════════════════════════════════════════════
-const CERT_AREAS = ['Operações','Vendas','Gestão','Marketing','IA','Franquias','Business'];
-const CERT_DURATIONS = ['Curta duração','Média duração','Longa duração'];
-const CERT_BG_COLORS = ['#001A26','#7C3AED','#0F766E','#C2410C','#1D4ED8','#15803D'];
-const CERT_ACCENT_COLORS = ['#4A72B2','#F59E0B','#34D399','#FB923C','#60A5FA','#86EFAC'];
-const AREA_BADGE = {
-  'Operações':'bg-emerald-100 text-emerald-700','Vendas':'bg-blue-100 text-blue-700',
-  'Gestão':'bg-purple-100 text-purple-700','Marketing':'bg-orange-100 text-orange-700',
-  'IA':'bg-pink-100 text-pink-700','Franquias':'bg-teal-100 text-teal-700','Business':'bg-cyan-100 text-cyan-700',
-};
-
 function CertPreview({ cert }) {
   return (
     <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm" style={{ background: cert.bgColor || '#001A26' }}>
