@@ -489,6 +489,39 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── PLATFORM CONFIG ───────────────────────────────────────────────────────
+    // GET  /api/data?resource=platform_config  — lê config do banco
+    // POST /api/data?resource=platform_config  — salva config no banco (admin)
+    if (resource === 'platform_config') {
+      if (req.method === 'GET') {
+        const { rows } = await pool.query('SELECT key, value FROM platform_config');
+        const config = {};
+        rows.forEach(r => {
+          // Converte booleanos e números
+          if (r.value === 'true')  config[r.key] = true;
+          else if (r.value === 'false') config[r.key] = false;
+          else if (!isNaN(r.value) && r.value !== '') config[r.key] = Number(r.value);
+          else config[r.key] = r.value;
+        });
+        return send(res, 200, config);
+      }
+
+      if (req.method === 'POST') {
+        if (!auth) return send(res, 401, { error: 'Não autorizado' });
+        if (auth.role !== 'admin') return send(res, 403, { error: 'Apenas admins' });
+        const updates = req.body ?? {};
+        for (const [key, value] of Object.entries(updates)) {
+          await pool.query(
+            `INSERT INTO platform_config (key, value, updated_at)
+             VALUES ($1, $2, now())
+             ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = now()`,
+            [key, String(value)]
+          );
+        }
+        return send(res, 200, { ok: true });
+      }
+    }
+
     return send(res, 400, { error: 'resource inválido' });
   } catch (err) {
     console.error('[data]', err);
