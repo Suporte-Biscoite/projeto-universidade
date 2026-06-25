@@ -205,7 +205,7 @@ function ConfigTablesPanel() {
 // ─── AdminPanel principal ─────────────────────────────────────────────────────
 export default function AdminPanel() {
   const navigate = useNavigate();
-  const { userData } = useProfile();
+  const { systemRole } = useProfile();
   const [activeTab, setActiveTab]   = useState('aprovacoes');
   const [search, setSearch]         = useState('');
   const [filterRole, setFilterRole] = useState(null);
@@ -276,10 +276,7 @@ export default function AdminPanel() {
     if (res.ok) fetchUsers();
   };
 
-  // role vem do JWT via userData — não do localStorage
-  const currentRole = userData?.role;
-
-  if (currentRole !== 'admin') {
+  if (systemRole !== 'admin') {
     return (
       <div className="min-h-screen bg-[#f6f9fd] flex items-center justify-center">
         <div className="bg-white rounded-[32px] p-12 text-center space-y-5 shadow-sm max-w-md w-full">
