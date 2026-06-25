@@ -250,7 +250,7 @@ export default function CoursePlayer() {
             )}
           </div>
           {course.description && (
-            <p className="text-sm text-slate-600 leading-relaxed px-2">{course.description}</p>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed px-1">{course.description}</p>
           )}
         </div>
       )}

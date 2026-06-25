@@ -515,7 +515,13 @@ export default function Settings() {
             <h2 className="text-2xl font-black text-[#001A26]">Sem permissão</h2>
             <p className="text-slate-400 text-sm font-medium mt-2">Configurações disponíveis apenas para professores e admins.</p>
           </div>
-
+          <button
+            onClick={() => setSystemRole('admin')}
+            className="flex items-center gap-2 mt-2 px-5 py-2.5 rounded-xl bg-[#001A26] text-white text-xs font-black hover:bg-[#4A72B2] transition-colors"
+          >
+            <Shield size={13} />
+            Restaurar acesso (Demo)
+          </button>
         </div>
       </div>
     );
@@ -539,14 +545,33 @@ export default function Settings() {
         </div>
         <div className="flex items-center gap-3">
           <RoleBadge role={systemRole} />
+          {/* Demo switcher — remover quando o backend estiver pronto */}
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            <span className="text-[9px] font-black text-amber-600 uppercase tracking-wider"></span>
+            <select
+              value={systemRole}
+              onChange={e => {
+                if (e.target.value === 'aluno' && !window.confirm('Trocar para Aluno bloqueará o acesso às configurações. Tem certeza?')) return;
+                setSystemRole(e.target.value);
+              }}
+              className="text-[10px] font-black text-amber-700 bg-transparent outline-none cursor-pointer"
+            >
+              <option value="admin">Admin</option>
+              <option value="professor">Professor</option>
+              <option value="gestor">Gestor</option>
+              <option value="loja">Líder Loja</option>
+              <option value="franqueado">Franqueado</option>
+              <option value="aluno">Aluno</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Layout: sidebar + conteúdo */}
-      <div className="flex gap-8 items-start">
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 items-start">
 
         {/* Sidebar de tabs */}
-        <nav className="w-48 shrink-0 space-y-1">
+        <nav className="w-full sm:w-48 shrink-0 space-y-1 flex sm:flex-col flex-row flex-wrap gap-1">
           {tabs.map(tab => {
             const Icon = tab.icon;
             const locked = tab.adminOnly && systemRole !== 'admin';

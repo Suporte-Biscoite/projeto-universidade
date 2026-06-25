@@ -58,7 +58,7 @@ export default function Mensagens() {
 
       {/* Nova conversa */}
       {showNew && (
-        <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 space-y-4">
+        <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-4 sm:p-6 space-y-4">
           <p className="font-black text-[#001A26] text-sm">Iniciar nova conversa</p>
           <div className="relative">
             <select value={selectedProf} onChange={e => setSelectedProf(e.target.value)}
@@ -81,7 +81,9 @@ export default function Mensagens() {
       )}
 
       {/* Chat */}
-      <ChatPanel key={refreshKey} currentUserId={currentUserId} />
+      <div className="h-[calc(100vh-280px)] sm:h-[600px]">
+        <ChatPanel key={refreshKey} currentUserId={currentUserId} />
+      </div>
     </div>
   );
 }

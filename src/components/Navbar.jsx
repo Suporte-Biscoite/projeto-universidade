@@ -1,15 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Search, Bell, Pencil, X, Heart, Briefcase, Settings, LogOut, Home, BookOpen, Award, Menu, Radio, Shield, Store, BarChart2, Users, MessageCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Bell, Pencil, X, Heart, Briefcase, Settings, LogOut, Home, BookOpen, Award, Menu, Radio, Shield, Store, BarChart2, Users } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
-import { authFetch } from '../utils/authFetch';
-
-const ROLE_LABEL = {
-  admin:     'Administrador',
-  professor: 'Professor',
-  gestor:    'Gestor',
-  aluno:     'Colaborador',
-};
 
 const ROLE_PANEL = {
   admin:     { label: 'Painel Admin',     path: '/admin',     icon: Shield,   color: 'text-purple-500 bg-purple-50' },
@@ -17,16 +9,24 @@ const ROLE_PANEL = {
   gestor:    { label: 'Painel Gestor',    path: '/gestor',    icon: BarChart2,color: 'text-teal-500 bg-teal-50' },
 };
 
-const TYPE_COLOR = {
-  course:      'bg-blue-500',
-  certificate: 'bg-green-500',
-  live:        'bg-red-500',
-  approval:    'bg-emerald-500',
-  system:      'bg-orange-500',
-  info:        'bg-slate-400',
-};
+const mockNotifications = [
+  { id: 1, title: 'Novo curso disponível', desc: 'Operação de cafeteria avançada foi adicionado', time: '2 min atrás', read: false, color: 'bg-blue-500' },
+  { id: 2, title: 'Certificado liberado!', desc: 'Você concluiu Fase 1 - Básico com sucesso', time: '1h atrás', read: false, color: 'bg-green-500' },
+  { id: 3, title: 'Webinar amanhã', desc: 'Não esqueça: Webinar Biscoitê às 19h', time: '3h atrás', read: true, color: 'bg-orange-500' },
+  { id: 4, title: 'Meta atingida', desc: 'Parabéns! Você completou 5 cursos este mês', time: '1d atrás', read: true, color: 'bg-purple-500' },
+];
 
-const allCourses = [];
+const allCourses = [
+  { id: 1, title: 'Fase 1 - Básico', category: 'Operações' },
+  { id: 2, title: 'Operação cafeteria', category: 'Operações' },
+  { id: 3, title: 'Páscoa 2026', category: 'Marketing' },
+  { id: 4, title: 'Atendimento ao cliente', category: 'Vendas' },
+  { id: 5, title: 'Gestão de equipes', category: 'Gestão' },
+  { id: 6, title: 'Marketing digital', category: 'Marketing' },
+  { id: 7, title: 'IA para negócios', category: 'IA' },
+  { id: 8, title: 'Operação máquina café', category: 'Operações' },
+  { id: 9, title: 'Franquias Biscoitê', category: 'Franquias' },
+];
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,34 +34,14 @@ export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const notifCloseTimer = useRef(null);
+  const [notifications, setNotifications] = useState(mockNotifications);
   const location = useLocation();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const searchRef = useRef(null);
 
   const { profileImage, updateProfileImage, userData, menuItems = [], systemRole, setSystemRole } = useProfile();
-
-
-  // Busca notificações reais da API
-  useEffect(() => {
-    const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
-    if (!isAuth) return;
-    const fetchNotifs = async () => {
-      try {
-        const res = await authFetch('/api/data?resource=notifications');
-        if (!res.ok) return;
-        const data = await res.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unread || 0);
-      } catch {}
-    };
-    fetchNotifs();
-    const interval = setInterval(fetchNotifs, 30_000); // atualiza a cada 30s
-    return () => clearInterval(interval);
-  }, []);
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleLogout = () => {
     ['biscoite_auth','biscoite_access_token','biscoite_refresh_token','biscoite_logged_user']
@@ -78,7 +58,7 @@ export default function Navbar() {
 
   // Mapeamento de id do menu para ícone
   const MENU_ID_TO_ICON = {
-    home: Home, courses: BookOpen, certificados: Award, mensagens: MessageCircle,
+    home: Home, courses: BookOpen, certificados: Award,
     favoritos: Heart, carreira: Briefcase, live: Radio, configuracoes: Settings,
   };
 
@@ -100,22 +80,8 @@ export default function Navbar() {
     reader.readAsDataURL(file);
   };
 
-  const markAllRead = async () => {
-    setNotifications([]);
-    setUnreadCount(0);
-    try { await authFetch('/api/data?resource=notifications&action=read-all', { method: 'POST' }); } catch {}
-  };
-
-  const deleteNotif = async (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    setUnreadCount(prev => Math.max(0, prev - 1));
-    try { await authFetch(`/api/data?resource=notifications&action=delete&id=${id}`, { method: 'POST' }); } catch {}
-  };
-
-  const deleteAllNotifs = async () => {
-    setNotifications([]);
-    setUnreadCount(0);
-    try { await authFetch('/api/data?resource=notifications&action=delete-all', { method: 'POST' }); } catch {}
+  const markAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   useEffect(() => {
@@ -166,7 +132,7 @@ export default function Navbar() {
             {isSearchOpen && (
               <>
                 <div className="fixed inset-0 z-[-1]" onClick={() => setIsSearchOpen(false)} />
-                <div className="absolute right-0 top-14 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+                <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-20 sm:top-14 sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50">
                   <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
                     <Search size={16} className="text-slate-400 shrink-0" />
                     <input
@@ -228,17 +194,7 @@ export default function Navbar() {
           {/* NOTIFICATIONS */}
           <div className="relative">
             <button
-              onClick={() => {
-                const opening = !isNotifOpen;
-                setIsNotifOpen(opening);
-                setIsSearchOpen(false);
-                setIsOpen(false);
-                // Auto-fecha após 8s
-                if (opening) {
-                  if (notifCloseTimer.current) clearTimeout(notifCloseTimer.current);
-                  notifCloseTimer.current = setTimeout(() => setIsNotifOpen(false), 8000);
-                }
-              }}
+              onClick={() => { setIsNotifOpen(!isNotifOpen); setIsSearchOpen(false); setIsOpen(false); }}
               className={`relative p-2 rounded-xl transition-all ${isNotifOpen ? 'bg-[#e2eef9] text-[#4A72B2]' : 'text-slate-400 hover:text-[#00263B] hover:bg-slate-50'}`}
             >
               <Bell size={20} />
@@ -248,11 +204,8 @@ export default function Navbar() {
             </button>
             {isNotifOpen && (
               <>
-                <div className="fixed inset-0 z-[-1]" onClick={() => {
-                  setIsNotifOpen(false);
-                  if (notifCloseTimer.current) clearTimeout(notifCloseTimer.current);
-                }} />
-                <div className="absolute right-0 top-14 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+                <div className="fixed inset-0 z-[-1]" onClick={() => setIsNotifOpen(false)} />
+                <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-20 sm:top-14 sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
                   <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
                     <div className="flex items-center gap-2">
                       <h3 className="font-black text-[#001A26] text-sm">Alertas</h3>
@@ -265,39 +218,19 @@ export default function Navbar() {
                     )}
                   </div>
                   <div className="divide-y divide-slate-50 max-h-80 overflow-y-auto">
-                    {notifications.length === 0 && (
-                      <div className="flex flex-col items-center gap-2 py-10 text-slate-300">
-                        <Bell size={28} />
-                        <p className="text-xs font-bold text-slate-400">Nenhuma notificação</p>
-                      </div>
-                    )}
                     {notifications.map(notif => (
                       <div
                         key={notif.id}
-                        className="flex gap-3 px-5 py-4 hover:bg-slate-50 transition-colors group bg-blue-50/40"
+                        className={`flex gap-3 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.read ? 'bg-blue-50/40' : ''}`}
+                        onClick={() => setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n))}
                       >
-                        <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${TYPE_COLOR[notif.type] || TYPE_COLOR.info}`}></div>
-                        <div className="flex-1 min-w-0 cursor-pointer" onClick={async () => {
-                          setNotifications(prev => prev.filter(n => n.id !== notif.id));
-                          setUnreadCount(prev => Math.max(0, prev - 1));
-                          try { await authFetch(`/api/data?resource=notifications&action=read&id=${notif.id}`, { method: 'POST' }); } catch {}
-                          setIsNotifOpen(false);
-                          if (notif.link) navigate(notif.link);
-                        }}>
-                          <p className="text-sm leading-tight font-bold text-[#001A26]">{notif.title}</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{notif.description}</p>
+                        <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${notif.color}`}></div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm leading-tight ${!notif.read ? 'font-bold text-[#001A26]' : 'font-medium text-slate-600'}`}>{notif.title}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{notif.desc}</p>
+                          <p className="text-[10px] text-slate-300 mt-1">{notif.time}</p>
                         </div>
-                        <button
-                          onClick={async () => {
-                            setNotifications(prev => prev.filter(n => n.id !== notif.id));
-                            setUnreadCount(prev => Math.max(0, prev - 1));
-                            try { await authFetch(`/api/data?resource=notifications&action=read&id=${notif.id}`, { method: 'POST' }); } catch {}
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-slate-500 transition-all flex-shrink-0 mt-1"
-                          title="Fechar notificação"
-                        >
-                          <X size={13} />
-                        </button>
+                        {!notif.read && <div className="w-1.5 h-1.5 bg-[#4A72B2] rounded-full mt-2 shrink-0"></div>}
                       </div>
                     ))}
                   </div>
@@ -312,7 +245,7 @@ export default function Navbar() {
           <div className="relative hidden md:flex items-center gap-3 cursor-pointer">
             <div className="text-right" onClick={() => setIsOpen(!isOpen)}>
               <p className="text-sm font-black text-[#00263B] leading-none uppercase">{userData.name.split(' ')[0]}</p>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 opacity-80">{ROLE_LABEL[systemRole] || systemRole || '—'}</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 opacity-80">{userData.role || 'VENDEDORA'}</p>
             </div>
             <div className="relative group" onClick={() => fileInputRef.current.click()}>
               <img src={profileImage} className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover transition-all group-hover:brightness-90" alt="Perfil" />
@@ -415,14 +348,14 @@ export default function Navbar() {
       {/* MOBILE MENU */}
       {isMobileMenuOpen && (
         <>
-          <div className="fixed inset-0 bg-black/30 z-[90]" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="fixed top-0 right-0 h-full w-72 bg-white z-[95] shadow-2xl flex flex-col">
+          <div className="fixed inset-0 bg-black/30 z-[90]" onClick={() => setIsMobileMenuOpen(false)} style={{ touchAction: 'none' }} />
+          <div className="fixed top-0 right-0 h-full w-72 bg-white z-[95] shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
               <div className="flex items-center gap-3">
                 <img src={profileImage} className="w-10 h-10 rounded-full object-cover border-2 border-[#e2eef9]" alt="Perfil" />
                 <div>
                   <p className="font-black text-sm text-[#001A26]">{userData.name.split(' ')[0]}</p>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">{ROLE_LABEL[systemRole] || systemRole || '—'}</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">{userData.role || 'Vendedora'}</p>
                 </div>
               </div>
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 text-slate-400"><X size={18} /></button>

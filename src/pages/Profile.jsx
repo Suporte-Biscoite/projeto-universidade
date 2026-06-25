@@ -1140,7 +1140,7 @@ export default function Profile() {
               {/* Distribuição por perfil */}
               <div className="bg-white p-8 rounded-[32px] shadow-xl border border-slate-50 space-y-5">
                 <h2 className="text-xl font-black text-[#00263B]">Distribuição por perfil</h2>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                   {[
                     { role: 'admin',      label: 'Admin',      color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
                     { role: 'professor',  label: 'Professor',  color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },

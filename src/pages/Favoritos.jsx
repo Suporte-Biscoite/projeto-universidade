@@ -71,7 +71,7 @@ export default function Favoritos() {
 
       {/* Conteúdo */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {[1,2,3,4].map(i => (
             <div key={i} className="bg-white rounded-2xl border border-slate-100 overflow-hidden animate-pulse">
               <div className="aspect-video bg-slate-100" />
@@ -99,7 +99,7 @@ export default function Favoritos() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {favorites.map(fav => (
             <CourseCard
               key={fav.course_id}

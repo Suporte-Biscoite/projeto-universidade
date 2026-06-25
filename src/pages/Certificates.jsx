@@ -228,11 +228,11 @@ Um passo importante na minha jornada de desenvolvimento profissional. Muito orgu
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-3 sm:p-4 overflow-hidden" onClick={onClose} style={{ touchAction: 'none' }}>
+      <div className="bg-white rounded-[24px] sm:rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col" onClick={e => e.stopPropagation()}>
 
         {/* Certificado visual */}
-        <div ref={printRef} className="relative bg-[#001A26] p-10 sm:p-14 text-center overflow-hidden">
+        <div ref={printRef} className="relative bg-[#001A26] p-6 sm:p-10 md:p-14 text-center overflow-hidden flex-shrink-0">
           {/* Decorações */}
           <div className="absolute top-0 left-0 w-40 h-40 rounded-full bg-[#4A72B2] opacity-10 -translate-x-16 -translate-y-16" />
           <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-[#b9d2eb] opacity-5 translate-x-16 -translate-y-16" />
@@ -261,12 +261,12 @@ Um passo importante na minha jornada de desenvolvimento profissional. Muito orgu
 
             <div className="space-y-2">
               <p className="text-white/50 text-sm">Certificamos que</p>
-              <h2 className="text-white text-3xl sm:text-4xl font-black tracking-tight">{cert.user_name}</h2>
+              <h2 className="text-white text-2xl sm:text-3xl md:text-4xl font-black tracking-tight">{cert.user_name}</h2>
             </div>
 
             <div className="space-y-2">
               <p className="text-white/50 text-sm">concluiu com êxito o curso</p>
-              <h3 className="text-[#b9d2eb] text-xl sm:text-2xl font-black">"{cert.course_title}"</h3>
+              <h3 className="text-[#b9d2eb] text-lg sm:text-xl md:text-2xl font-black">"{cert.course_title}"</h3>
             </div>
 
             <div className="flex items-center justify-center gap-2 text-white/40 text-xs">
@@ -290,7 +290,7 @@ Um passo importante na minha jornada de desenvolvimento profissional. Muito orgu
         </div>
 
         {/* Botões */}
-        <div className="p-4 flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="p-4 flex flex-col gap-2 sm:flex-row sm:gap-3 flex-shrink-0">
           <button onClick={onClose}
             className="py-3 px-5 rounded-2xl border border-slate-200 text-slate-500 font-bold text-sm hover:bg-slate-50 transition-colors">
             Fechar
