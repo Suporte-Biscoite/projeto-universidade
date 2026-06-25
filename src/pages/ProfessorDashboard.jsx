@@ -310,10 +310,10 @@ function Sidebar({ activeView, setActiveView, profileImage, userName, unreadComm
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
               activeView === id ? 'bg-[#E2F0FF] text-[#4A72B2]' : 'text-slate-400 hover:bg-slate-50 hover:text-[#00263B]'
             }`}>
-            <Icon size={16} />
+            <Icon size={18} className="flex-shrink-0" />
             <span className="flex-1">{label}</span>
             {badge > 0 && (
-              <span className="w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{badge}</span>
+              <span className="w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center flex-shrink-0">{badge}</span>
             )}
           </button>
         ))}
@@ -1214,6 +1214,12 @@ function CertificadosSubTab({ certTemplates, addCertTemplate, updateCertTemplate
 // VIEW: MEUS CURSOS
 // ═══════════════════════════════════════════════════════════════════════════
 function MeusCursosView() {
+  const loggedId = (() => {
+    try {
+      const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
+      return raw ? JSON.parse(raw)?.id : null;
+    } catch { return null; }
+  })();
   const {
     courses, modules, systemRole,
     addCourse, updateCourse, deleteCourse,
@@ -1339,7 +1345,7 @@ function MeusCursosView() {
       {/* ── Main tabs ── */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-0">
         <div className="flex gap-6">
-          {[['gerenciamento','Gerenciamento de Cursos'],['relatorios','Relatórios']].map(([id, label]) => (
+          {[['gerenciamento','Gerenciamento de Cursos'],['relatorios','Relatórios'],['avaliacoes','Avaliações']].map(([id, label]) => (
             <button key={id} onClick={() => setMainTab(id)}
               className={`pb-3 text-sm font-black transition-all border-b-2 -mb-px ${
                 mainTab === id ? 'text-[#00263B] border-[#4A72B2]' : 'text-slate-400 border-transparent hover:text-[#00263B]'
@@ -1785,7 +1791,8 @@ function MeusCursosView() {
         </div>
       )}
 
-      {mainTab === 'relatorios' && <RelatoriosView />}
+      {mainTab === 'relatorios'  && <RelatoriosView />}
+      {mainTab === 'avaliacoes'  && <AvaliacoesView loggedId={loggedId} />}
     </div>
   );
 }
@@ -2212,9 +2219,142 @@ function ReelsView() {
 // ═══════════════════════════════════════════════════════════════════════════
 // PÁGINA PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════
+// ─── AvaliacoesView ──────────────────────────────────────────────────────────
+function AvaliacoesView({ loggedId }) {
+  const [courses, setCourses] = useState([]);
+  const [ratings, setRatings] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [comments, setComments] = useState([]);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    if (!token) return;
+    const headers = { Authorization: `Bearer ${token}` };
+    fetch('/api/courses', { headers }).then(r => r.ok ? r.json() : []).then(async data => {
+      const mine = Array.isArray(data)
+        ? data.filter(c => c.instructor_id === loggedId || c.instructorId === loggedId)
+        : [];
+      setCourses(mine);
+      // Busca ratings para cada curso
+      const ratingsMap = {};
+      await Promise.all(mine.map(async c => {
+        try {
+          const res = await fetch(`/api/data?resource=ratings&courseId=${c.id}`, { headers });
+          if (res.ok) ratingsMap[c.id] = await res.json();
+        } catch {}
+      }));
+      setRatings(ratingsMap);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [loggedId]);
+
+  const loadComments = async (courseId) => {
+    setSelected(courseId);
+    setComments([]);
+    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
+    try {
+      const res = await fetch(`/api/data?resource=ratings&courseId=${courseId}&comments=true`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setComments(data.comments || []);
+      }
+    } catch {}
+  };
+
+  const StarRow = ({ value, size = 14 }) => (
+    <div className="flex items-center gap-0.5">
+      {[1,2,3,4,5].map(s => (
+        <Star key={s} size={size}
+          fill={Number(value) >= s ? '#F59E0B' : 'none'}
+          className={Number(value) >= s ? 'text-amber-400' : 'text-slate-200'}
+        />
+      ))}
+    </div>
+  );
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader size={28} className="animate-spin text-[#4A72B2]" />
+    </div>
+  );
+
+  if (courses.length === 0) return (
+    <div className="text-center py-20 text-slate-400">
+      <Star size={40} className="mx-auto mb-3 text-slate-200" />
+      <p className="font-bold">Nenhum curso publicado ainda.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-black text-[#001A26]">Avaliações dos cursos</h2>
+        <p className="text-sm text-slate-400 mt-1">Veja o que os alunos estão dizendo sobre seus cursos.</p>
+      </div>
+
+      {courses.map(course => {
+        const r = ratings[course.id];
+        const avg = r?.avg_rating ? Number(r.avg_rating) : null;
+        const total = r?.total ? Number(r.total) : 0;
+        const isOpen = selected === course.id;
+
+        return (
+          <div key={course.id} className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+            <button onClick={() => isOpen ? setSelected(null) : loadComments(course.id)}
+              className="w-full flex items-center gap-4 p-5 text-left hover:bg-slate-50 transition-colors">
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-[#001A26] text-sm truncate">{course.title}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{course.category} · {course.level}</p>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {avg ? (
+                  <>
+                    <StarRow value={avg} />
+                    <span className="font-black text-[#001A26]">{avg.toFixed(1)}</span>
+                    <span className="text-xs text-slate-400">({total})</span>
+                  </>
+                ) : (
+                  <span className="text-xs text-slate-400 italic">Sem avaliações</span>
+                )}
+                <ChevronDown size={16} className={`text-slate-300 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+
+            {isOpen && (
+              <div className="border-t border-slate-50 px-5 py-4 space-y-3">
+                {comments.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">Nenhum comentário ainda.</p>
+                ) : comments.map((c, i) => (
+                  <div key={i} className="flex gap-3 p-3 bg-slate-50 rounded-2xl">
+                    <div className="w-8 h-8 rounded-full bg-[#4A72B2] flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                      {(c.user_name || 'A').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-bold text-[#001A26] text-xs">{c.user_name || 'Aluno'}</p>
+                        <StarRow value={c.rating} size={11} />
+                      </div>
+                      {c.comment && <p className="text-xs text-slate-500 leading-relaxed">{c.comment}</p>}
+                      <p className="text-[10px] text-slate-300 mt-1">
+                        {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ProfessorDashboard() {
   const [activeView, setActiveView] = useState('overview');
-  const [unreadComm, setUnreadComm] = useState(3);
+  const [unreadComm, setUnreadComm] = useState(0);
   const { profileImage, userData } = useProfile();
 
   const handleViewChange = (view) => {
