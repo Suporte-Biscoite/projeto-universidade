@@ -2,7 +2,7 @@
 // Painel de aprovação de cadastros — usado dentro do AdminPanel
 
 import { useState, useEffect } from 'react';
-import { Check, X, Clock, User, Store, AlertTriangle, Loader } from 'lucide-react';
+import { Check, X, Clock, User, Store, AlertTriangle, Loader, ChevronDown } from 'lucide-react';
 import { authFetch } from '../utils/authFetch';
 
 const STORE_TYPE_LABEL = {
@@ -19,13 +19,30 @@ const ROLE_LABEL = {
   admin:     'Admin',
 };
 
+const ROLE_COLOR = {
+  aluno:     'bg-slate-100 text-slate-600',
+  gestor:    'bg-teal-100 text-teal-700',
+  professor: 'bg-blue-100 text-blue-700',
+  admin:     'bg-purple-100 text-purple-700',
+};
+
+// Roles que o admin pode atribuir ao aprovar
+const ASSIGNABLE_ROLES = [
+  { value: 'aluno',     label: 'Colaborador' },
+  { value: 'gestor',    label: 'Gestor / Franqueado' },
+  { value: 'professor', label: 'Professor / Instrutor' },
+  { value: 'admin',     label: 'Administrador' },
+];
+
 export default function ApprovalsPanel() {
-  const [pending, setPending]     = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [acting, setActing]       = useState(null); // id do usuário sendo processado
-  const [rejectModal, setRejectModal] = useState(null); // usuário a rejeitar
+  const [pending, setPending]         = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [acting, setActing]           = useState(null);
+  const [rejectModal, setRejectModal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [toast, setToast]         = useState(null);
+  // approveModal: { user, selectedRole }
+  const [approveModal, setApproveModal] = useState(null);
+  const [toast, setToast]             = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -35,7 +52,7 @@ export default function ApprovalsPanel() {
   const fetchPending = async () => {
     try {
       setLoading(true);
-      const res = await authFetch('/api/users?action=approvals');
+      const res  = await authFetch('/api/users?action=approvals');
       const data = await res.json();
       if (res.ok) setPending(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -47,18 +64,30 @@ export default function ApprovalsPanel() {
 
   useEffect(() => { fetchPending(); }, []);
 
-  const handleApprove = async (user) => {
+  // Abre o modal de aprovação já com o role solicitado pré-selecionado
+  const openApproveModal = (user) => {
+    setApproveModal({
+      user,
+      selectedRole: user.requested_role || 'aluno',
+    });
+  };
+
+  const handleApprove = async () => {
+    if (!approveModal) return;
+    const { user, selectedRole } = approveModal;
     setActing(user.id);
     try {
       const res = await authFetch(`/api/users?action=approve&id=${user.id}`, {
         method: 'POST',
+        body: JSON.stringify({ role: selectedRole }),
       });
       if (res.ok) {
         setPending(prev => prev.filter(u => u.id !== user.id));
-        showToast(`${user.name} aprovado com sucesso!`);
+        showToast(`${user.name} aprovado como ${ROLE_LABEL[selectedRole] || selectedRole}!`);
       }
     } finally {
       setActing(null);
+      setApproveModal(null);
     }
   };
 
@@ -133,9 +162,12 @@ export default function ApprovalsPanel() {
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                     <Clock size={8} className="inline mr-1" />Pendente
                   </span>
-                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                    {ROLE_LABEL[user.role] || user.role}
-                  </span>
+                  {/* Role solicitado pelo usuário no cadastro */}
+                  {user.requested_role && (
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${ROLE_COLOR[user.requested_role] || 'bg-slate-100 text-slate-600'}`}>
+                      Solicitou: {ROLE_LABEL[user.requested_role] || user.requested_role}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-slate-400">{user.email}</p>
                 {(user.store_name || user.store_type) && (
@@ -148,14 +180,17 @@ export default function ApprovalsPanel() {
                   </div>
                 )}
                 <p className="text-[9px] text-slate-300">
-                  Cadastrado em {new Date(user.created_at).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                  Cadastrado em {new Date(user.created_at).toLocaleDateString('pt-BR', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                  })}
                 </p>
               </div>
 
               {/* Actions */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
-                  onClick={() => handleApprove(user)}
+                  onClick={() => openApproveModal(user)}
                   disabled={acting === user.id}
                   className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black rounded-xl transition-all disabled:opacity-50"
                 >
@@ -177,6 +212,71 @@ export default function ApprovalsPanel() {
         </div>
       )}
 
+      {/* Modal de aprovação — admin confirma/altera o role antes de aprovar */}
+      {approveModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[28px] p-8 max-w-sm w-full shadow-2xl space-y-5">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                <Check size={20} className="text-emerald-500" />
+              </div>
+              <div>
+                <p className="font-black text-[#001A26] text-sm">
+                  Aprovar cadastro de {approveModal.user.name}?
+                </p>
+                <p className="text-slate-400 text-xs mt-1">
+                  Confirme ou altere o perfil de acesso antes de aprovar.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                Perfil de acesso
+              </label>
+              <div className="relative">
+                <select
+                  value={approveModal.selectedRole}
+                  onChange={e => setApproveModal(prev => ({ ...prev, selectedRole: e.target.value }))}
+                  className="w-full appearance-none px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-[#001A26] outline-none focus:border-[#4A72B2] bg-white cursor-pointer"
+                >
+                  {ASSIGNABLE_ROLES.map(r => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+              {approveModal.user.requested_role &&
+               approveModal.user.requested_role !== approveModal.selectedRole && (
+                <p className="text-[10px] text-amber-600 mt-2 font-medium">
+                  ⚠️ Usuário solicitou "{ROLE_LABEL[approveModal.user.requested_role]}" —
+                  você está aprovando como "{ROLE_LABEL[approveModal.selectedRole]}".
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setApproveModal(null)}
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-black text-xs hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleApprove}
+                disabled={acting === approveModal.user.id}
+                className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {acting === approveModal.user.id
+                  ? <Loader size={12} className="animate-spin" />
+                  : <Check size={12} />}
+                Confirmar aprovação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de rejeição */}
       {rejectModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -186,7 +286,9 @@ export default function ApprovalsPanel() {
                 <AlertTriangle size={20} className="text-red-500" />
               </div>
               <div>
-                <p className="font-black text-[#001A26] text-sm">Rejeitar cadastro de {rejectModal.name}?</p>
+                <p className="font-black text-[#001A26] text-sm">
+                  Rejeitar cadastro de {rejectModal.name}?
+                </p>
                 <p className="text-slate-400 text-xs mt-1">O usuário receberá um email informando.</p>
               </div>
             </div>
@@ -203,12 +305,16 @@ export default function ApprovalsPanel() {
               />
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { setRejectModal(null); setRejectReason(''); }}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-black text-xs hover:bg-slate-50">
+              <button
+                onClick={() => { setRejectModal(null); setRejectReason(''); }}
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-black text-xs hover:bg-slate-50"
+              >
                 Cancelar
               </button>
-              <button onClick={handleReject}
-                className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-xs transition-all">
+              <button
+                onClick={handleReject}
+                className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-xs transition-all"
+              >
                 Rejeitar
               </button>
             </div>

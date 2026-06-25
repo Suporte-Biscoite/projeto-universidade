@@ -24,6 +24,9 @@ function send(res, status, body) {
   res.status(status).json(body);
 }
 
+// Roles que o admin pode atribuir via painel
+const VALID_ROLES = ['aluno', 'gestor', 'professor', 'admin'];
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
@@ -56,7 +59,9 @@ async function getUsers(req, res, auth, id) {
       return send(res, 403, { error: 'Sem permissão' });
 
     const { rows } = await pool.query(
-      'SELECT id, name, email, role, unit, store_id, active, instructor_id, avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at FROM users WHERE id = $1',
+      `SELECT id, name, email, role, unit, store_id, active, instructor_id,
+              avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at
+       FROM users WHERE id = $1`,
       [id]
     );
     if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });
@@ -68,7 +73,9 @@ async function getUsers(req, res, auth, id) {
     return send(res, 403, { error: 'Sem permissão' });
 
   const { rows } = await pool.query(
-    'SELECT id, name, email, role, unit, store_id, active, instructor_id, avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at FROM users ORDER BY created_at DESC'
+    `SELECT id, name, email, role, unit, store_id, active, instructor_id,
+            avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at
+     FROM users ORDER BY created_at DESC`
   );
   return send(res, 200, rows);
 }
@@ -105,9 +112,12 @@ async function updateUser(req, res, auth, id) {
   if (auth.sub !== id && auth.role !== 'admin')
     return send(res, 403, { error: 'Sem permissão' });
 
-  const { name, email, password, role, unit, store_id, active, avatar_url, banner_url, pronoun, position, company_time, bio, skills, instructor_id, contacts } = req.body ?? {};
+  const {
+    name, email, password, role, unit, store_id, active,
+    avatar_url, banner_url, pronoun, position, company_time,
+    bio, skills, instructor_id, contacts,
+  } = req.body ?? {};
 
-  // Apenas admin pode mudar role e active
   const updates = [];
   const values  = [];
   let i = 1;
@@ -115,20 +125,20 @@ async function updateUser(req, res, auth, id) {
   if (name)       { updates.push(`name = $${i++}`);       values.push(name.trim()); }
   if (email)      { updates.push(`email = $${i++}`);      values.push(email.toLowerCase().trim()); }
   if (unit)       { updates.push(`unit = $${i++}`);       values.push(unit); }
-  if (store_id !== undefined) { updates.push(`store_id = $${i++}`); values.push(store_id); }
-  if (avatar_url !== undefined)   { updates.push(`avatar_url = $${i++}`);    values.push(avatar_url); }
-  if (banner_url !== undefined)   { updates.push(`banner_url = $${i++}`);    values.push(banner_url); }
-  if (pronoun !== undefined)      { updates.push(`pronoun = $${i++}`);       values.push(pronoun); }
-  if (position !== undefined)     { updates.push(`position = $${i++}`);      values.push(position); }
-  if (company_time !== undefined) { updates.push(`company_time = $${i++}`);  values.push(company_time); }
-  if (bio !== undefined)          { updates.push(`bio = $${i++}`);           values.push(bio); }
-  if (skills !== undefined)       { updates.push(`skills = $${i++}`);        values.push(skills); }
-  if (instructor_id !== undefined) { updates.push(`instructor_id = $${i++}`); values.push(instructor_id); }
-  if (contacts !== undefined)     { updates.push(`contacts = $${i++}`);      values.push(JSON.stringify(contacts)); }
+  if (store_id !== undefined)     { updates.push(`store_id = $${i++}`);     values.push(store_id); }
+  if (avatar_url !== undefined)   { updates.push(`avatar_url = $${i++}`);   values.push(avatar_url); }
+  if (banner_url !== undefined)   { updates.push(`banner_url = $${i++}`);   values.push(banner_url); }
+  if (pronoun !== undefined)      { updates.push(`pronoun = $${i++}`);      values.push(pronoun); }
+  if (position !== undefined)     { updates.push(`position = $${i++}`);     values.push(position); }
+  if (company_time !== undefined) { updates.push(`company_time = $${i++}`); values.push(company_time); }
+  if (bio !== undefined)          { updates.push(`bio = $${i++}`);          values.push(bio); }
+  if (skills !== undefined)       { updates.push(`skills = $${i++}`);       values.push(skills); }
+  if (instructor_id !== undefined){ updates.push(`instructor_id = $${i++}`);values.push(instructor_id); }
+  if (contacts !== undefined)     { updates.push(`contacts = $${i++}`);     values.push(JSON.stringify(contacts)); }
 
   // Só admin muda role e active
   if (auth.role === 'admin') {
-    if (role)            { updates.push(`role = $${i++}`);   values.push(role); }
+    if (role !== undefined)   { updates.push(`role = $${i++}`);   values.push(role); }
     if (active !== undefined) { updates.push(`active = $${i++}`); values.push(active); }
   }
 
@@ -146,7 +156,8 @@ async function updateUser(req, res, auth, id) {
   const { rows } = await pool.query(
     `UPDATE users SET ${updates.join(', ')}, updated_at = now()
      WHERE id = $${i}
-     RETURNING id, name, email, role, unit, store_id, active, instructor_id, avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts`,
+     RETURNING id, name, email, role, unit, store_id, active, instructor_id,
+               avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts`,
     values
   );
   if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });
@@ -164,10 +175,9 @@ async function deleteUser(req, res, auth, id) {
 }
 
 // ── APPROVALS (consolidado) ────────────────────────────────────────────────────
-// GET    /api/users?action=approvals         — lista pendentes (admin)
-// POST   /api/users?action=approve&id=uuid   — aprova
-// POST   /api/users?action=reject&id=uuid    — rejeita
-
+// GET    /api/users?action=approvals              — lista pendentes (admin)
+// POST   /api/users?action=approve&id=uuid        — aprova com role escolhido pelo admin
+// POST   /api/users?action=reject&id=uuid         — rejeita com motivo
 
 const FRONTEND_URL = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -195,31 +205,55 @@ export async function handleApprovals(req, res, auth) {
 
   const { action, id } = req.query;
 
+  // Lista todos os cadastros pendentes, incluindo o role solicitado (position)
   if (req.method === 'GET') {
     const { rows } = await pool.query(
-      `SELECT id, name, email, role, unit, store_name, store_type, created_at
+      `SELECT id, name, email, role, position AS requested_role,
+              unit, store_name, store_type, created_at
        FROM users WHERE status = 'pending' ORDER BY created_at DESC`
     );
     return send(res, 200, rows);
   }
 
+  // Aprova cadastro — o admin pode confirmar ou alterar o role antes de aprovar
   if (req.method === 'POST' && action === 'approve') {
+    if (!id) return send(res, 400, { error: 'ID obrigatório' });
+
+    const { role: chosenRole } = req.body ?? {};
+
+    // Valida o role escolhido pelo admin; se não enviado, usa 'aluno' como segurança
+    const finalRole = VALID_ROLES.includes(chosenRole) ? chosenRole : 'aluno';
+
     const { rows } = await pool.query(
-      `UPDATE users SET status='approved', active=true WHERE id=$1
+      `UPDATE users
+       SET status = 'approved', active = true, role = $2, updated_at = now()
+       WHERE id = $1
        RETURNING id, name, email, role`,
-      [id]
+      [id, finalRole]
     );
     if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });
 
-    await sendEmail(rows[0].email, 'Cadastro aprovado — Universidade Biscoitê ✅',
+    const approvedUser = rows[0];
+
+    await sendEmail(
+      approvedUser.email,
+      'Cadastro aprovado — Universidade Biscoitê ✅',
       `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
-        <h2 style="color:#001A26;">Olá, ${rows[0].name}!</h2>
-        <p>Seu cadastro na <strong>Universidade Biscoitê</strong> foi <strong style="color:#1D9E75;">aprovado</strong>!</p>
-        <a href="${FRONTEND_URL}/login" style="display:inline-block;background:#4A72B2;color:white;padding:14px 28px;border-radius:24px;text-decoration:none;font-weight:bold;">
+        <img src="https://projeto-universidade-chi.vercel.app/logo-biscoite.svg"
+             alt="Biscoitê" style="height:48px;margin-bottom:24px;" />
+        <h2 style="color:#001A26;">Olá, ${approvedUser.name}!</h2>
+        <p style="color:#444;line-height:1.6;">
+          Seu cadastro na <strong>Universidade Biscoitê</strong> foi
+          <strong style="color:#1D9E75;">aprovado</strong>!
+        </p>
+        <a href="${FRONTEND_URL}/login"
+           style="display:inline-block;background:#4A72B2;color:white;padding:14px 28px;
+                  border-radius:24px;text-decoration:none;font-weight:bold;">
           Acessar a plataforma
         </a>
       </div>`
     );
+
     await createNotification({
       user_id: id,
       title: 'Cadastro aprovado! ✅',
@@ -227,33 +261,48 @@ export async function handleApprovals(req, res, auth) {
       type: 'approval',
       link: '/login',
     });
-    return send(res, 200, { ok: true, user: rows[0] });
+
+    return send(res, 200, { ok: true, user: approvedUser });
   }
 
+  // Rejeita cadastro
   if (req.method === 'POST' && action === 'reject') {
+    if (!id) return send(res, 400, { error: 'ID obrigatório' });
+
     const { reason = 'Cadastro não autorizado.' } = req.body ?? {};
+
     const { rows } = await pool.query(
-      `UPDATE users SET status='rejected', active=false, rejected_reason=$2
-       WHERE id=$1 RETURNING id, name, email`,
+      `UPDATE users
+       SET status = 'rejected', active = false, rejected_reason = $2, updated_at = now()
+       WHERE id = $1
+       RETURNING id, name, email`,
       [id, reason]
     );
     if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });
 
-    await sendEmail(rows[0].email, 'Cadastro não aprovado — Universidade Biscoitê',
+    await sendEmail(
+      rows[0].email,
+      'Cadastro não aprovado — Universidade Biscoitê',
       `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <img src="https://projeto-universidade-chi.vercel.app/logo-biscoite.svg"
+             alt="Biscoitê" style="height:48px;margin-bottom:24px;" />
         <h2 style="color:#001A26;">Olá, ${rows[0].name}!</h2>
-        <p>Seu cadastro na <strong>Universidade Biscoitê</strong> não foi aprovado.</p>
+        <p style="color:#444;line-height:1.6;">
+          Seu cadastro na <strong>Universidade Biscoitê</strong> não foi aprovado.
+        </p>
         <div style="background:#fff5f5;border-radius:12px;padding:16px;border-left:3px solid #E24B4A;">
           <p style="color:#E24B4A;margin:0;"><strong>Motivo:</strong> ${reason}</p>
         </div>
       </div>`
     );
+
     await createNotification({
       user_id: id,
       title: 'Cadastro não aprovado',
       description: `Motivo: ${reason}`,
       type: 'approval',
     });
+
     return send(res, 200, { ok: true });
   }
 

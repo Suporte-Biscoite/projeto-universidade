@@ -14,6 +14,16 @@ const FRONTEND_URL   = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : (process.env.FRONTEND_URL || 'http://localhost:3000');
 
+// Roles válidos que um usuário pode solicitar no auto-cadastro.
+// 'admin' nunca pode ser solicitado — é promovido manualmente no banco.
+const ALLOWED_REQUESTED_ROLES = ['aluno', 'gestor', 'professor'];
+
+const ROLE_LABEL = {
+  aluno:     'Colaborador',
+  gestor:    'Gestor / Franqueado',
+  professor: 'Professor / Instrutor',
+};
+
 function signAccess(user) {
   return jwt.sign(
     { sub: user.id, email: user.email, role: user.role, name: user.name },
@@ -83,17 +93,15 @@ async function login(req, res) {
   const user = rows[0];
   if (!user) return send(res, 401, { error: 'Email ou senha incorretos' });
 
-  // Conta desativada pelo admin
-  if (!user.active) return send(res, 403, { error: 'Conta desativada. Fale com o administrador.' });
+  if (!user.active)
+    return send(res, 403, { error: 'Conta desativada. Fale com o administrador.' });
 
-  // Cadastro pendente de aprovação
   if (user.status === 'pending')
     return send(res, 403, {
       error: 'Seu cadastro está em análise. Você receberá um email quando for aprovado.',
       code: 'PENDING_APPROVAL',
     });
 
-  // Cadastro rejeitado
   if (user.status === 'rejected')
     return send(res, 403, {
       error: 'Seu cadastro foi recusado. Entre em contato com o administrador.',
@@ -132,9 +140,18 @@ async function login(req, res) {
 async function register(req, res) {
   const {
     name, email, password,
-    role = 'aluno',
+    role: roleRequest,
     unit, store_name, store_type,
   } = req.body ?? {};
+
+  // Role definitivo é SEMPRE 'aluno' no auto-cadastro — o admin promove depois.
+  // O role solicitado pelo usuário é salvo em 'position' como referência para
+  // o admin visualizar no painel de aprovações e decidir o role final.
+  const role = 'aluno';
+  const status = 'pending';
+
+  // Valida o role solicitado — aceita apenas os permitidos ou usa 'aluno' como fallback.
+  const requestedRole = ALLOWED_REQUESTED_ROLES.includes(roleRequest) ? roleRequest : 'aluno';
 
   if (!name || !email || !password)
     return send(res, 400, { error: 'Nome, email e senha são obrigatórios' });
@@ -149,17 +166,26 @@ async function register(req, res) {
 
   const hash = await bcrypt.hash(password, 12);
 
-  // Admins não precisam de aprovação
-  const status = role === 'admin' ? 'approved' : 'pending';
-
+  // 'position' guarda o role solicitado para exibição no painel de aprovações.
   const { rows } = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role, unit, store_name, store_type, status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-     RETURNING id, name, email, role, status`,
-    [name.trim(), email.toLowerCase().trim(), hash, role, unit || null, store_name || null, store_type || null, status]
+    `INSERT INTO users (name, email, password_hash, role, unit, store_name, store_type, status, position)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+     RETURNING id, name, email, role, status, position`,
+    [
+      name.trim(),
+      email.toLowerCase().trim(),
+      hash,
+      role,
+      unit        || null,
+      store_name  || null,
+      store_type  || null,
+      status,
+      requestedRole,
+    ]
   );
 
   const user = rows[0];
+  const requestedLabel = ROLE_LABEL[requestedRole] || requestedRole;
 
   // ── Email para o admin notificando novo cadastro ──
   await sendEmail(
@@ -173,7 +199,7 @@ async function register(req, res) {
       <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
         <tr><td style="padding:6px 0; color:#666; font-size:13px;"><strong>Nome:</strong></td><td style="font-size:13px;">${name}</td></tr>
         <tr><td style="padding:6px 0; color:#666; font-size:13px;"><strong>Email:</strong></td><td style="font-size:13px;">${email}</td></tr>
-        <tr><td style="padding:6px 0; color:#666; font-size:13px;"><strong>Perfil:</strong></td><td style="font-size:13px;">${role}</td></tr>
+        <tr><td style="padding:6px 0; color:#666; font-size:13px;"><strong>Perfil solicitado:</strong></td><td style="font-size:13px;">${requestedLabel}</td></tr>
         <tr><td style="padding:6px 0; color:#666; font-size:13px;"><strong>Loja:</strong></td><td style="font-size:13px;">${store_name || '—'}</td></tr>
         <tr><td style="padding:6px 0; color:#666; font-size:13px;"><strong>Tipo:</strong></td><td style="font-size:13px;">${store_type || '—'}</td></tr>
         <tr><td style="padding:6px 0; color:#666; font-size:13px;"><strong>Unidade:</strong></td><td style="font-size:13px;">${unit || '—'}</td></tr>
