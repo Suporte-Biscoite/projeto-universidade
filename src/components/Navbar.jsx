@@ -251,9 +251,7 @@ export default function Navbar() {
                       )}
                     </div>
                     {unreadCount > 0 && (
-                      {unreadCount > 0 && (
                       <button onClick={markAllRead} className="text-[10px] font-bold text-[#4A72B2] hover:underline">Marcar todas como lidas</button>
-                    )}
                     )}
                   </div>
                   <div className="divide-y divide-slate-50 max-h-80 overflow-y-auto">
