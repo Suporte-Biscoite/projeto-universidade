@@ -9,12 +9,8 @@ function getStoredUserId() {
   try {
     const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
     const parsed = raw ? JSON.parse(raw) : null;
-    console.log('[MessageFloat] getStoredUserId:', parsed?.id, 'role:', parsed?.role);
     return parsed?.id || null;
-  } catch (e) {
-    console.error('[MessageFloat] getStoredUserId error:', e);
-    return null;
-  }
+  } catch { return null; }
 }
 
 const HIDDEN_PATHS = ['/professor', '/gestor', '/admin', '/login', '/registrar', '/mensagens'];
@@ -26,8 +22,6 @@ export default function MessageFloatButton() {
   const location                = useLocation();
 
   const hidden = HIDDEN_PATHS.some(p => location.pathname.startsWith(p));
-
-  console.log('[MessageFloat] render — userId:', userId, 'hidden:', hidden, 'path:', location.pathname || '(empty - router not ready)');
 
   useEffect(() => {
     if (hidden || !userId) return;
