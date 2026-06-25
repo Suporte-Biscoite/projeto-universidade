@@ -42,16 +42,6 @@ function HelpModal({ onClose }) {
             <p className="text-slate-400 text-xs">academy@biscoite.com.br</p>
           </div>
         </a>
-        {/* <a href="https://wa.me/5511999999999" target="_blank" rel="noreferrer"
-          className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl hover:bg-[#e2eef9] transition-colors group">
-          <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-100">
-            <MessageCircle size={18} className="text-emerald-500" />
-          </div>
-          <div>
-            <p className="font-bold text-[#001A26] text-sm">WhatsApp</p>
-            <p className="text-slate-400 text-xs">Atendimento de seg. a sex., das 9h às 18h</p>
-          </div>
-        </a> */}
         <a href="https://biscoite.com.br" target="_blank" rel="noreferrer"
           className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl hover:bg-[#e2eef9] transition-colors group">
           <div className="w-10 h-10 bg-[#4A72B2]/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-[#4A72B2]/20">
