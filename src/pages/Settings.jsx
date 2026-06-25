@@ -147,7 +147,7 @@ function UsuariosTab({ users, onUpdateUser, onAddUser }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 flex gap-3 flex-1 mr-4">
           <Shield size={16} className="text-slate-400 shrink-0 mt-0.5" />
           <p className="text-xs font-medium text-slate-500 leading-relaxed">
@@ -167,7 +167,7 @@ function UsuariosTab({ users, onUpdateUser, onAddUser }) {
       {showCreate && (
         <div className="bg-white rounded-2xl border border-[#4A72B2]/30 p-6 space-y-4">
           <p className="text-sm font-black text-[#001A26]">Criar novo usuário</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome completo *</label>
               <input
@@ -246,7 +246,7 @@ function UsuariosTab({ users, onUpdateUser, onAddUser }) {
 
       <div className="space-y-3">
         {users.map(user => (
-          <div key={user.id} className="bg-white rounded-2xl px-6 py-5 border border-slate-100 flex items-center gap-4">
+          <div key={user.id} className="bg-white rounded-2xl px-4 sm:px-6 py-4 sm:py-5 border border-slate-100 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
             <div className="w-10 h-10 rounded-full bg-[#e2eef9] flex items-center justify-center font-black text-[#4A72B2] text-sm shrink-0">
               {user.name.split(' ').map(n => n[0]).slice(0, 2).join('')}
             </div>
@@ -535,7 +535,7 @@ export default function Settings() {
   ];
 
   return (
-    <div className="max-w-[1200px] mx-auto pb-20 space-y-8">
+    <div className="max-w-[1200px] mx-auto pb-20 space-y-8 overflow-x-hidden">
 
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
@@ -571,7 +571,7 @@ export default function Settings() {
       <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 items-start">
 
         {/* Sidebar de tabs */}
-        <nav className="w-full sm:w-48 shrink-0 space-y-1 flex sm:flex-col flex-row flex-wrap gap-1">
+        <nav className="w-full sm:w-48 shrink-0 flex sm:flex-col flex-row overflow-x-auto gap-1 pb-1 sm:pb-0 flex-nowrap">
           {tabs.map(tab => {
             const Icon = tab.icon;
             const locked = tab.adminOnly && systemRole !== 'admin';

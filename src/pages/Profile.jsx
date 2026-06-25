@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { useProfile, DEFAULT_COURSE_IMAGES, CURRENT_INSTRUCTOR_ID } from '../context/ProfileContext';
 import { useNavigate } from 'react-router-dom';
-import { LOJAS_PROPRIAS, LOJAS_FRANQUIA } from '../utils/stores';
 
 
 
@@ -110,7 +109,7 @@ function ProfessorPanel() {
       </div>
 
       {/* Métricas */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
 
         {/* Taxa de Conclusão */}
         <div className="flex flex-col items-center gap-3 p-5 bg-[#f8fafc] rounded-[24px] border border-slate-100">
@@ -170,7 +169,7 @@ function ProfessorPanel() {
       </div>
 
       {/* Stats extras */}
-      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-50">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-50">
         <div className="flex items-center gap-3 p-4 bg-[#f8fafc] rounded-2xl">
           <div className="w-9 h-9 bg-[#E2F0FF] rounded-xl flex items-center justify-center">
             <Users size={16} className="text-[#4A72B2]" />
@@ -322,7 +321,7 @@ function ComunicacaoAluno({ userRole }) {
 
         {/* ── TAB: Dúvidas ── */}
         {tab === 'duvidas' && (
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {/* Formulário */}
             <div className="space-y-4">
               <h3 className="font-black text-[#00263B] text-sm">Nova Dúvida</h3>
@@ -406,21 +405,6 @@ function ComunicacaoAluno({ userRole }) {
 export default function Profile() {
   const { profileImage, updateProfileImage, userData, updateUserData, updateUserDataApi, systemRole: userRole, users, courses } = useProfile();
 
-  // Busca cargos e lojas do banco para dropdowns
-  const [jobTitles, setJobTitles] = React.useState([]);
-  const [allStores, setAllStores] = React.useState([]);
-
-  React.useEffect(() => {
-    const token = sessionStorage.getItem('biscoite_access_token') || localStorage.getItem('biscoite_access_token');
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    // Cargos
-    fetch('/api/data?resource=job_titles', { headers })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => { if (Array.isArray(data)) setJobTitles(data); })
-      .catch(() => {});
-    // Lojas já disponíveis via import
-  }, []);
-
   // Carrega dados extras do perfil do banco ao montar
   React.useEffect(() => {
     const raw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
@@ -481,6 +465,7 @@ export default function Profile() {
 
   const handleSave = async () => {
     updateUserData(prev => ({ ...prev, ...tempData }));
+    // Salva no banco os campos que temos colunas
     await saveProfileToApi({
       name:         tempData.name,
       unit:         tempData.unit,
@@ -489,7 +474,6 @@ export default function Profile() {
       company_time: tempData.time,
       bio:          tempData.bio,
       skills:       tempData.skills,
-      contacts:     tempData.contacts,
     });
     setActiveModal(null);
   };
@@ -550,17 +534,17 @@ export default function Profile() {
         className={`relative h-44 ${bannerImage ? '' : bannerBg}`}
         style={bannerImage ? { backgroundImage: `url(${bannerImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
       >
-        <div className="max-w-7xl mx-auto h-full relative px-10">
-          <div className="absolute bottom-6 right-10 flex gap-3">
+        <div className="max-w-7xl mx-auto h-full relative px-4 sm:px-10">
+          <div className="absolute bottom-2 sm:bottom-6 right-3 sm:right-10 flex gap-2">
             <button
               onClick={() => openModal('profile')}
-              className="px-8 py-2 bg-[#6385B7] text-white font-black rounded-full text-sm shadow-lg hover:scale-105 transition-all"
+              className="px-4 sm:px-8 py-1.5 sm:py-2 bg-[#6385B7] text-white font-black rounded-full text-xs sm:text-sm shadow-lg hover:scale-105 transition-all"
             >
               Editar perfil
             </button>
             <button
               onClick={() => navigate('/configuracoes')}
-              className="px-8 py-2 bg-[#6385B7] text-white font-black rounded-full text-sm shadow-lg hover:scale-105 transition-all"
+              className="px-4 sm:px-8 py-1.5 sm:py-2 bg-[#6385B7] text-white font-black rounded-full text-xs sm:text-sm shadow-lg hover:scale-105 transition-all"
             >
               Configurações
             </button>
@@ -613,7 +597,7 @@ export default function Profile() {
       </div>
 
       {/* ── CONTEÚDO ── */}
-      <div className="max-w-7xl mx-auto px-10 pt-28 grid grid-cols-12 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-10 pt-20 sm:pt-28 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
 
         {/* ── COLUNA ESQUERDA ── */}
         <div className="col-span-12 lg:col-span-3 space-y-6 pt-4">
@@ -662,7 +646,7 @@ export default function Profile() {
             </div>
 
             {/* Contatos */}
-            <div className="flex gap-3 mt-8 items-center flex-wrap">
+            <div className="flex gap-3 mt-8">
               {[
                 { Icon: Phone, key: 'phone', href: contacts.phone ? `tel:${contacts.phone}` : null },
                 { Icon: Mail, key: 'email', href: contacts.email ? `mailto:${contacts.email}` : null },
@@ -674,14 +658,13 @@ export default function Profile() {
                     className="p-2.5 bg-[#E2F0FF] text-[#6385B7] rounded-full shadow-sm hover:bg-[#6385B7] hover:text-white transition-all">
                     <Icon size={18} />
                   </a>
-                ) : null
+                ) : (
+                  <button key={key} onClick={() => openModal('contacts')}
+                    className="p-2.5 bg-slate-100 text-slate-300 rounded-full shadow-sm hover:bg-[#E2F0FF] hover:text-[#6385B7] transition-all">
+                    <Icon size={18} />
+                  </button>
+                )
               ))}
-              {/* Botão de editar sempre visível */}
-              <button onClick={() => openModal('contacts')}
-                className="p-2.5 bg-slate-100 text-slate-400 rounded-full shadow-sm hover:bg-[#E2F0FF] hover:text-[#6385B7] transition-all"
-                title="Editar contatos">
-                <Pencil size={16} />
-              </button>
             </div>
           </div>
         </div>
@@ -737,7 +720,7 @@ export default function Profile() {
           {userRole === 'aluno' && (
             <>
               {/* Stats */}
-              <div className="grid grid-cols-12 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
                 <div className="col-span-12 md:col-span-8 bg-white p-10 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 flex justify-around">
                   {[{ L: 'Cursos completos', V: '12' }, { L: 'Média desempenho', V: '7.5/10' }, { L: 'Posição ranking', V: '6º' }].map(s => (
                     <div key={s.L} className="text-center">
@@ -850,7 +833,7 @@ export default function Profile() {
           {userRole === 'franqueado' && (
             <>
               {/* Stats igual ao aluno mas sem educação/experiência */}
-              <div className="grid grid-cols-12 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
                 <div className="col-span-12 md:col-span-8 bg-white p-10 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 flex justify-around">
                   {[{ L: 'Cursos completos', V: '12' }, { L: 'Média desempenho', V: '7.5/10' }, { L: 'Posição ranking', V: '6º' }].map(s => (
                     <div key={s.L} className="text-center">
@@ -927,7 +910,7 @@ export default function Profile() {
           {userRole === 'gestor' && (
             <>
               {/* Stats */}
-              <div className="grid grid-cols-12 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
                 <div className="col-span-12 md:col-span-8 bg-white p-10 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 flex justify-around">
                   {[{ L: 'Lojas gerenciadas', V: '3' }, { L: 'Colaboradores', V: '47' }, { L: 'Conclusão média', V: '71%' }].map(s => (
                     <div key={s.L} className="text-center">
@@ -1025,7 +1008,7 @@ export default function Profile() {
           {userRole === 'loja' && (
             <>
               {/* Stats */}
-              <div className="grid grid-cols-12 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
                 <div className="col-span-12 md:col-span-8 bg-white p-10 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 flex justify-around">
                   {[{ L: 'Colaboradores', V: '9' }, { L: 'Conclusão média', V: '82%' }, { L: 'Ranking na rede', V: '#2' }].map(s => (
                     <div key={s.L} className="text-center">
@@ -1117,12 +1100,12 @@ export default function Profile() {
                   <h2 className="text-xl font-black text-[#00263B]">Visão geral da plataforma</h2>
                   <button onClick={() => navigate('/admin')} className="text-[#6385B7] text-xs font-black hover:underline uppercase tracking-widest">Painel Admin</button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
                   {[
-                    { icon: Users,      label: 'Usuários ativos',   value: users.filter(u => u.active).length,                           color: 'bg-blue-50 text-blue-500' },
-                    { icon: Store,      label: 'Pendentes',         value: users.filter(u => u.status === 'pending').length,             color: 'bg-amber-50 text-amber-500' },
-                    { icon: BookOpen,   label: 'Cursos publicados', value: courses.filter(c => c.published).length,                     color: 'bg-purple-50 text-purple-500' },
-                    { icon: TrendingUp, label: 'Total de usuários', value: users.length,                                                 color: 'bg-emerald-50 text-emerald-500' },
+                    { icon: Users,    label: 'Usuários ativos',   value: users.filter(u => u.active).length, color: 'bg-blue-50 text-blue-500' },
+                    { icon: Store,    label: 'Lojas na rede',     value: '8',                                color: 'bg-teal-50 text-teal-500' },
+                    { icon: BookOpen, label: 'Cursos publicados', value: '12',                               color: 'bg-purple-50 text-purple-500' },
+                    { icon: TrendingUp, label: 'Engajamento',     value: '71%',                              color: 'bg-emerald-50 text-emerald-500' },
                   ].map(({ icon: Icon, label, value, color }) => (
                     <div key={label} className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl">
                       <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${color}`}>
@@ -1140,18 +1123,19 @@ export default function Profile() {
               {/* Distribuição por perfil */}
               <div className="bg-white p-8 rounded-[32px] shadow-xl border border-slate-50 space-y-5">
                 <h2 className="text-xl font-black text-[#00263B]">Distribuição por perfil</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   {[
                     { role: 'admin',      label: 'Admin',      color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
                     { role: 'professor',  label: 'Professor',  color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },
                     { role: 'gestor',     label: 'Gestor',     color: 'bg-teal-100 text-teal-700',     dot: 'bg-teal-500' },
-
+                    { role: 'loja',       label: 'Líder Loja', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
+                    { role: 'franqueado', label: 'Franqueado', color: 'bg-cyan-100 text-cyan-700',     dot: 'bg-cyan-500' },
                     { role: 'aluno',      label: 'Aluno',      color: 'bg-slate-100 text-slate-600',   dot: 'bg-slate-400' },
                   ].map(({ role, label, color, dot }) => (
                     <div key={role} className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl ${color}`}>
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
                       <div>
-                        <p className="font-black text-lg leading-none">{users.filter(u => (u.role || u.systemRole) === role).length}</p>
+                        <p className="font-black text-lg leading-none">{users.filter(u => u.systemRole === role).length}</p>
                         <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mt-0.5">{label}</p>
                       </div>
                     </div>
@@ -1174,8 +1158,8 @@ export default function Profile() {
                         <p className="text-sm font-bold text-[#00263B] truncate">{u.name}</p>
                         <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
                       </div>
-                      <span className={`text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0 ${roleColors[u.role || u.systemRole] || 'bg-slate-100 text-slate-500'}`}>
-                        {roleLabels[u.role || u.systemRole] || u.systemRole}
+                      <span className={`text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0 ${roleColors[u.systemRole] || 'bg-slate-100 text-slate-500'}`}>
+                        {roleLabels[u.systemRole] || u.systemRole}
                       </span>
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${u.active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
                         {u.active ? 'Ativo' : 'Inativo'}
@@ -1197,7 +1181,7 @@ export default function Profile() {
       {/* ── COMUNICAÇÃO ── */}
       {(userRole === 'aluno' || userRole === 'franqueado') && (
         <div className="max-w-7xl mx-auto px-10 mt-8">
-
+          <ComunicacaoAluno userRole={userRole} />
         </div>
       )}
 
@@ -1225,33 +1209,8 @@ export default function Profile() {
                 <div className="space-y-4">
                   <InputLabel label="Nome" value={tempData.name} onChange={(v) => setTempData({ ...tempData, name: v })} />
                   <InputLabel label="Pronome" value={tempData.pronoun} onChange={(v) => setTempData({ ...tempData, pronoun: v })} />
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Unidade / Loja</label>
-                    <select
-                      value={tempData.unit || ''}
-                      onChange={e => setTempData({ ...tempData, unit: e.target.value })}
-                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm text-[#001A26] outline-none focus:border-[#4A72B2] bg-white font-medium"
-                    >
-                      <option value="">Selecione a unidade</option>
-                      <optgroup label="Lojas Próprias">
-                        {LOJAS_PROPRIAS.map(l => <option key={l} value={l}>{l}</option>)}
-                      </optgroup>
-                      <optgroup label="Franquias">
-                        {LOJAS_FRANQUIA.map(l => <option key={l} value={l}>{l}</option>)}
-                      </optgroup>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Cargo</label>
-                    <select
-                      value={tempData.role || ''}
-                      onChange={e => setTempData({ ...tempData, role: e.target.value })}
-                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm text-[#001A26] outline-none focus:border-[#4A72B2] bg-white font-medium"
-                    >
-                      <option value="">Selecione o cargo</option>
-                      {jobTitles.map(j => <option key={j.id} value={j.name}>{j.name}</option>)}
-                    </select>
-                  </div>
+                  <InputLabel label="Unidade / Loja" value={tempData.unit} onChange={(v) => setTempData({ ...tempData, unit: v })} />
+                  <InputLabel label="Cargo" value={tempData.role} onChange={(v) => setTempData({ ...tempData, role: v })} />
                   <InputLabel label="Tempo de Empresa" value={tempData.time} onChange={(v) => setTempData({ ...tempData, time: v })} />
 
                   {/* Banner */}
