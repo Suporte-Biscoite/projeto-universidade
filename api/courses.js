@@ -61,62 +61,112 @@ export default async function handler(req, res) {
   }
 }
 
+// ─── Monta a árvore curso → módulos → aulas a partir de rows flat ─────────────
+// Usado após queries com JOIN para evitar N+1.
+function buildCourseTree(courseRow, modulesWithLessons) {
+  return { ...courseRow, modules: modulesWithLessons };
+}
+
+// Busca módulos + aulas de um ou mais cursos em 2 queries (sem N+1)
+async function fetchModulesAndLessons(courseIds) {
+  if (!courseIds.length) return {};
+
+  const { rows: mods } = await pool.query(
+    `SELECT * FROM modules WHERE course_id = ANY($1::uuid[]) ORDER BY course_id, "order"`,
+    [courseIds]
+  );
+
+  if (!mods.length) return Object.fromEntries(courseIds.map(id => [id, []]));
+
+  const modIds = mods.map(m => m.id);
+  const { rows: lessons } = await pool.query(
+    `SELECT * FROM lessons WHERE module_id = ANY($1::uuid[]) ORDER BY module_id, "order"`,
+    [modIds]
+  );
+
+  // Agrupa aulas por module_id
+  const lessonsByMod = lessons.reduce((acc, l) => {
+    (acc[l.module_id] ??= []).push(l);
+    return acc;
+  }, {});
+
+  // Agrupa módulos (com aulas) por course_id
+  const modsByCourse = mods.reduce((acc, m) => {
+    (acc[m.course_id] ??= []).push({ ...m, lessons: lessonsByMod[m.id] ?? [] });
+    return acc;
+  }, {});
+
+  // Garante que cursos sem módulos retornem array vazio
+  for (const id of courseIds) {
+    modsByCourse[id] ??= [];
+  }
+
+  return modsByCourse;
+}
+
 async function getCourses(req, res, id, auth) {
-  // Curso específico com módulos e aulas
+  const userRole = auth?.role ?? 'guest';
+  const isStaff  = ['professor', 'admin'].includes(userRole);
+
+  // ── Curso específico por ID ───────────────────────────────────────────────
   if (id) {
     const { rows: courses } = await pool.query(
       `SELECT c.*, u.name as instructor_name, u.avatar_url as instructor_avatar
        FROM courses c
        LEFT JOIN users u ON u.id::text = c.instructor_id OR u.instructor_id = c.instructor_id
-       WHERE c.id = $1`, [id]
+       WHERE c.id = $1`,
+      [id]
     );
     if (!courses.length) return send(res, 404, { error: 'Curso não encontrado' });
 
-    const { rows: modules } = await pool.query(
-      'SELECT * FROM modules WHERE course_id = $1 ORDER BY "order"', [id]
-    );
-    for (const mod of modules) {
-      const { rows: lessons } = await pool.query(
-        'SELECT * FROM lessons WHERE module_id = $1 ORDER BY "order"', [mod.id]
-      );
-      mod.lessons = lessons;
+    const course = courses[0];
+
+    // Valida visibilidade: staff sempre acessa; outros precisam estar no array
+    if (!isStaff) {
+      const vis = Array.isArray(course.visibility) ? course.visibility : [];
+      if (!vis.includes(userRole)) {
+        return send(res, 403, { error: 'Você não tem acesso a este curso' });
+      }
     }
-    return send(res, 200, { ...courses[0], modules });
+
+    const modsByCourse = await fetchModulesAndLessons([course.id]);
+    return send(res, 200, buildCourseTree(course, modsByCourse[course.id] ?? []));
   }
 
-  // Lista todos cursos — professor vê todos seus, aluno vê publicados
-  const isInstructor = ['professor', 'admin'].includes(auth?.role);
-  // Prioriza instructor_name salvo manualmente; fallback para nome do usuário logado
-  const query = isInstructor
-    ? `SELECT c.*, COALESCE(c.instructor_name, u.name) as instructor_name
+  // ── Lista de cursos ───────────────────────────────────────────────────────
+  let rows;
+
+  if (isStaff) {
+    // Professor e admin veem todos os cursos (publicados e rascunhos)
+    const { rows: r } = await pool.query(
+      `SELECT c.*, COALESCE(c.instructor_name, u.name) as instructor_name
        FROM courses c
        LEFT JOIN users u ON u.id::text = c.instructor_id::text
        ORDER BY c.created_at DESC`
-    : `SELECT c.*, COALESCE(c.instructor_name, u.name) as instructor_name
+    );
+    rows = r;
+  } else {
+    // Aluno e gestor: só cursos publicados E que incluam o seu role na visibility
+    const { rows: r } = await pool.query(
+      `SELECT c.*, COALESCE(c.instructor_name, u.name) as instructor_name
        FROM courses c
        LEFT JOIN users u ON u.id::text = c.instructor_id::text
        WHERE c.published = true
-       ORDER BY c.created_at DESC`;
-
-  const { rows } = await pool.query(query);
-
-  // Carrega módulos e aulas para cada curso
-  for (const course of rows) {
-    const { rows: mods } = await pool.query(
-      'SELECT * FROM modules WHERE course_id = $1 ORDER BY "order"',
-      [course.id]
+         AND $1 = ANY(c.visibility)
+       ORDER BY c.created_at DESC`,
+      [userRole]
     );
-    for (const mod of mods) {
-      const { rows: lessons } = await pool.query(
-        'SELECT * FROM lessons WHERE module_id = $1 ORDER BY "order"',
-        [mod.id]
-      );
-      mod.lessons = lessons;
-    }
-    course.modules = mods;
+    rows = r;
   }
 
-  return send(res, 200, rows);
+  if (!rows.length) return send(res, 200, []);
+
+  // Busca módulos e aulas em apenas 2 queries (resolve o N+1)
+  const courseIds    = rows.map(c => c.id);
+  const modsByCourse = await fetchModulesAndLessons(courseIds);
+
+  const result = rows.map(c => buildCourseTree(c, modsByCourse[c.id] ?? []));
+  return send(res, 200, result);
 }
 
 async function createCourse(req, res, auth) {
@@ -129,7 +179,7 @@ async function createCourse(req, res, auth) {
 
   const vis = Array.isArray(visibility) && visibility.length
     ? visibility
-    : ['aluno','gestor','professor','admin'];
+    : ['aluno', 'gestor', 'professor', 'admin'];
 
   const { rows } = await pool.query(
     `INSERT INTO courses (title, description, category, level, format, duration,
@@ -141,25 +191,25 @@ async function createCourse(req, res, auth) {
      thumbnail_url || null, vimeo_id || null, auth.sub, instructor || null,
      Boolean(published), vis]
   );
+
   // Se publicado, notifica usuários com acesso baseado na visibilidade
   if (Boolean(published) && rows[0]) {
     const course = rows[0];
-    const visibility = course.visibility || ['aluno','gestor','professor','admin'];
-    // Busca usuários que têm acesso ao curso
     await pool.query(
       `INSERT INTO notifications (user_id, title, description, type, link)
        SELECT id, $1, $2, 'course', $3
        FROM users
        WHERE active = true AND status = 'approved'
-       AND role = ANY($4::text[])`,
+         AND role = ANY($4::text[])`,
       [
         `Novo curso disponível: ${course.title}`,
-        `Um novo curso foi publicado. Confira agora!`,
+        'Um novo curso foi publicado. Confira agora!',
         `/player?id=${course.id}`,
-        visibility,
+        vis,
       ]
     ).catch(() => {});
   }
+
   return send(res, 201, rows[0]);
 }
 
@@ -170,7 +220,7 @@ async function updateCourse(req, res, auth, id) {
   // Professor só edita os próprios cursos
   const where = auth.role === 'admin' ? 'WHERE id = $1' : 'WHERE id = $1 AND instructor_id = $2';
   const check = auth.role === 'admin' ? [id] : [id, auth.sub];
-  const { rows: existing } = await pool.query(`SELECT id FROM courses ${where}`, check);
+  const { rows: existing } = await pool.query(`SELECT id, published FROM courses ${where}`, check);
   if (!existing.length) return send(res, 403, { error: 'Sem permissão ou curso não encontrado' });
 
   const { title, description, category, level, format, duration, thumbnail_url, vimeo_id, published, instructor, visibility } = req.body ?? {};
@@ -194,28 +244,31 @@ async function updateCourse(req, res, auth, id) {
      instructor || null,
      published, visibility || null, id]
   );
-  // Se publicação foi ativada neste update, notifica
-  if (published === true && rows[0] && !rows[0].published === false) {
+
+  // Notifica quando publicação é ativada neste update
+  const wasPublished = existing[0].published;
+  if (published === true && !wasPublished && rows[0]) {
     const course = rows[0];
-    const vis = course.visibility || ['aluno','gestor','professor','admin'];
+    const vis = Array.isArray(course.visibility) ? course.visibility : ['aluno', 'gestor', 'professor', 'admin'];
     await pool.query(
       `INSERT INTO notifications (user_id, title, description, type, link)
        SELECT id, $1, $2, 'course', $3
        FROM users
        WHERE active = true AND status = 'approved'
-       AND role = ANY($4::text[])
-       AND id NOT IN (
-         SELECT user_id FROM notifications
-         WHERE link = $3 AND type = 'course'
-       )`,
+         AND role = ANY($4::text[])
+         AND id NOT IN (
+           SELECT user_id FROM notifications
+           WHERE link = $3 AND type = 'course'
+         )`,
       [
         `Novo curso disponível: ${course.title}`,
-        `Um novo curso foi publicado. Confira agora!`,
+        'Um novo curso foi publicado. Confira agora!',
         `/player?id=${course.id}`,
         vis,
       ]
     ).catch(() => {});
   }
+
   return send(res, 200, rows[0]);
 }
 
@@ -223,7 +276,7 @@ async function deleteCourse(req, res, auth, id) {
   if (!auth) return send(res, 401, { error: 'Não autorizado' });
   if (!id)   return send(res, 400, { error: 'ID obrigatório' });
 
-  const where = auth.role === 'admin' ? 'WHERE id = $1' : 'WHERE id = $1 AND instructor_id = $2';
+  const where  = auth.role === 'admin' ? 'WHERE id = $1' : 'WHERE id = $1 AND instructor_id = $2';
   const params = auth.role === 'admin' ? [id] : [id, auth.sub];
   await pool.query(`DELETE FROM courses ${where}`, params);
   return send(res, 200, { ok: true });
@@ -235,7 +288,8 @@ async function getModules(res, courseId) {
   const { rows } = await pool.query(
     `SELECT m.*, json_agg(l.* ORDER BY l."order") FILTER (WHERE l.id IS NOT NULL) as lessons
      FROM modules m LEFT JOIN lessons l ON l.module_id = m.id
-     WHERE m.course_id = $1 GROUP BY m.id ORDER BY m."order"`, [courseId]
+     WHERE m.course_id = $1 GROUP BY m.id ORDER BY m."order"`,
+    [courseId]
   );
   return send(res, 200, rows);
 }
@@ -274,13 +328,13 @@ async function deleteModule(req, res, auth, id) {
 // ── LESSONS ───────────────────────────────────────────────────────────────────
 async function createLesson(req, res, auth) {
   if (!auth) return send(res, 401, { error: 'Não autorizado' });
-  const { moduleId, title, duration, vimeo_id, type='video', visibility } = req.body ?? {};
+  const { moduleId, title, duration, vimeo_id, type = 'video', visibility } = req.body ?? {};
   if (!moduleId || !title) return send(res, 400, { error: 'moduleId e title obrigatórios' });
   const { rows: counts } = await pool.query(
     'SELECT COUNT(*) as count FROM lessons WHERE module_id=$1', [moduleId]
   );
   const order = Number(counts[0].count) + 1;
-  const vis = Array.isArray(visibility) && visibility.length ? visibility : ['aluno','gestor','professor','admin'];
+  const vis   = Array.isArray(visibility) && visibility.length ? visibility : ['aluno', 'gestor', 'professor', 'admin'];
   const { rows } = await pool.query(
     `INSERT INTO lessons (module_id, title, duration, vimeo_id, "order", locked, visibility)
      VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
@@ -295,9 +349,11 @@ async function updateLesson(req, res, auth, id) {
   const { title, duration, vimeo_id, locked, visibility } = req.body ?? {};
   const { rows } = await pool.query(
     `UPDATE lessons SET
-       title=COALESCE($1,title), duration=COALESCE($2,duration),
-       vimeo_id=COALESCE($3,vimeo_id), locked=COALESCE($4,locked),
-       visibility=COALESCE($5,visibility)
+       title      = COALESCE($1, title),
+       duration   = COALESCE($2, duration),
+       vimeo_id   = COALESCE($3, vimeo_id),
+       locked     = COALESCE($4, locked),
+       visibility = COALESCE($5, visibility)
      WHERE id=$6 RETURNING *`,
     [title, duration, vimeo_id, locked, visibility || null, id]
   );
@@ -350,16 +406,11 @@ async function markProgress(req, res, auth) {
     );
     const courseCompleted = Number(done[0].count) >= Number(total[0].count);
     if (courseCompleted) {
-      const { rows: c } = await pool.query(
-        'SELECT title FROM courses WHERE id=$1', [courseId]
-      );
-      const { rows: u } = await pool.query(
-        'SELECT name FROM users WHERE id=$1', [auth.sub]
-      );
+      const { rows: c } = await pool.query('SELECT title FROM courses WHERE id=$1', [courseId]);
+      const { rows: u } = await pool.query('SELECT name FROM users WHERE id=$1', [auth.sub]);
       const courseTitle = c[0]?.title || 'Curso';
-      const userName   = u[0]?.name   || 'Colaborador';
+      const userName    = u[0]?.name   || 'Colaborador';
 
-      // Gera certificado automaticamente
       await pool.query(
         `INSERT INTO certificates (user_id, course_id, user_name, course_title)
          VALUES ($1,$2,$3,$4)
@@ -367,10 +418,9 @@ async function markProgress(req, res, auth) {
         [auth.sub, courseId, userName, courseTitle]
       );
 
-      // Notifica o aluno
       await createNotification({
         user_id: auth.sub,
-        title: `Certificado disponível! 🎓`,
+        title: 'Certificado disponível! 🎓',
         description: `Você concluiu "${courseTitle}". Acesse seus certificados.`,
         type: 'certificate',
         link: '/certificados',
