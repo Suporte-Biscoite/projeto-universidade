@@ -49,6 +49,8 @@ export default function CoursePlayer() {
   const [activeLesson, setActiveLesson]       = useState(null);
   const [isExpanded, setIsExpanded]           = useState(false);
   const [courseCompleted, setCourseCompleted] = useState(false);
+  const [courseRatings, setCourseRatings]     = useState(null);
+  const [courseComments, setCourseComments]   = useState([]);
   const [showRating, setShowRating]           = useState(false);
   const [ratingValue, setRatingValue]         = useState(0);
   const [ratingComment, setRatingComment]     = useState('');
@@ -204,6 +206,19 @@ export default function CoursePlayer() {
       setTimeout(() => setShowRating(false), 2000);
     } catch {}
   };
+
+  // Busca avaliações do curso
+  useEffect(() => {
+    if (!courseId) return;
+    authFetch(`/api/data?resource=ratings&courseId=${courseId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setCourseRatings(data); })
+      .catch(() => {});
+    authFetch(`/api/data?resource=ratings&courseId=${courseId}&comments=true`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.comments) setCourseComments(data.comments); })
+      .catch(() => {});
+  }, [courseId]);
 
   // ── Loading / Error states ─────────────────────────────────────────────────
   if (loading) return (
@@ -404,6 +419,86 @@ export default function CoursePlayer() {
                 {activeLesson.duration && <span className="flex items-center gap-1"><Clock size={14} /> {activeLesson.duration}</span>}
                 <span className="flex items-center gap-1 capitalize"><FileText size={14} /> {activeLesson.type || 'video'}</span>
               </div>
+            </div>
+          )}
+
+          {/* AVALIAÇÕES DO CURSO */}
+          {!isExpanded && courseRatings && Number(courseRatings.total) > 0 && (
+            <div className="bg-white rounded-[24px] border border-slate-100 p-6 shadow-sm space-y-6">
+              <h3 className="font-black text-[#001A26] text-base">Avaliações dos alunos</h3>
+
+              {/* Média + barras */}
+              <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+                {/* Nota grande */}
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                  <span className="text-5xl font-black text-[#001A26]">{Number(courseRatings.avg_rating).toFixed(1)}</span>
+                  <div className="flex items-center gap-0.5">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} size={14}
+                        fill={Number(courseRatings.avg_rating) >= s ? '#F59E0B' : 'none'}
+                        className={Number(courseRatings.avg_rating) >= s ? 'text-amber-400' : 'text-slate-200'} />
+                    ))}
+                  </div>
+                  <span className="text-xs text-slate-400 font-medium">{courseRatings.total} avaliações</span>
+                </div>
+
+                {/* Barras de distribuição */}
+                <div className="flex-1 w-full space-y-2">
+                  {[5,4,3,2,1].map(stars => {
+                    const key = `star${stars}`;
+                    const count = Number(courseRatings[key] || 0);
+                    const pct = Number(courseRatings.total) > 0
+                      ? Math.round((count / Number(courseRatings.total)) * 100)
+                      : 0;
+                    return (
+                      <div key={stars} className="flex items-center gap-3">
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          {[1,2,3,4,5].map(s => (
+                            <Star key={s} size={10}
+                              fill={s <= stars ? '#F59E0B' : 'none'}
+                              className={s <= stars ? 'text-amber-400' : 'text-slate-200'} />
+                          ))}
+                        </div>
+                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs text-slate-400 w-8 text-right font-medium">{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Comentários */}
+              {courseComments.filter(c => c.comment).length > 0 && (
+                <div className="space-y-4 border-t border-slate-50 pt-4">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Comentários</p>
+                  {courseComments.filter(c => c.comment).slice(0, 5).map((c, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[#4A72B2] flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                        {(c.user_name || 'A').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-black text-[#001A26] text-sm">{c.user_name || 'Aluno'}</p>
+                          <div className="flex items-center gap-0.5">
+                            {[1,2,3,4,5].map(s => (
+                              <Star key={s} size={11}
+                                fill={c.rating >= s ? '#F59E0B' : 'none'}
+                                className={c.rating >= s ? 'text-amber-400' : 'text-slate-200'} />
+                            ))}
+                          </div>
+                          <span className="text-[10px] text-slate-300">
+                            {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">{c.comment}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

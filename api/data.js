@@ -443,13 +443,32 @@ export default async function handler(req, res) {
       if (!auth) return send(res, 401, { error: 'Não autorizado' });
 
       if (req.method === 'GET') {
-        const { courseId } = req.query;
+        const { courseId, comments } = req.query;
         if (!courseId) return send(res, 400, { error: 'courseId obrigatório' });
+
+        if (comments === 'true') {
+          // Retorna lista de avaliações com comentários
+          const { rows } = await pool.query(
+            `SELECT cr.rating, cr.comment, cr.created_at, u.name as user_name
+             FROM course_ratings cr
+             JOIN users u ON u.id = cr.user_id
+             WHERE cr.course_id = $1
+             ORDER BY cr.created_at DESC`,
+            [courseId]
+          );
+          return send(res, 200, { comments: rows });
+        }
+
         const { rows } = await pool.query(
           `SELECT
              ROUND(AVG(rating)::numeric, 1) as avg_rating,
              COUNT(*) as total,
-             COUNT(*) FILTER (WHERE user_id = $2) as user_rated
+             COUNT(*) FILTER (WHERE user_id = $2) as user_rated,
+             COUNT(*) FILTER (WHERE rating = 5) as star5,
+             COUNT(*) FILTER (WHERE rating = 4) as star4,
+             COUNT(*) FILTER (WHERE rating = 3) as star3,
+             COUNT(*) FILTER (WHERE rating = 2) as star2,
+             COUNT(*) FILTER (WHERE rating = 1) as star1
            FROM course_ratings WHERE course_id = $1`,
           [courseId, auth.sub]
         );
