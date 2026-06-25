@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Shield, Settings, BarChart2, Home, LogOut,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useProfile } from '../context/ProfileContext';
 import ApprovalsPanel from '../components/ApprovalsPanel';
+import { authFetch } from '../utils/authFetch';
 
 const ROLE_CONFIG = {
   admin:     { label: 'Admin',     color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
@@ -26,7 +27,7 @@ function RoleBadge({ role }) {
 }
 
 function CreateUserForm({ onAdd, onClose }) {
-  const [form, setForm] = useState({ name: '', email: '', systemRole: 'aluno' });
+  const [form, setForm] = useState({ name: '', email: '', role: 'aluno' });
   const [done, setDone] = useState(false);
 
   const handleSubmit = () => {
@@ -59,8 +60,8 @@ function CreateUserForm({ onAdd, onClose }) {
         </div>
         <div className="space-y-1.5">
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Perfil</label>
-          <select value={form.systemRole}
-            onChange={e => setForm(p => ({ ...p, systemRole: e.target.value }))}
+          <select value={form.role}
+            onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
             className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2] bg-white">
             {Object.entries(ROLE_CONFIG).map(([r, cfg]) => (
               <option key={r} value={r}>{cfg.label}</option>
@@ -124,28 +125,19 @@ function ListCard({ title, items, type, newVal, setNew, onAdd, onRemove, loading
   );
 }
 
-// ─── Painel de Setores e Cargos ──────────────────────────────────────────────
+// ─── Painel de Setores e Cargos — usa authFetch para renovação automática ────
 function ConfigTablesPanel() {
-  const [sectors, setSectors]       = useState([]);
-  const [jobTitles, setJobTitles]   = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [newSector, setNewSector]   = useState('');
-  const [newJob, setNewJob]         = useState('');
-  const [saving, setSaving]         = useState(false);
-
-  const getToken = () =>
-    sessionStorage.getItem('biscoite_access_token') ||
-    localStorage.getItem('biscoite_access_token') || '';
-
-  const headers = () => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${getToken()}`,
-  });
+  const [sectors, setSectors]     = useState([]);
+  const [jobTitles, setJobTitles] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [newSector, setNewSector] = useState('');
+  const [newJob, setNewJob]       = useState('');
+  const [saving, setSaving]       = useState(false);
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/data?resource=sectors',    { headers: headers() }).then(r => r.json()),
-      fetch('/api/data?resource=job_titles', { headers: headers() }).then(r => r.json()),
+      authFetch('/api/data?resource=sectors').then(r => r.json()),
+      authFetch('/api/data?resource=job_titles').then(r => r.json()),
     ]).then(([s, j]) => {
       setSectors(Array.isArray(s) ? s : []);
       setJobTitles(Array.isArray(j) ? j : []);
@@ -156,23 +148,21 @@ function ConfigTablesPanel() {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/data', {
+      const res = await authFetch('/api/data', {
         method: 'POST',
-        headers: headers(),
         body: JSON.stringify({ type, name }),
       });
       if (res.ok) {
         const item = await res.json();
-        setList(prev => [...prev, item].sort((a,b) => a.name.localeCompare(b.name)));
+        setList(prev => [...prev, item].sort((a, b) => a.name.localeCompare(b.name)));
         setInput('');
       }
     } finally { setSaving(false); }
   };
 
   const removeItem = async (type, id, setList) => {
-    await fetch(`/api/data?resource=${type}&id=${id}`, {
+    await authFetch(`/api/data?resource=${type}&id=${id}`, {
       method: 'DELETE',
-      headers: headers(),
       body: JSON.stringify({ type }),
     });
     setList(prev => prev.filter(i => i.id !== id));
@@ -212,15 +202,18 @@ function ConfigTablesPanel() {
   );
 }
 
+// ─── AdminPanel principal ─────────────────────────────────────────────────────
 export default function AdminPanel() {
   const navigate = useNavigate();
-  const { systemRole, users, updateUser, addUser } = useProfile();
-  const [activeTab, setActiveTab] = useState('aprovacoes');
-  const [search, setSearch] = useState('');
+  const { userData } = useProfile();
+  const [activeTab, setActiveTab]   = useState('aprovacoes');
+  const [search, setSearch]         = useState('');
   const [filterRole, setFilterRole] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [editRole, setEditRole] = useState('');
+  const [editingId, setEditingId]   = useState(null);
+  const [editRole, setEditRole]     = useState('');
+  const [dbUsers, setDbUsers]       = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const handleLogout = () => {
     ['biscoite_auth', 'biscoite_access_token', 'biscoite_refresh_token', 'biscoite_logged_user']
@@ -228,7 +221,65 @@ export default function AdminPanel() {
     navigate('/login');
   };
 
-  if (systemRole !== 'admin') {
+  // Carrega usuários do banco quando a aba usuarios é aberta
+  const fetchUsers = useCallback(async () => {
+    setLoadingUsers(true);
+    try {
+      const res = await authFetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        setDbUsers(Array.isArray(data) ? data : []);
+      }
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'usuarios') fetchUsers();
+  }, [activeTab, fetchUsers]);
+
+  // Atualiza role de um usuário diretamente no banco
+  const handleUpdateRole = async (userId, newRole) => {
+    const res = await authFetch(`/api/users?id=${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ role: newRole }),
+    });
+    if (res.ok) {
+      setDbUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    }
+    setEditingId(null);
+  };
+
+  // Alterna active/inactive de um usuário no banco
+  const handleToggleActive = async (userId, currentActive) => {
+    const res = await authFetch(`/api/users?id=${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ active: !currentActive }),
+    });
+    if (res.ok) {
+      setDbUsers(prev => prev.map(u => u.id === userId ? { ...u, active: !currentActive } : u));
+    }
+  };
+
+  // Cria novo usuário via admin
+  const handleCreateUser = async (form) => {
+    const res = await authFetch('/api/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        name:     form.name,
+        email:    form.email,
+        role:     form.role,
+        password: Math.random().toString(36).slice(-10) + 'A1!',
+      }),
+    });
+    if (res.ok) fetchUsers();
+  };
+
+  // role vem do JWT via userData — não do localStorage
+  const currentRole = userData?.role;
+
+  if (currentRole !== 'admin') {
     return (
       <div className="min-h-screen bg-[#f6f9fd] flex items-center justify-center">
         <div className="bg-white rounded-[32px] p-12 text-center space-y-5 shadow-sm max-w-md w-full">
@@ -246,14 +297,14 @@ export default function AdminPanel() {
     );
   }
 
-  const filteredUsers = users.filter(u => {
+  const filteredUsers = dbUsers.filter(u => {
     const matchSearch = u.name?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase());
-    const matchRole = !filterRole || u.systemRole === filterRole;
+    const matchRole   = !filterRole || u.role === filterRole;
     return matchSearch && matchRole;
   });
 
   const countByRole = Object.keys(ROLE_CONFIG).reduce((acc, r) => {
-    acc[r] = users.filter(u => u.systemRole === r).length;
+    acc[r] = dbUsers.filter(u => u.role === r).length;
     return acc;
   }, {});
 
@@ -353,7 +404,7 @@ export default function AdminPanel() {
               </button>
             </div>
 
-            {showCreate && <CreateUserForm onAdd={addUser} onClose={() => setShowCreate(false)} />}
+            {showCreate && <CreateUserForm onAdd={handleCreateUser} onClose={() => setShowCreate(false)} />}
 
             <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
               <table className="w-full">
@@ -365,7 +416,9 @@ export default function AdminPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map(user => (
+                  {loadingUsers ? (
+                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">Carregando usuários...</td></tr>
+                  ) : filteredUsers.map(user => (
                     <tr key={user.id} className="border-t border-slate-50 hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -387,7 +440,7 @@ export default function AdminPanel() {
                                 <option key={r} value={r}>{cfg.label}</option>
                               ))}
                             </select>
-                            <button onClick={() => { updateUser(user.id, { systemRole: editRole }); setEditingId(null); }}
+                            <button onClick={() => handleUpdateRole(user.id, editRole)}
                               className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
                               <Check size={13} />
                             </button>
@@ -398,8 +451,8 @@ export default function AdminPanel() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            <RoleBadge role={user.systemRole} />
-                            <button onClick={() => { setEditingId(user.id); setEditRole(user.systemRole); }}
+                            <RoleBadge role={user.role} />
+                            <button onClick={() => { setEditingId(user.id); setEditRole(user.role); }}
                               className="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 hover:bg-[#e2eef9] hover:text-[#4A72B2] flex items-center justify-center">
                               <Pencil size={11} />
                             </button>
@@ -417,7 +470,7 @@ export default function AdminPanel() {
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <button onClick={() => updateUser(user.id, { active: !user.active })}
+                        <button onClick={() => handleToggleActive(user.id, user.active)}
                           className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
                             user.active
                               ? 'bg-emerald-50 text-emerald-500 hover:bg-red-50 hover:text-red-500'
@@ -428,7 +481,7 @@ export default function AdminPanel() {
                       </td>
                     </tr>
                   ))}
-                  {filteredUsers.length === 0 && (
+                  {!loadingUsers && filteredUsers.length === 0 && (
                     <tr>
                       <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">
                         Nenhum usuário encontrado.
