@@ -1939,8 +1939,12 @@ function VideoPlayer({ url, className = "w-full h-full rounded-[20px]" }) {
   // YouTube — aceita watch, shorts, live, youtu.be
   const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/))([a-zA-Z0-9_-]{11})/);
   if (ytMatch) return (
-    <iframe src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`}
-      className={className} allow="autoplay; fullscreen" />
+    <iframe
+      src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1`}
+      className={className}
+      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+      allowFullScreen
+    />
   );
 
   // Vimeo
@@ -1963,17 +1967,24 @@ function VideoPlayer({ url, className = "w-full h-full rounded-[20px]" }) {
 }
 
 function ShortsView() {
-  const { profileImage } = useProfile();
-  const [shorts, setShorts] = useState([]);
+  const { profileImage, shorts: cachedShorts, addShort, deleteShort } = useProfile();
+  const [shorts, setShorts] = useState(cachedShorts || []);
+  const [loadingShorts, setLoadingShorts] = useState(cachedShorts?.length === 0);
 
   useEffect(() => {
+    if (cachedShorts?.length > 0) {
+      setShorts(cachedShorts);
+      setLoadingShorts(false);
+      return;
+    }
     authFetch('/api/data?resource=shorts')
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (Array.isArray(data)) setShorts(data); })
-      .catch(() => {});
-  }, []);
+      .catch(() => {})
+      .finally(() => setLoadingShorts(false));
+  }, [cachedShorts]);
 
-  const addShort = async (data) => {
+  const handleAddShort = async (data) => {
     const res = await authFetch('/api/data?resource=shorts', {
       method: 'POST',
       body: JSON.stringify({
@@ -1989,7 +2000,7 @@ function ShortsView() {
     }
   };
 
-  const deleteShort = async (id) => {
+  const handleDeleteShort = async (id) => {
     if (!window.confirm('Excluir este short?')) return;
     setShorts(prev => prev.filter(r => r.id !== id));
     await authFetch(`/api/data?resource=shorts&id=${id}`, { method: 'DELETE' }).catch(() => {});
@@ -2068,7 +2079,7 @@ function ShortsView() {
   const handleSubmit = () => {
     if (!caption.trim()) return;
     const finalThumb = previewThumb || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400';
-    addShort({ caption, tag, thumbnail: finalThumb, vimeoId: vimeoId || null });
+    handleAddShort({ caption, tag, thumbnail: finalThumb, vimeoId: vimeoId || null });
     setShowForm(false);
     setCaption(''); setTag('Dica'); setVideoUrl(''); setVideoFile(null); setThumbnail(''); setThumbFile(null);
     setToast('Short publicado com sucesso!');
@@ -2268,7 +2279,13 @@ function ShortsView() {
       )}
 
       {/* Grid de shorts */}
-      {myShorts.length === 0 ? (
+      {loadingShorts ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="rounded-[20px] aspect-[9/14] bg-slate-100 animate-pulse" />
+          ))}
+        </div>
+      ) : myShorts.length === 0 ? (
         <div className="py-24 text-center text-slate-300 space-y-3">
           <Clapperboard size={40} className="mx-auto" />
           <p className="font-bold text-slate-400">Você ainda não publicou nenhum short</p>
@@ -2305,7 +2322,7 @@ function ShortsView() {
                     <Pencil size={10} />
                   </button>
                   <button
-                    onClick={e => { e.stopPropagation(); deleteShort(short.id); }}
+                    onClick={e => { e.stopPropagation(); handleDeleteShort(short.id); }}
                     className="w-6 h-6 rounded-full bg-red-500/90 text-white flex items-center justify-center hover:bg-red-600"
                     title="Excluir"
                   >

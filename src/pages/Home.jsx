@@ -28,8 +28,10 @@ function VideoPlayer({ url, className = "w-full h-full rounded-[20px]" }) {
   // YouTube — aceita watch, shorts, live, youtu.be
   const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/))([a-zA-Z0-9_-]{11})/);
   if (ytMatch) return (
-    <iframe src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`}
-      className={className} allow="autoplay; fullscreen" />
+    <iframe src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1`}
+      className={className}
+      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+      allowFullScreen />
   );
 
   // Vimeo

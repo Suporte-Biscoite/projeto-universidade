@@ -47,7 +47,7 @@ const INITIAL_COURSES = [];
 const INITIAL_MODULES = [];
 
 // ─── Reels dos instrutores ───────────────────────────────────────────────────
-const INITIAL_REELS = [];
+const INITIAL_SHORTS = [];
 
 // ─── Perfis públicos de instrutores ─────────────────────────────────────────
 const INITIAL_INSTRUCTOR_PROFILES = {};
@@ -212,7 +212,7 @@ export function ProfileProvider({ children }) {
   );
 
   // ── Reels ─────────────────────────────────────────────────────────────────
-  const [reels, setReels] = useState([]);
+  const [shorts, setShorts] = useState([]);
 
   // ── Persistência no localStorage ──────────────────────────────────────────
   // ── Busca usuários do banco (para admin) ────────────────────────────────────
@@ -243,7 +243,7 @@ export function ProfileProvider({ children }) {
     sessionStorage.removeItem('biscoite_reels');
     authFetch('/api/data?resource=shorts')
       .then(r => r.ok ? r.json() : [])
-      .then(data => { if (Array.isArray(data)) setReels(data); })
+      .then(data => { if (Array.isArray(data)) setShorts(data); })
       .catch(() => {});
   }, []);
 
@@ -735,7 +735,7 @@ export function ProfileProvider({ children }) {
   };
 
   // ── Funções de reels (API) ────────────────────────────────────────────────
-  const addReel = async (data) => {
+  const addShort = async (data) => {
     try {
       const res = await authFetch('/api/data?resource=shorts', {
         method: 'POST',
@@ -748,14 +748,14 @@ export function ProfileProvider({ children }) {
       });
       if (res.ok) {
         const newReel = await res.json();
-        setReels(prev => [newReel, ...prev]);
+        setShorts(prev => [newReel, ...prev]);
         return newReel.id;
       }
     } catch (e) { console.error('addReel:', e); }
   };
 
-  const deleteReel = async (id) => {
-    setReels(prev => prev.filter(r => r.id !== id));
+  const deleteShort = async (id) => {
+    setShorts(prev => prev.filter(r => r.id !== id));
     try {
       await authFetch(`/api/data?resource=shorts&id=${id}`, { method: 'DELETE' });
     } catch (e) { console.error('deleteReel:', e); }
@@ -828,7 +828,7 @@ export function ProfileProvider({ children }) {
       // Perfis de instrutores
       instructorProfiles, updateInstructorProfile,
       // Reels
-      reels, addReel, deleteReel,
+      shorts, addReel: addShort, deleteReel: deleteShort, addShort, deleteShort,
     }}>
       {children}
     </ProfileContext.Provider>
