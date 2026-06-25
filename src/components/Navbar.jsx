@@ -406,23 +406,30 @@ export default function Navbar() {
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 text-slate-400"><X size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto py-4">
-              {/* Botão do painel por role */}
-              {ROLE_PANEL[systemRole] && (() => {
-                const panel = ROLE_PANEL[systemRole];
-                const PanelIcon = panel.icon;
-                return (
-                  <div className="px-4 mb-2">
-                    <Link to={panel.path} onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-3 rounded-xl font-black text-sm mb-1 ${panel.color} bg-opacity-10`}>
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${panel.color}`}>
-                        <PanelIcon size={13} />
-                      </div>
-                      {panel.label}
-                    </Link>
-                    <div className="mx-0 h-[1px] bg-slate-100 my-3"></div>
-                  </div>
-                );
-              })()}
+              {/* Botões de painel — admin vê todos, outros veem só o seu */}
+              {(systemRole === 'admin'
+                ? Object.values(ROLE_PANEL)
+                : ROLE_PANEL[systemRole] ? [ROLE_PANEL[systemRole]] : []
+              ).length > 0 && (
+                <div className="px-4 mb-2">
+                  {(systemRole === 'admin'
+                    ? Object.values(ROLE_PANEL)
+                    : [ROLE_PANEL[systemRole]]
+                  ).map(panel => {
+                    const PanelIcon = panel.icon;
+                    return (
+                      <Link key={panel.path} to={panel.path} onClick={() => setIsMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-3 rounded-xl font-black text-sm mb-1 ${panel.color}`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-white/60`}>
+                          <PanelIcon size={13} />
+                        </div>
+                        {panel.label}
+                      </Link>
+                    );
+                  })}
+                  <div className="mx-0 h-[1px] bg-slate-100 my-3"></div>
+                </div>
+              )}
               <div className="px-4 mb-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">Navegação</p>
                 {navLinks.map(link => {
