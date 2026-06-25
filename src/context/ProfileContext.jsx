@@ -241,7 +241,7 @@ export function ProfileProvider({ children }) {
     // Remove reels antigos do localStorage
     localStorage.removeItem('biscoite_reels');
     sessionStorage.removeItem('biscoite_reels');
-    authFetch('/api/data?resource=reels')
+    authFetch('/api/data?resource=shorts')
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (Array.isArray(data)) setReels(data); })
       .catch(() => {});
@@ -737,7 +737,7 @@ export function ProfileProvider({ children }) {
   // ── Funções de reels (API) ────────────────────────────────────────────────
   const addReel = async (data) => {
     try {
-      const res = await authFetch('/api/data?resource=reels', {
+      const res = await authFetch('/api/data?resource=shorts', {
         method: 'POST',
         body: JSON.stringify({
           caption:       data.caption,
@@ -757,7 +757,7 @@ export function ProfileProvider({ children }) {
   const deleteReel = async (id) => {
     setReels(prev => prev.filter(r => r.id !== id));
     try {
-      await authFetch(`/api/data?resource=reels&id=${id}`, { method: 'DELETE' });
+      await authFetch(`/api/data?resource=shorts&id=${id}`, { method: 'DELETE' });
     } catch (e) { console.error('deleteReel:', e); }
   };
 
