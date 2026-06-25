@@ -1,5 +1,5 @@
 // api/data.js
-// Consolida: notifications, config (sectors/job_titles) e reels
+// Consolida: notifications, config (sectors/job_titles) e shorts
 //
 // GET    /api/data?resource=notifications
 // POST   /api/data?resource=notifications&action=read|read-all|create
@@ -8,9 +8,9 @@
 // POST   /api/data?resource=sectors|job_titles          (admin)
 // PUT    /api/data?resource=sectors|job_titles&id=uuid  (admin)
 // DELETE /api/data?resource=sectors|job_titles&id=uuid  (admin)
-// GET    /api/data?resource=reels
-// POST   /api/data?resource=reels
-// DELETE /api/data?resource=reels&id=uuid
+// GET    /api/data?resource=shorts
+// POST   /api/data?resource=shorts
+// DELETE /api/data?resource=shorts&id=uuid
 
 import pool from './db.js';
 import jwt from 'jsonwebtoken';
@@ -137,7 +137,7 @@ export default async function handler(req, res) {
     }
 
     // ── REELS ──────────────────────────────────────────────────────────────────
-    if (resource === 'reels') {
+    if (resource === 'shorts') {
       if (!auth) return send(res, 401, { error: 'Não autorizado' });
 
       if (req.method === 'GET') {
@@ -145,7 +145,7 @@ export default async function handler(req, res) {
           `SELECT r.id, r.caption, r.tag, r.thumbnail_url, r.vimeo_id,
                   r.views, r.created_at, r.instructor_id,
                   u.name as instructor, u.avatar_url as avatar
-           FROM reels r
+           FROM shorts r
            LEFT JOIN users u ON u.id = r.instructor_id
            WHERE r.active=true ORDER BY r.created_at DESC`
         );
@@ -157,13 +157,32 @@ export default async function handler(req, res) {
         })));
       }
 
+      if (req.method === 'PUT') {
+        if (!auth) return send(res, 401, { error: 'Não autorizado' });
+        if (!id) return send(res, 400, { error: 'id obrigatório' });
+        const { caption, tag, vimeo_id } = req.body ?? {};
+        const where = auth.role === 'admin' ? 'WHERE id=$1' : 'WHERE id=$1 AND instructor_id=$2';
+        const params = auth.role === 'admin' ? [id] : [id, auth.sub];
+        const { rows } = await pool.query(
+          `UPDATE shorts SET
+             caption   = COALESCE($${params.length + 1}, caption),
+             tag       = COALESCE($${params.length + 2}, tag),
+             vimeo_id  = COALESCE($${params.length + 3}, vimeo_id)
+           ${where}
+           RETURNING *`,
+          [...params, caption?.trim() || null, tag || null, vimeo_id || null]
+        );
+        if (!rows.length) return send(res, 404, { error: 'Short não encontrado' });
+        return send(res, 200, rows[0]);
+      }
+
       if (req.method === 'POST') {
         if (!['professor','admin'].includes(auth.role))
           return send(res, 403, { error: 'Apenas professores e admins' });
         const { caption, tag='Dica', thumbnail_url, vimeo_id } = req.body ?? {};
         if (!caption?.trim()) return send(res, 400, { error: 'caption obrigatório' });
         const { rows } = await pool.query(
-          `INSERT INTO reels (instructor_id, caption, tag, thumbnail_url, vimeo_id)
+          `INSERT INTO shorts (instructor_id, caption, tag, thumbnail_url, vimeo_id)
            VALUES ($1,$2,$3,$4,$5) RETURNING *`,
           [auth.sub, caption.trim(), tag, thumbnail_url || null, vimeo_id || null]
         );
@@ -185,7 +204,7 @@ export default async function handler(req, res) {
         if (!id) return send(res, 400, { error: 'id obrigatório' });
         const where = auth.role === 'admin' ? 'WHERE id=$1' : 'WHERE id=$1 AND instructor_id=$2';
         const params = auth.role === 'admin' ? [id] : [id, auth.sub];
-        await pool.query(`UPDATE reels SET active=false ${where}`, params);
+        await pool.query(`UPDATE shorts SET active=false ${where}`, params);
         return send(res, 200, { ok: true });
       }
     }

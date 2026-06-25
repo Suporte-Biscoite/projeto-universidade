@@ -259,7 +259,7 @@ function Sidebar({ activeView, setActiveView, profileImage, userName, unreadComm
   const navItems = [
     { id: 'overview',     label: 'Overview',     icon: LayoutDashboard },
     { id: 'cursos',       label: 'Meus Cursos',  icon: BookOpen },
-    { id: 'reels',        label: 'Reels',        icon: Clapperboard },
+    { id: 'shorts',        label: 'Shorts',        icon: Clapperboard },
     { id: 'comunicacao',  label: 'Comunicação',  icon: MessageSquare, badge: unreadComm },
   ];
 
@@ -1927,19 +1927,19 @@ function extractVimeoId(url) {
   return m ? m[1] : null;
 }
 
-function ReelsView() {
+function ShortsView() {
   const { profileImage } = useProfile();
-  const [reels, setReels] = useState([]);
+  const [shorts, setShorts] = useState([]);
 
   useEffect(() => {
-    authFetch('/api/data?resource=reels')
+    authFetch('/api/data?resource=shorts')
       .then(r => r.ok ? r.json() : [])
-      .then(data => { if (Array.isArray(data)) setReels(data); })
+      .then(data => { if (Array.isArray(data)) setShorts(data); })
       .catch(() => {});
   }, []);
 
-  const addReel = async (data) => {
-    const res = await authFetch('/api/data?resource=reels', {
+  const addShort = async (data) => {
+    const res = await authFetch('/api/data?resource=shorts', {
       method: 'POST',
       body: JSON.stringify({
         caption:       data.caption,
@@ -1949,15 +1949,15 @@ function ReelsView() {
       }),
     });
     if (res.ok) {
-      const newReel = await res.json();
-      setReels(prev => [newReel, ...prev]);
+      const newShort = await res.json();
+      setShorts(prev => [newShort, ...prev]);
     }
   };
 
-  const deleteReel = async (id) => {
-    if (!window.confirm('Excluir este reel?')) return;
-    setReels(prev => prev.filter(r => r.id !== id));
-    await authFetch(`/api/data?resource=reels&id=${id}`, { method: 'DELETE' }).catch(() => {});
+  const deleteShort = async (id) => {
+    if (!window.confirm('Excluir este short?')) return;
+    setShorts(prev => prev.filter(r => r.id !== id));
+    await authFetch(`/api/data?resource=shorts&id=${id}`, { method: 'DELETE' }).catch(() => {});
   };
   const loggedId = (() => {
     try {
@@ -1966,7 +1966,7 @@ function ReelsView() {
     } catch { return null; }
   })();
   // Admin vê todos, professor vê só os seus
-  const myReels = reels.filter(r =>
+  const myShorts = shorts.filter(r =>
     !loggedId || r.instructor_id === loggedId || r.instructorId === loggedId
   );
 
@@ -1979,10 +1979,39 @@ function ReelsView() {
   const [thumbnail, setThumbnail]     = useState('');
   const [thumbFile, setThumbFile]     = useState(null);
   const [hoveredId, setHoveredId]     = useState(null);
-  const [selectedReel, setSelectedReel] = useState(null);
+  const [selectedShort, setSelectedShort] = useState(null);
+  const [editingShort, setEditingShort]   = useState(null); // short sendo editado
+  const [editForm, setEditForm]           = useState({});
   const [toast, setToast]             = useState(null);
   const thumbInputRef = useRef(null);
   const videoInputRef = useRef(null);
+
+  const openEdit = (short) => {
+    setEditForm({ caption: short.caption || '', tag: short.tag || 'Dica', vimeo_id: short.vimeo_id || '' });
+    setEditingShort(short);
+  };
+
+  const saveEdit = async () => {
+    if (!editingShort || !editForm.caption?.trim()) return;
+    try {
+      const res = await authFetch(`/api/data?resource=shorts&id=${editingShort.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          caption:  editForm.caption.trim(),
+          tag:      editForm.tag,
+          vimeo_id: editForm.vimeo_id || null,
+        }),
+      });
+      if (res.ok) {
+        setShorts(prev => prev.map(r =>
+          r.id === editingShort.id
+            ? { ...r, caption: editForm.caption.trim(), tag: editForm.tag, vimeo_id: editForm.vimeo_id }
+            : r
+        ));
+        setEditingShort(null);
+      }
+    } catch {}
+  };
 
   const vimeoId = extractVimeoId(videoUrl);
   const previewThumb = thumbFile ? thumbnail : thumbnail;
@@ -2004,10 +2033,10 @@ function ReelsView() {
   const handleSubmit = () => {
     if (!caption.trim()) return;
     const finalThumb = previewThumb || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400';
-    addReel({ caption, tag, thumbnail: finalThumb, vimeoId: vimeoId || null });
+    addShort({ caption, tag, thumbnail: finalThumb, vimeoId: vimeoId || null });
     setShowForm(false);
     setCaption(''); setTag('Dica'); setVideoUrl(''); setVideoFile(null); setThumbnail(''); setThumbFile(null);
-    setToast('Reel publicado com sucesso!');
+    setToast('Short publicado com sucesso!');
     setTimeout(() => setToast(null), 2800);
   };
 
@@ -2023,7 +2052,7 @@ function ReelsView() {
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 bg-[#4A72B2] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#001A26] transition-colors shadow-lg shadow-blue-100 text-sm"
         >
-          <Plus size={15} /> Novo Reel
+          <Plus size={15} /> Novo Short
         </button>
       </div>
 
@@ -2032,7 +2061,7 @@ function ReelsView() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[28px] w-full max-w-xl shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-7 pt-7 pb-5 border-b border-slate-100">
-              <h3 className="font-black text-[#001A26] text-lg">Novo Reel</h3>
+              <h3 className="font-black text-[#001A26] text-lg">Novo Short</h3>
               <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center">
                 <X size={15} className="text-slate-500" />
               </button>
@@ -2124,7 +2153,7 @@ function ReelsView() {
                 disabled={!caption.trim()}
                 className="flex-1 py-3 rounded-2xl bg-[#4A72B2] text-white font-bold text-sm hover:bg-[#001A26] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Publicar Reel
+                Publicar Short
               </button>
             </div>
           </div>
@@ -2132,17 +2161,17 @@ function ReelsView() {
       )}
 
       {/* Player modal */}
-      {selectedReel && (
+      {selectedShort && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
-          onClick={() => setSelectedReel(null)}>
+          onClick={() => setSelectedShort(null)}>
           <div className="relative w-full max-w-sm" style={{ aspectRatio: '9/16' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedReel(null)}
+            <button onClick={() => setSelectedShort(null)}
               className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-1">
               <X size={16} /> Fechar
             </button>
-            {selectedReel.vimeo_id ? (
+            {selectedShort.vimeo_id ? (
               <iframe
-                src={`https://player.vimeo.com/video/${selectedReel.vimeo_id}?autoplay=1&title=0&byline=0`}
+                src={`https://player.vimeo.com/video/${selectedShort.vimeo_id}?autoplay=1&title=0&byline=0`}
                 className="w-full h-full rounded-[20px]"
                 allow="autoplay; fullscreen"
               />
@@ -2153,53 +2182,107 @@ function ReelsView() {
               </div>
             )}
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[20px]">
-              <p className="text-white font-bold text-sm">{selectedReel.caption}</p>
+              <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Grid de reels */}
-      {myReels.length === 0 ? (
+      {/* Edit modal */}
+      {editingShort && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[28px] w-full max-w-md shadow-2xl p-6 space-y-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-[#001A26]">Editar Short</h3>
+              <button onClick={() => setEditingShort(null)} className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200">
+                <X size={15} />
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Legenda</label>
+              <textarea value={editForm.caption} onChange={e => setEditForm(p => ({ ...p, caption: e.target.value }))}
+                rows={3} className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2] resize-none" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tag</label>
+              <select value={editForm.tag} onChange={e => setEditForm(p => ({ ...p, tag: e.target.value }))}
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2] bg-white">
+                {['Dica','Tutorial','Receita','Novidade','Operação','Marketing','Gestão'].map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link Vimeo</label>
+              <input value={editForm.vimeo_id} onChange={e => setEditForm(p => ({ ...p, vimeo_id: e.target.value }))}
+                placeholder="Ex: https://vimeo.com/123456789"
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2]" />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setEditingShort(null)}
+                className="flex-1 py-3 rounded-2xl border border-slate-200 text-slate-500 font-bold text-sm hover:bg-slate-50">
+                Cancelar
+              </button>
+              <button onClick={saveEdit} disabled={!editForm.caption?.trim()}
+                className="flex-1 py-3 rounded-2xl bg-[#001A26] hover:bg-[#4A72B2] text-white font-bold text-sm transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                <Check size={14} /> Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grid de shorts */}
+      {myShorts.length === 0 ? (
         <div className="py-24 text-center text-slate-300 space-y-3">
           <Clapperboard size={40} className="mx-auto" />
-          <p className="font-bold text-slate-400">Você ainda não publicou nenhum reel</p>
-          <p className="text-sm text-slate-300">Clique em "Novo Reel" para começar</p>
+          <p className="font-bold text-slate-400">Você ainda não publicou nenhum short</p>
+          <p className="text-sm text-slate-300">Clique em "Novo Short" para começar</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {myReels.map(reel => {
-            const isHovered = hoveredId === reel.id;
-            const thumb = reel.thumbnail || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400';
+          {myShorts.map(short => {
+            const isHovered = hoveredId === short.id;
+            const thumb = short.thumbnail || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400';
             return (
               <div
-                key={reel.id}
+                key={short.id}
                 className="relative rounded-[16px] sm:rounded-[20px] overflow-hidden aspect-[9/14] group cursor-pointer shadow-sm"
-                onMouseEnter={() => setHoveredId(reel.id)}
+                onMouseEnter={() => setHoveredId(short.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                onClick={() => setSelectedReel(reel)}
+                onClick={() => setSelectedShort(short)}
               >
-                <img src={thumb} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={reel.caption} />
+                <img src={thumb} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={short.caption} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
 
                 {/* Tag */}
                 <div className="absolute top-3 left-3">
-                  <span className="bg-white/90 text-[#4A72B2] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">{reel.tag}</span>
+                  <span className="bg-white/90 text-[#4A72B2] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">{short.tag}</span>
                 </div>
 
-                {/* Delete btn */}
-                <button
-                  onClick={e => { e.stopPropagation(); deleteReel(reel.id); }}
-                  className="absolute top-3 right-3 w-6 h-6 rounded-full bg-red-500/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                >
-                  <Trash size={10} />
-                </button>
+                {/* Action buttons */}
+                <div className="absolute top-3 right-3 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={e => { e.stopPropagation(); openEdit(short); }}
+                    className="w-6 h-6 rounded-full bg-white/90 text-[#4A72B2] flex items-center justify-center hover:bg-white"
+                    title="Editar"
+                  >
+                    <Pencil size={10} />
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); deleteShort(short.id); }}
+                    className="w-6 h-6 rounded-full bg-red-500/90 text-white flex items-center justify-center hover:bg-red-600"
+                    title="Excluir"
+                  >
+                    <Trash size={10} />
+                  </button>
+                </div>
 
                 {/* Bottom info */}
                 <div className="absolute bottom-0 left-0 right-0 p-3 space-y-1.5">
-                  <p className="text-white text-[11px] font-bold leading-snug line-clamp-2">{reel.caption}</p>
+                  <p className="text-white text-[11px] font-bold leading-snug line-clamp-2">{short.caption}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-white/60 text-[9px]">{reel.views} views · {reel.time}</span>
+                    <span className="text-white/60 text-[9px]">{short.views} views · {short.time}</span>
                     <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-md">
                       <Play size={8} fill="#001A26" className="text-[#001A26] translate-x-[1px]" />
                     </div>
@@ -2365,7 +2448,7 @@ export default function ProfessorDashboard() {
   const viewTitle = {
     overview:    'Painel do Professor',
     cursos:      'Painel do Professor',
-    reels:       'Meus Reels',
+    shorts:       'Meus Shorts',
     comunicacao: 'Comunicação',
   }[activeView];
 
@@ -2386,7 +2469,7 @@ export default function ProfessorDashboard() {
           <h1 className="text-2xl font-black text-[#00263B] mb-6">{viewTitle}</h1>
           {activeView === 'overview'    && <OverviewView onNewComm={() => setUnreadComm(p => p + 1)} />}
           {activeView === 'cursos'      && <MeusCursosView />}
-          {activeView === 'reels'       && <ReelsView />}
+          {activeView === 'shorts'       && <ShortsView />}
           {activeView === 'comunicacao' && <ComunicacaoView onRead={() => setUnreadComm(0)} />}
         </main>
 
@@ -2395,7 +2478,7 @@ export default function ProfessorDashboard() {
           {[
             { id: 'overview',    label: 'Overview',    icon: LayoutDashboard },
             { id: 'cursos',      label: 'Cursos',      icon: BookOpen },
-            { id: 'reels',       label: 'Reels',       icon: Clapperboard },
+            { id: 'shorts',       label: 'Shorts',       icon: Clapperboard },
             { id: 'comunicacao', label: 'Chat',        icon: MessageSquare },
           ].map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => handleViewChange(id)}

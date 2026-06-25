@@ -18,7 +18,7 @@ const categories = [
 
 export default function Home() {
   const navigate = useNavigate();
-  const { reels: reelsData } = useProfile();
+  const { shorts: shortsData } = useProfile();
   const [myCourses, setMyCourses]     = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [favorites, setFavorites] = useState([]);
@@ -46,8 +46,8 @@ export default function Home() {
     } catch {}
   };
   const [courseIndex, setCourseIndex] = useState(0);
-  const [hoveredReel, setHoveredReel] = useState(null);
-  const [selectedReel, setSelectedReel] = useState(null);
+  const [hoveredShort, setHoveredShort] = useState(null);
+  const [selectedShort, setSelectedShort] = useState(null);
   const coursesPerPage = 3;
 
   useEffect(() => {
@@ -93,18 +93,18 @@ export default function Home() {
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-16 sm:space-y-20 pb-20">
-      {/* Reel player modal */}
-      {selectedReel && (
+      {/* Short player modal */}
+      {selectedShort && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
-          onClick={() => setSelectedReel(null)}>
+          onClick={() => setSelectedShort(null)}>
           <div className="relative w-full max-w-xs" style={{ aspectRatio: '9/16' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedReel(null)}
+            <button onClick={() => setSelectedShort(null)}
               className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-2">
               ✕ Fechar
             </button>
-            {selectedReel.vimeo_id ? (
+            {selectedShort.vimeo_id ? (
               <iframe
-                src={`https://player.vimeo.com/video/${selectedReel.vimeo_id}?autoplay=1&title=0&byline=0`}
+                src={`https://player.vimeo.com/video/${selectedShort.vimeo_id}?autoplay=1&title=0&byline=0`}
                 className="w-full h-full rounded-[24px]"
                 allow="autoplay; fullscreen"
               />
@@ -114,8 +114,8 @@ export default function Home() {
               </div>
             )}
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[24px]">
-              <p className="text-white font-bold text-sm">{selectedReel.caption}</p>
-              <p className="text-white/50 text-xs mt-1">{selectedReel.instructor}</p>
+              <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
+              <p className="text-white/50 text-xs mt-1">{selectedShort.instructor}</p>
             </div>
           </div>
         </div>
@@ -282,20 +282,20 @@ export default function Home() {
       </section>
 
       {/* 3. REELS */}
-      {reelsData && reelsData.length > 0 && (
+      {shortsData && shortsData.length > 0 && (
         <section className="bg-[#f0f7ff] -mx-4 sm:-mx-8 px-4 sm:px-8 py-10 sm:py-16 rounded-[32px] sm:rounded-[48px] space-y-6 sm:space-y-8">
           <div>
-            <h2 className="text-xl sm:text-2xl font-black text-[#001A26]">Reels dos instrutores</h2>
+            <h2 className="text-xl sm:text-2xl font-black text-[#001A26]">Shorts dos instrutores</h2>
             <p className="text-slate-400 text-sm mt-1">Novidades, dicas e avisos em vídeos rápidos</p>
           </div>
-          {/* Desktop: expandable reels */}
+          {/* Desktop: expandable shorts */}
           <div className="hidden md:flex gap-3 overflow-hidden" style={{ height: '400px' }}>
-            {reelsData.map((item) => {
-              const isActive = hoveredReel === item.id;
+            {shortsData.map((item) => {
+              const isActive = hoveredShort === item.id;
               return (
-                <button key={item.id} onClick={() => setSelectedReel(item)}
-                  onMouseEnter={() => setHoveredReel(item.id)}
-                  onMouseLeave={() => setHoveredReel(null)}
+                <button key={item.id} onClick={() => setSelectedShort(item)}
+                  onMouseEnter={() => setHoveredShort(item.id)}
+                  onMouseLeave={() => setHoveredShort(null)}
                   className="relative flex-shrink-0 rounded-[24px] overflow-hidden border-2 border-white shadow-sm cursor-pointer text-left"
                   style={{ width: isActive ? '240px' : '120px', transition: 'width 0.45s cubic-bezier(0.4,0,0.2,1)' }}>
                   <img src={item.thumbnail || item.image} className="absolute inset-0 w-full h-full object-cover"
@@ -345,7 +345,7 @@ export default function Home() {
           </div>
           {/* Mobile: horizontal scroll */}
           <div className="flex md:hidden gap-3 overflow-x-auto pb-4 snap-x snap-mandatory">
-            {reelsData.map((item) => (
+            {shortsData.map((item) => (
               <div key={item.id} className="relative flex-shrink-0 w-36 rounded-[20px] overflow-hidden snap-start" style={{ aspectRatio: '9/16' }}>
                 <img src={item.thumbnail || item.image} className="absolute inset-0 w-full h-full object-cover" alt={item.caption} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
