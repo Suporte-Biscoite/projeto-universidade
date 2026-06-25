@@ -209,10 +209,14 @@ export default function ChatPanel({ currentUserId, compact = false }) {
   const totalUnread = conversations.reduce((acc, c) => acc + (Number(c.unread) || 0), 0);
 
   return (
-    <div className={`flex bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden ${compact ? 'h-full' : 'h-[600px]'}`}>
+    <div className={`flex bg-white overflow-hidden ${compact ? 'h-full w-full' : 'rounded-[24px] border border-slate-100 shadow-sm h-[600px]'}`}>
 
       {/* LISTA DE CONVERSAS */}
-      <div className={`flex flex-col border-r border-slate-100 flex-shrink-0 ${compact ? 'w-44' : 'w-72'} ${!showList ? 'hidden' : 'flex'}`}>
+      <div className={`flex flex-col border-r border-slate-100 flex-shrink-0 ${
+        compact
+          ? `${showList ? 'flex w-full' : 'hidden'}`
+          : 'flex w-72'
+      }`}>
         <div className="px-4 py-4 border-b border-slate-50">
           <div className="flex items-center justify-between mb-3">
             <p className="font-black text-[#001A26] text-sm">Mensagens</p>
@@ -251,7 +255,11 @@ export default function ChatPanel({ currentUserId, compact = false }) {
       </div>
 
       {/* ÁREA DE MENSAGENS */}
-      <div className={`flex-1 flex flex-col min-w-0 ${showList && !selectedConv ? 'hidden' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 ${
+        compact
+          ? `${!showList || selectedConv ? 'flex w-full' : 'hidden'}`
+          : 'flex'
+      }`}>
         {!selectedConv ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-300">
             <MessageCircle size={40} />

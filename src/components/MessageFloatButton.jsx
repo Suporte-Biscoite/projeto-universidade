@@ -53,18 +53,24 @@ export default function MessageFloatButton() {
   return (
     <>
       {open && (
-        <div
-          className="fixed z-[200] shadow-2xl rounded-[24px] overflow-hidden border border-slate-200 bg-white"
-          style={{
-            bottom: '88px',
-            right: '16px',
-            width: 'calc(100vw - 32px)',
-            maxWidth: '400px',
-            height: '480px',
-          }}
-        >
-          <ChatPanel currentUserId={userId} compact />
-        </div>
+        <>
+          {/* Overlay mobile */}
+          <div className="fixed inset-0 z-[199] bg-black/20 sm:hidden" onClick={() => setOpen(false)} />
+          {/* Popup */}
+          <div
+            className="fixed z-[200] shadow-2xl rounded-[24px] overflow-hidden border border-slate-200 bg-white"
+            style={{
+              bottom: '88px',
+              right: '16px',
+              left: '16px',
+              maxWidth: '480px',
+              marginLeft: 'auto',
+              height: 'min(520px, calc(100vh - 120px))',
+            }}
+          >
+            <ChatPanel currentUserId={userId} compact />
+          </div>
+        </>
       )}
 
       <button
