@@ -112,9 +112,6 @@ export default function Navbar() {
     reader.readAsDataURL(file);
   };
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
 
   useEffect(() => {
     if (isSearchOpen && searchRef.current) searchRef.current.focus();
