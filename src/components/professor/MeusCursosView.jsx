@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import {
   BookOpen, Plus, ChevronRight, ChevronDown, ChevronUp, Search,
-  FileText, CheckSquare, GripVertical, X, Check, Pencil, Eye, EyeOff,
+  FileText, GripVertical, X, Check, Pencil, Eye, EyeOff,
   Layers, Award, Megaphone, AlertTriangle, BarChart2, Loader, Star, Trash2,
 } from 'lucide-react';
 import { useProfile } from '../../context/ProfileContext';
@@ -87,18 +87,6 @@ function MeusCursosView() {
   // ── Kanban expand state ──
   const [expandedKanbanMod, setExpandedKanbanMod] = useState({});
 
-  // ── Quiz state ──
-  const [quizQuestions, setQuizQuestions] = useState([
-    { id: 1, text: 'Questão 1 — Aula 1' },
-    { id: 2, text: 'Questão 2 — Aula 2' },
-    { id: 3, text: 'Questão 3 — Aula 1' },
-  ]);
-  const [quizSearch, setQuizSearch] = useState('');
-  const [quizQuestion, setQuizQuestion] = useState('Como funciona o processo de abertura de loja?');
-  const [quizAlts, setQuizAlts] = useState(['Checklist e aprovação do gestor', 'Apenas a chave do caixa', 'Sinal de wi-fi ativo']);
-  const [quizCorrect, setQuizCorrect] = useState(0);
-  const [newAlt, setNewAlt] = useState('');
-
   const myCourses = systemRole === 'professor'
     ? courses.filter(c => c.instructorId === instructorId || c.instructor_id === instructorId)
     : courses;
@@ -123,10 +111,6 @@ function MeusCursosView() {
     setNewLesson({ title: '', duration: '', type: 'video', vimeoId: null, visibility: ['aluno','gestor','professor','admin'] });
     setAddingLessonTo(null);
   };
-
-  const quizFiltered = quizQuestions.filter(q =>
-    q.text.toLowerCase().includes(quizSearch.toLowerCase())
-  );
 
   return (
     <div className="space-y-8">
@@ -501,106 +485,6 @@ function MeusCursosView() {
             />
           )}
 
-          {/* ── Quiz + Acesso (oculto na aba Certificados) ── */}
-          {subTab !== 'certificados' && <>
-
-          {/* ── Gerador de Quiz + Configurações de Acesso ── */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* Quiz */}
-            <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-4">
-              <h4 className="text-sm font-black text-[#00263B]">Gerador de Quiz</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Banco de Questões</p>
-                  <div className="flex gap-2">
-                    <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                      <Search size={11} className="text-slate-300" />
-                      <input value={quizSearch} onChange={e => setQuizSearch(e.target.value)} placeholder="Buscar"
-                        className="flex-1 bg-transparent text-[10px] outline-none text-slate-500" />
-                    </div>
-                    <button onClick={() => {
-                      const t = prompt('Título da questão:');
-                      if (t?.trim()) setQuizQuestions(p => [...p, { id: Date.now(), text: t.trim() }]);
-                    }} className="w-8 h-8 bg-[#4A72B2] text-white rounded-xl flex items-center justify-center hover:bg-[#00263B] transition-all">
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {quizFiltered.map((q) => (
-                      <div key={q.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl hover:bg-[#E2F0FF] transition-colors cursor-pointer group/q">
-                        <CheckSquare size={11} className="text-[#4A72B2]" />
-                        <span className="text-[9px] font-semibold text-slate-500 flex-1">{q.text}</span>
-                        <button onClick={() => setQuizQuestions(p => p.filter(x => x.id !== q.id))}
-                          className="opacity-0 group-hover/q:opacity-100 text-slate-300 hover:text-red-400 transition-all">
-                          <X size={9} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pergunta</p>
-                  <textarea value={quizQuestion} onChange={e => setQuizQuestion(e.target.value)}
-                    className="w-full h-20 bg-slate-50 border border-slate-200 rounded-xl p-2 text-[9px] text-slate-500 outline-none resize-none focus:border-[#4A72B2]" />
-                  <div className="space-y-1.5">
-                    {quizAlts.map((alt, i) => (
-                      <div key={i} className="flex items-center gap-2 group/alt">
-                        <input type="radio" name="quiz_alt" checked={quizCorrect === i} onChange={() => setQuizCorrect(i)} className="accent-[#4A72B2]" />
-                        <span className="text-[9px] text-slate-400 font-medium flex-1">{alt}</span>
-                        <button onClick={() => setQuizAlts(p => p.filter((_, j) => j !== i))}
-                          className="opacity-0 group-hover/alt:opacity-100 text-slate-300 hover:text-red-400 transition-all">
-                          <X size={9} />
-                        </button>
-                      </div>
-                    ))}
-                    {newAlt !== undefined && (
-                      <div className="flex gap-1 pt-1">
-                        <input value={newAlt} onChange={e => setNewAlt(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter' && newAlt.trim()) { setQuizAlts(p => [...p, newAlt.trim()]); setNewAlt(''); } }}
-                          placeholder="+ Nova alternativa (Enter)"
-                          className="flex-1 px-2 py-1 rounded-lg border border-slate-200 text-[9px] outline-none focus:border-[#4A72B2] placeholder-slate-300" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Configurações de Acesso */}
-            <div className="bg-white rounded-[24px] border border-slate-100 p-6 space-y-4">
-              <h4 className="text-sm font-black text-[#00263B]">Configurações de Acesso</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trilhas de Pré-requisito</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {myCourses.slice(0, 3).map((c, i) => (
-                      <div key={c.id} className="relative">
-                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-[8px] font-black border-2 border-white shadow-sm ${KANBAN_COLORS[i % KANBAN_COLORS.length]}`}>
-                          {c.title.slice(0, 4)}
-                        </div>
-                        <span className="absolute -bottom-1 left-0 right-0 text-center text-[7px] font-black text-slate-500 bg-white rounded-full mx-1 py-0.5 truncate">{c.title.split(' ')[0]}</span>
-                      </div>
-                    ))}
-                    {myCourses.length === 0 && <p className="text-[9px] text-slate-300 font-medium">Nenhum curso disponível.</p>}
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <input type="checkbox" className="accent-[#4A72B2]" defaultChecked />
-                    <span className="text-[9px] text-slate-400 font-medium">Requer conclusão do pré-requisito</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Segmentação</p>
-                  {['Diretores','Vendedores','Apenas Franqueados','Apenas Funcionários'].map((seg) => (
-                    <div key={seg} className="flex items-center justify-between p-2 bg-slate-50 rounded-xl hover:bg-[#E2F0FF] transition-colors cursor-pointer">
-                      <span className="text-[9px] font-semibold text-slate-500">{seg}</span>
-                      <ChevronRight size={10} className="text-slate-300" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          </>}
         </div>
       )}
 
