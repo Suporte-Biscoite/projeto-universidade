@@ -6,7 +6,7 @@ import {
   AlertTriangle, TrendingUp, Users, MessageSquare, Send, Bell, Check,
   BarChart2, Store, BookOpen, Shield, User, Camera,
 } from 'lucide-react';
-import { useProfile, DEFAULT_COURSE_IMAGES, CURRENT_INSTRUCTOR_ID } from '../context/ProfileContext';
+import { useProfile, DEFAULT_COURSE_IMAGES } from '../context/ProfileContext';
 import { useNavigate } from 'react-router-dom';
 
 

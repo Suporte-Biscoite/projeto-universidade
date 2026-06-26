@@ -1,7 +1,6 @@
 // src/components/professor/CertificadosTab.jsx
 import { useState } from 'react';
 import { X, Check, Award, AlertTriangle, Plus, Pencil, Trash2, Star } from 'lucide-react';
-import { CURRENT_INSTRUCTOR_ID } from '../../context/ProfileContext';
 
 const CERT_AREAS = ['Operações','Vendas','Gestão','Marketing','IA','Franquias','Business'];
 const CERT_DURATIONS = ['Curta duração','Média duração','Longa duração'];
@@ -245,13 +244,13 @@ function IssueModal({ template, users, issuedCerts, onIssue, onClose }) {
   );
 }
 
-function CertificadosSubTab({ certTemplates, addCertTemplate, updateCertTemplate, deleteCertTemplate, issuedCerts, issueCertificate, revokeIssuedCert, courses, users, systemRole }) {
+function CertificadosSubTab({ certTemplates, addCertTemplate, updateCertTemplate, deleteCertTemplate, issuedCerts, issueCertificate, revokeIssuedCert, courses, users, systemRole, instructorId }) {
   const [modal, setModal] = useState(null); // null | 'add' | template obj
   const [issueModal, setIssueModal] = useState(null); // null | template obj
   const [confirmDel, setConfirmDel] = useState(null);
 
   const myCerts = systemRole === 'professor'
-    ? certTemplates.filter(t => t.instructorId === CURRENT_INSTRUCTOR_ID)
+    ? certTemplates.filter(t => t.instructorId === instructorId)
     : certTemplates;
 
   return (

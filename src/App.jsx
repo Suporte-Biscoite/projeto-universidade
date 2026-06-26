@@ -1,7 +1,59 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, Component } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import InactivityGuard from './components/InactivityGuard';
+
+// ─── Error Boundary ───────────────────────────────────────────────────────────
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('[ErrorBoundary]', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
+          <div className="bg-white rounded-[32px] p-10 max-w-md w-full text-center space-y-5 shadow-sm border border-slate-100">
+            <div className="text-5xl">⚠️</div>
+            <h1 className="text-xl font-black text-[#001A26]">Algo deu errado</h1>
+            <p className="text-slate-400 text-sm">
+              Ocorreu um erro inesperado. Tente recarregar a página.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2.5 bg-[#001A26] text-white rounded-xl font-bold text-sm hover:bg-[#4A72B2] transition-colors"
+              >
+                Recarregar
+              </button>
+              <button
+                onClick={() => { window.location.href = '/'; }}
+                className="px-6 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
+              >
+                Ir para Home
+              </button>
+            </div>
+            {import.meta.env.DEV && (
+              <details className="text-left mt-4">
+                <summary className="text-xs text-slate-400 cursor-pointer font-bold">Detalhes do erro</summary>
+                <pre className="text-[10px] text-red-500 mt-2 bg-red-50 p-3 rounded-xl overflow-auto max-h-40">
+                  {this.state.error?.toString()}
+                </pre>
+              </details>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── Lazy loading de todas as páginas ────────────────────────────────────────
 const Login            = lazy(() => import('./pages/Login'));
@@ -168,9 +220,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <InactivityGuard timeoutMinutes={15}>
-        <AppRoutes />
-      </InactivityGuard>
+      <ErrorBoundary>
+        <InactivityGuard timeoutMinutes={15}>
+          <AppRoutes />
+        </InactivityGuard>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

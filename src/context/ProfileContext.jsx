@@ -14,8 +14,7 @@ export const AREA_COLORS = {
 };
 
 // ID do professor logado — em produção viria do JWT verificado no servidor
-export const CURRENT_INSTRUCTOR_ID = 'prof_karla';
-export const CURRENT_USER_ID = 3;
+// DEFAULT_COURSE_IMAGES mantido para compatibilidade com outros imports
 
 export const STORES = [
   { id: 'loja_eldorado',      name: 'Loja Eldorado',       city: 'São Paulo', state: 'SP' },
@@ -669,7 +668,7 @@ export function ProfileProvider({ children }) {
       areaColor: AREA_COLORS[data.area] ? `${AREA_COLORS[data.area]}` : 'bg-slate-100 text-slate-700',
       tags: Array.isArray(data.tags) ? data.tags.slice(0, 5) : [],
       duration: data.duration || 'Curta duração',
-      instructorId: CURRENT_INSTRUCTOR_ID,
+      instructorId: userData?.instructor_id || userData?.id || null,
       instructorName: sanitizeText(data.instructorName, 60),
       bgColor: data.bgColor || '#001A26',
       accentColor: data.accentColor || '#4A72B2',

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Star, Users, BookOpen, GraduationCap, ExternalLink, Play } from 'lucide-react';
-import { useProfile, DEFAULT_COURSE_IMAGES, CURRENT_INSTRUCTOR_ID } from '../context/ProfileContext';
+import { useProfile, DEFAULT_COURSE_IMAGES } from '../context/ProfileContext';
 
 const AREA_ACCENT = {
   'Operações':      'bg-emerald-100 text-emerald-700',
@@ -34,12 +34,13 @@ function getBannerGradient(instructorId) {
 export default function InstructorProfile() {
   const { instructorId } = useParams();
   const navigate = useNavigate();
-  const { instructorProfiles, courses, systemRole } = useProfile();
+  const { instructorProfiles, courses, systemRole, userData } = useProfile();
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [instructorId]);
 
   const profile = instructorProfiles?.[instructorId];
-  const isOwn = (systemRole === 'professor' || systemRole === 'admin') && CURRENT_INSTRUCTOR_ID === instructorId;
+  const myInstructorId = userData?.instructor_id || userData?.id || null;
+  const isOwn = (systemRole === 'professor' || systemRole === 'admin') && myInstructorId === instructorId;
   const instructorCourses = courses.filter(c => c.instructorId === instructorId && c.published);
   const fallbackImg = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400';
 

@@ -5,7 +5,7 @@ import {
   FileText, CheckSquare, GripVertical, X, Check, Pencil, Eye, EyeOff,
   Layers, Award, Megaphone, AlertTriangle, BarChart2, Loader, Star, Trash2,
 } from 'lucide-react';
-import { useProfile, CURRENT_INSTRUCTOR_ID } from '../../context/ProfileContext';
+import { useProfile } from '../../context/ProfileContext';
 import { authFetch } from '../../utils/authFetch';
 import VimeoUploader from '../VimeoUploader';
 import { getLoggedId } from './ProfessorHelpers';
@@ -33,13 +33,15 @@ const KANBAN_COLORS = [
 function MeusCursosView() {
   const loggedId = getLoggedId();
   const {
-    courses, modules, systemRole,
+    courses, modules, systemRole, userData,
     addCourse, updateCourse, deleteCourse,
     addModule, updateModule, deleteModule, addLesson, updateLesson, deleteLesson,
     certTemplates, addCertTemplate, updateCertTemplate, deleteCertTemplate,
     issuedCerts, issueCertificate, revokeIssuedCert,
     users, setCourses, setModules,
   } = useProfile();
+
+  const instructorId = userData?.instructor_id || userData?.id || null;
 
   // Recarrega cursos e módulos frescos do banco ao abrir aba
   const [refreshKey, setRefreshKey] = useState(0);
@@ -98,7 +100,7 @@ function MeusCursosView() {
   const [newAlt, setNewAlt] = useState('');
 
   const myCourses = systemRole === 'professor'
-    ? courses.filter(c => c.instructorId === CURRENT_INSTRUCTOR_ID)
+    ? courses.filter(c => c.instructorId === instructorId || c.instructor_id === instructorId)
     : courses;
 
   const filteredCourses = courseFilter === 'todos' ? myCourses
@@ -495,6 +497,7 @@ function MeusCursosView() {
               courses={myCourses}
               users={users}
               systemRole={systemRole}
+              instructorId={instructorId}
             />
           )}
 
