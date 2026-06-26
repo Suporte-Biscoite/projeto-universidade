@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronRight, Play, Clock, LayoutDashboard, Store, ShoppingBag, BarChart3, Megaphone, Brain, Tent, Building2, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CourseCard from '../components/CourseCard';
@@ -131,12 +132,11 @@ export default function Home() {
   return (
     <div className="max-w-[1200px] mx-auto space-y-16 sm:space-y-20 pb-20">
       {/* Short player modal */}
-      {selectedShort && (() => {
+      {selectedShort && createPortal((() => {
         const idx  = shortsData.findIndex(s => s.id === selectedShort.id);
         const prev = idx > 0 ? shortsData[idx - 1] : null;
         const next = idx < shortsData.length - 1 ? shortsData[idx + 1] : null;
 
-        // Swipe handlers
         let touchStartY = 0;
         const onTouchStart = e => { touchStartY = e.touches[0].clientY; };
         const onTouchEnd   = e => {
@@ -146,8 +146,57 @@ export default function Home() {
         };
 
         return (
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
             onClick={() => setSelectedShort(null)}>
+
+            {prev && (
+              <button
+                onClick={e => { e.stopPropagation(); setSelectedShort(prev); }}
+                style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all">
+                <ChevronLeft size={20} />
+              </button>
+            )}
+
+            <div
+              className="relative w-full"
+              style={{ height: 'min(calc(100vw * 16/9), calc(100vh - 80px))', maxWidth: 'min(calc((100vh - 80px) * 9/16), 320px)' }}
+              onClick={e => e.stopPropagation()}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            >
+              <button onClick={() => setSelectedShort(null)}
+                style={{ position: 'absolute', top: '-40px', right: 0 }}
+                className="text-white/70 hover:text-white font-bold text-sm flex items-center gap-2">
+                ✕ Fechar
+              </button>
+              <VideoPlayer url={selectedShort.vimeo_id} className="w-full h-full rounded-[24px]" />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', borderRadius: '0 0 24px 24px', pointerEvents: 'none' }}>
+                <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
+                <p className="text-white/50 text-xs mt-1">{selectedShort.instructor}</p>
+              </div>
+              {shortsData.length > 1 && (
+                <div style={{ position: 'absolute', bottom: '-24px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px' }}>
+                  {shortsData.map((s, i) => (
+                    <button key={s.id} onClick={e => { e.stopPropagation(); setSelectedShort(s); }}
+                      style={{ borderRadius: '999px', background: 'white', opacity: i === idx ? 1 : 0.4, width: i === idx ? '16px' : '6px', height: '6px', transition: 'all 0.2s' }} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {next && (
+              <button
+                onClick={e => { e.stopPropagation(); setSelectedShort(next); }}
+                style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all">
+                <ChevronRight size={20} />
+              </button>
+            )}
+          </div>
+        );
+      })(), document.body)}
 
             {/* Seta anterior */}
             {prev && (

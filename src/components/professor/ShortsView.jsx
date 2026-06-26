@@ -1,5 +1,6 @@
 // src/components/professor/ShortsView.jsx
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, X, Check, Pencil, Trash, Play, Link, Image as ImageIcon, Clapperboard, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProfile } from '../../context/ProfileContext';
 import { authFetch } from '../../utils/authFetch';
@@ -94,6 +95,7 @@ function ShortsView() {
   );
 
   const [showForm, setShowForm]       = useState(false);
+  const [submitting, setSubmitting]   = useState(false);
   const [caption, setCaption]         = useState('');
   const [tag, setTag]                 = useState('Dica');
   const [videoTab, setVideoTab]       = useState('vimeo'); // vimeo only
@@ -153,11 +155,12 @@ function ShortsView() {
     setVideoUrl(url);
   };
 
-  const handleSubmit = () => {
-    if (!caption.trim()) return;
+  const handleSubmit = async () => {
+    if (!caption.trim() || submitting) return;
+    setSubmitting(true);
     const finalThumb = previewThumb || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400';
-    // Salva a URL completa do vídeo — pode ser YouTube ou Vimeo
-    handleAddShort({ caption, tag, thumbnail: finalThumb, vimeoId: videoUrl.trim() || null });
+    await handleAddShort({ caption, tag, thumbnail: finalThumb, vimeoId: videoUrl.trim() || null });
+    setSubmitting(false);
     setShowForm(false);
     setCaption(''); setTag('Dica'); setVideoUrl(''); setVideoFile(null); setThumbnail(''); setThumbFile(null);
     setToast('Short publicado com sucesso!');
@@ -273,10 +276,12 @@ function ShortsView() {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!caption.trim()}
-                className="flex-1 py-3 rounded-2xl bg-[#4A72B2] text-white font-bold text-sm hover:bg-[#001A26] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={!caption.trim() || submitting}
+                className="flex-1 py-3 rounded-2xl bg-[#4A72B2] text-white font-bold text-sm hover:bg-[#001A26] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Publicar Short
+                {submitting ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Publicando...</>
+                ) : 'Publicar Short'}
               </button>
             </div>
           </div>
@@ -284,7 +289,7 @@ function ShortsView() {
       )}
 
       {/* Player modal */}
-      {selectedShort && (() => {
+      {selectedShort && createPortal((() => {
         const idx  = myShorts.findIndex(s => s.id === selectedShort.id);
         const prev = idx > 0 ? myShorts[idx - 1] : null;
         const next = idx < myShorts.length - 1 ? myShorts[idx + 1] : null;
@@ -298,8 +303,54 @@ function ShortsView() {
         };
 
         return (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
             onClick={() => setSelectedShort(null)}>
+
+            {prev && (
+              <button onClick={e => { e.stopPropagation(); setSelectedShort(prev); }}
+                style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all">
+                <ChevronLeft size={20} />
+              </button>
+            )}
+
+            <div
+              className="relative w-full"
+              style={{ height: 'min(calc(100vw * 16/9), calc(100vh - 80px))', maxWidth: 'min(calc((100vh - 80px) * 9/16), 320px)' }}
+              onClick={e => e.stopPropagation()}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            >
+              <button onClick={() => setSelectedShort(null)}
+                style={{ position: 'absolute', top: '-40px', right: 0 }}
+                className="text-white/70 hover:text-white font-bold text-sm flex items-center gap-1">
+                <X size={16} /> Fechar
+              </button>
+              <VideoPlayer url={selectedShort.vimeo_id} className="w-full h-full rounded-[20px]" />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', borderRadius: '0 0 20px 20px', pointerEvents: 'none' }}>
+                <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
+              </div>
+              {myShorts.length > 1 && (
+                <div style={{ position: 'absolute', bottom: '-24px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px' }}>
+                  {myShorts.map((s, i) => (
+                    <button key={s.id} onClick={e => { e.stopPropagation(); setSelectedShort(s); }}
+                      style={{ borderRadius: '999px', background: 'white', opacity: i === idx ? 1 : 0.4, width: i === idx ? '16px' : '6px', height: '6px', transition: 'all 0.2s' }} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {next && (
+              <button onClick={e => { e.stopPropagation(); setSelectedShort(next); }}
+                style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all">
+                <ChevronRight size={20} />
+              </button>
+            )}
+          </div>
+        );
+      })(), document.body)}
 
             {prev && (
               <button onClick={e => { e.stopPropagation(); setSelectedShort(prev); }}
