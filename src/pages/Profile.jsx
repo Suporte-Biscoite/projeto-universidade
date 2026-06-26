@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { authFetch } from '../utils/authFetch';
-import { TODAS_LOJAS } from '../utils/stores';
 import {
   Mail, Linkedin, Phone, Globe, Plus, Pencil, Star, Calendar,
   MapPin, Briefcase, ChevronLeft, ChevronRight, X, Save, Trash2,
@@ -524,6 +523,7 @@ export default function Profile() {
   const [newSkill, setNewSkill]       = useState('');
   const [sectors, setSectors]         = useState([]);
   const [jobTitles, setJobTitles]     = useState([]);
+  const [todasLojas, setTodasLojas]   = useState([]);
 
   // ── Dados reais para gestor ──────────────────────────────────────────────
   const [gestorStats, setGestorStats] = useState(null);
@@ -535,9 +535,11 @@ export default function Profile() {
     Promise.all([
       authFetch('/api/data?resource=sectors').then(r => r.ok ? r.json() : []),
       authFetch('/api/data?resource=job_titles').then(r => r.ok ? r.json() : []),
-    ]).then(([s, j]) => {
-      if (Array.isArray(s)) setSectors(s.map(i => i.name));
-      if (Array.isArray(j)) setJobTitles(j.map(i => i.name));
+      authFetch('/api/stores').then(r => r.ok ? r.json() : []),
+    ]).then(([s, j, stores]) => {
+      if (Array.isArray(s))      setSectors(s.map(i => i.name));
+      if (Array.isArray(j))      setJobTitles(j.map(i => i.name));
+      if (Array.isArray(stores)) setTodasLojas(stores.map(st => st.name));
     }).catch(() => {});
   }, []);
 
@@ -550,11 +552,14 @@ export default function Profile() {
       authFetch('/api/courses').then(r => r.ok ? r.json() : []),
       authFetch('/api/data?resource=certificates').then(r => r.ok ? r.json() : []),
     ]).then(([allUsers, allCourses, allCerts]) => {
-      const team = Array.isArray(allUsers) ? allUsers.filter(u =>
-        u.active && u.status === 'approved' &&
-        (u.role === 'aluno' || u.role === 'gestor') &&
-        (storeName ? u.store_name === storeName : true)
-      ) : [];
+      const normalize = (s) => (s || '').trim().toUpperCase();
+      const storeNorm = normalize(storeName);
+      const team = Array.isArray(allUsers) ? allUsers.filter(u => {
+        if (!u.active || u.status !== 'approved') return false;
+        if (u.role !== 'aluno' && u.role !== 'gestor') return false;
+        if (!storeNorm) return true;
+        return normalize(u.store_name) === storeNorm || normalize(u.unit) === storeNorm;
+      }) : [];
       const published = Array.isArray(allCourses) ? allCourses.filter(c => c.published) : [];
       const certsData = Array.isArray(allCerts) ? allCerts : [];
       const avgCompletion = team.length > 0
@@ -1205,7 +1210,7 @@ export default function Profile() {
                     label="Unidade / Loja"
                     value={tempData.unit}
                     onChange={(v) => setTempData({ ...tempData, unit: v })}
-                    options={TODAS_LOJAS}
+                    options={todasLojas}
                     placeholder="Selecione a loja"
                   />
                   <SelectLabel

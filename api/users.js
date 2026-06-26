@@ -59,7 +59,7 @@ async function getUsers(req, res, auth, id) {
       return send(res, 403, { error: 'Sem permissão' });
 
     const { rows } = await pool.query(
-      `SELECT id, name, email, role, unit, store_id, store_name, store_type, active, instructor_id,
+      `SELECT id, name, email, role, unit, store_id, store_name, store_type, store_id_fk, active, instructor_id,
               avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at
        FROM users WHERE id = $1`,
       [id]
@@ -73,7 +73,7 @@ async function getUsers(req, res, auth, id) {
     return send(res, 403, { error: 'Sem permissão' });
 
   const { rows } = await pool.query(
-    `SELECT id, name, email, role, unit, store_id, store_name, store_type, active, instructor_id,
+    `SELECT id, name, email, role, unit, store_id, store_name, store_type, store_id_fk, active, instructor_id,
             avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at
      FROM users ORDER BY created_at DESC`
   );
@@ -126,7 +126,12 @@ async function updateUser(req, res, auth, id) {
   if (email)      { updates.push(`email = $${i++}`);      values.push(email.toLowerCase().trim()); }
   if (unit)       { updates.push(`unit = $${i++}`);       values.push(unit); }
   if (store_id !== undefined)     { updates.push(`store_id = $${i++}`);     values.push(store_id); }
-  if (store_name !== undefined)   { updates.push(`store_name = $${i++}`);   values.push(store_name); }
+  if (store_name !== undefined)   {
+    updates.push(`store_name = $${i++}`);   values.push(store_name);
+    // Popula store_id_fk automaticamente ao salvar store_name
+    updates.push(`store_id_fk = (SELECT id FROM stores WHERE UPPER(TRIM(name)) = UPPER(TRIM($${i++})) LIMIT 1)`);
+    values.push(store_name);
+  }
   if (store_type !== undefined)   { updates.push(`store_type = $${i++}`);   values.push(store_type); }
   if (avatar_url !== undefined)   { updates.push(`avatar_url = $${i++}`);   values.push(avatar_url); }
   if (banner_url !== undefined)   { updates.push(`banner_url = $${i++}`);   values.push(banner_url); }
@@ -158,7 +163,7 @@ async function updateUser(req, res, auth, id) {
   const { rows } = await pool.query(
     `UPDATE users SET ${updates.join(', ')}, updated_at = now()
      WHERE id = $${i}
-     RETURNING id, name, email, role, unit, store_id, store_name, store_type, active, instructor_id,
+     RETURNING id, name, email, role, unit, store_id, store_name, store_type, store_id_fk, active, instructor_id,
                avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts`,
     values
   );

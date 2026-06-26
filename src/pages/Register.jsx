@@ -1,8 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { LOJAS_PROPRIAS, LOJAS_FRANQUIA } from '../utils/stores';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ChevronDown, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { STORES } from '../context/ProfileContext';
 
 // ─── Sanitização ─────────────────────────────────────────────────────────────
 function sanitize(value) {
@@ -92,12 +90,26 @@ const ROLES_CADASTRO = [
 ];
 
 export default function Register() {
-  const [sectors, setSectors] = useState([]);
+  const [sectors, setSectors]         = useState([]);
+  const [lojasProprias, setLojasProprias] = useState([]);
+  const [lojasFranquia, setLojasFranquia] = useState([]);
 
   useEffect(() => {
+    // Busca setores do banco
     fetch('/api/data?resource=sectors')
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (Array.isArray(data)) setSectors(data); })
+      .catch(() => {});
+
+    // Busca lojas do banco
+    fetch('/api/stores')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) {
+          setLojasProprias(data.filter(s => s.type === 'propria').map(s => s.name));
+          setLojasFranquia(data.filter(s => s.type === 'franquia').map(s => s.name));
+        }
+      })
       .catch(() => {});
   }, []);
   const navigate = useNavigate();
@@ -495,7 +507,7 @@ export default function Register() {
                     <select name="storeName" value={form.storeName} onChange={handleChange}
                       className={`${inputClass('storeName')} appearance-none`}>
                       <option value="">Selecione a loja</option>
-                      {(form.storeType === 'propria' ? LOJAS_PROPRIAS : LOJAS_FRANQUIA).map(loja => (
+                      {(form.storeType === 'propria' ? lojasProprias : lojasFranquia).map(loja => (
                         <option key={loja} value={loja}>{loja}</option>
                       ))}
                     </select>

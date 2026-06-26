@@ -7,7 +7,6 @@ import {
   Loader, Search,
 } from 'lucide-react';
 import { useProfile, STORES } from '../context/ProfileContext';
-import { TODAS_LOJAS } from '../utils/stores';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 const ROLE_LABELS = {
@@ -135,15 +134,23 @@ const EMPTY_NEW_USER = { name: '', email: '', systemRole: 'aluno', unit: '', sto
 
 // ─── Tab: Minha Conta ─────────────────────────────────────────────────────────
 function MinhaContaTab({ userData, onUpdate, onUpdateImage, profileImage }) {
-  const [form, setForm]       = useState({ name: userData.name || '', unit: userData.unit || '' });
-  const [pwdForm, setPwdForm] = useState({ password: '', confirm: '' });
-  const [showPwd, setShowPwd] = useState(false);
-  const [saving, setSaving]   = useState(false);
-  const [saved, setSaved]     = useState(false);
-  const [error, setError]     = useState('');
+  const [form, setForm]           = useState({ name: userData.name || '', unit: userData.unit || '' });
+  const [pwdForm, setPwdForm]     = useState({ password: '', confirm: '' });
+  const [showPwd, setShowPwd]     = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [saved, setSaved]         = useState(false);
+  const [error, setError]         = useState('');
+  const [todasLojas, setTodasLojas] = useState([]);
+
+  // Busca lojas do banco
+  useEffect(() => {
+    fetch('/api/stores')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setTodasLojas(data.map(s => s.name)); })
+      .catch(() => {});
+  }, []);
 
   // Sincroniza o form quando userData.unit é atualizado externamente
-  // (ex: usuário salvou a loja no modal de Editar Perfil)
   useEffect(() => {
     setForm(prev => ({
       ...prev,
@@ -219,11 +226,11 @@ function MinhaContaTab({ userData, onUpdate, onUpdateImage, profileImage }) {
               className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#4A72B2] bg-white appearance-none"
             >
               <option value="">Selecione a loja...</option>
-              {TODAS_LOJAS.map(loja => (
+              {todasLojas.map(loja => (
                 <option key={loja} value={loja}>{loja}</option>
               ))}
             </select>
-            {form.unit && !TODAS_LOJAS.includes(form.unit) && (
+            {form.unit && todasLojas.length > 0 && !todasLojas.includes(form.unit) && (
               <p className="text-[10px] text-amber-500 mt-1">
                 Valor atual: "{form.unit}" — selecione a loja correta acima para atualizar.
               </p>

@@ -88,8 +88,10 @@ export default function GestorDashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Busca os dados do próprio usuário para garantir store_name atualizado
-      let currentStore = storeName;
+      // Busca dados frescos do próprio gestor
+      let currentStore     = storeName;
+      let currentStoreIdFk = null;
+
       if (loggedUser?.id) {
         const selfRes = await authFetch(`/api/users?id=${loggedUser.id}`);
         if (selfRes.ok) {
@@ -97,26 +99,39 @@ export default function GestorDashboard() {
           if (self.store_name) {
             currentStore = self.store_name;
             setStoreName(self.store_name);
-            // Atualiza o storage
-            const s = sessionStorage.getItem('biscoite_logged_user') ? sessionStorage : localStorage;
-            const raw = s.getItem('biscoite_logged_user');
-            if (raw) s.setItem('biscoite_logged_user', JSON.stringify({ ...JSON.parse(raw), store_name: self.store_name }));
           }
+          if (self.store_id_fk) currentStoreIdFk = self.store_id_fk;
+          // Atualiza storage com dados frescos
+          const s   = sessionStorage.getItem('biscoite_logged_user') ? sessionStorage : localStorage;
+          const raw = s.getItem('biscoite_logged_user');
+          if (raw) s.setItem('biscoite_logged_user', JSON.stringify({
+            ...JSON.parse(raw),
+            store_name:   self.store_name   || JSON.parse(raw).store_name,
+            store_id_fk:  self.store_id_fk  || JSON.parse(raw).store_id_fk,
+          }));
         }
       }
-      // Todos os usuários ativos (admin pode ver todos, gestor filtra por loja)
+
       const usersRes = await authFetch('/api/users');
       if (!usersRes.ok) return;
       const allUsers = await usersRes.json();
 
-      // Colaboradores da loja do gestor (ou todos os alunos se não tiver loja definida)
-      const team = allUsers.filter(u =>
-        u.active &&
-        u.status === 'approved' &&
-        (u.role === 'aluno' || u.role === 'gestor') &&
-        u.id !== loggedUser?.id &&
-        (currentStore ? (u.store_name === currentStore) : true)
-      );
+      const normalize = (s) => (s || '').trim().toUpperCase();
+      const storeNorm = normalize(currentStore);
+
+      const team = allUsers.filter(u => {
+        if (!u.active) return false;
+        if (u.status !== 'approved') return false;
+        if (u.role !== 'aluno' && u.role !== 'gestor') return false;
+        if (u.id === loggedUser?.id) return false;
+        if (!storeNorm && !currentStoreIdFk) return true;
+        // Prioriza match por store_id_fk (mais confiável)
+        if (currentStoreIdFk && u.store_id_fk === currentStoreIdFk) return true;
+        // Fallback: comparação de string normalizada em store_name OU unit
+        const uStore = normalize(u.store_name);
+        const uUnit  = normalize(u.unit);
+        return uStore === storeNorm || uUnit === storeNorm;
+      });
 
       setColaboradores(team);
 
