@@ -52,9 +52,12 @@ async function requestReset(req, res) {
     [user.id, `reset_${token}`, expiresAt]
   );
 
-  const frontendUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : (process.env.FRONTEND_URL || 'http://localhost:3000');
+  // Usa FRONTEND_URL se definido, senão tenta reconstruir a partir do request
+  // NUNCA usar VERCEL_URL pois aponta para o deploy específico, não o domínio customizado
+  const frontendUrl = process.env.FRONTEND_URL
+    || (req.headers.origin && !req.headers.origin.includes('localhost')
+        ? req.headers.origin
+        : 'http://localhost:5173');
 
   const resetLink = `${frontendUrl}/redefinir-senha?token=${token}`;
 

@@ -69,16 +69,41 @@ async function getUsers(req, res, auth, id) {
     return send(res, 200, rows[0]);
   }
 
-  // Lista todos — só admin
-  if (auth.role !== 'admin')
+  // Lista todos — só admin vê todos; gestor vê apenas da sua loja
+  if (auth.role !== 'admin' && auth.role !== 'gestor')
     return send(res, 403, { error: 'Sem permissão' });
 
-  const { rows } = await pool.query(
-    `SELECT id, name, email, role, unit, store_id, store_name, store_type, store_id_fk, active, instructor_id,
-            avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts,
-            certificates, education, experience, created_at
-     FROM users ORDER BY created_at DESC`
-  );
+  let query  = `SELECT id, name, email, role, unit, store_id, store_name, store_type, store_id_fk, active, instructor_id,
+                       avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts,
+                       certificates, education, experience, created_at, status
+                FROM users`;
+  const params = [];
+
+  // Gestor só vê usuários da sua própria loja
+  if (auth.role === 'gestor') {
+    const { rows: self } = await pool.query(
+      'SELECT store_name, store_id_fk FROM users WHERE id = $1',
+      [auth.sub]
+    );
+    const gestorStore    = self[0]?.store_name   || null;
+    const gestorStoreIdFk = self[0]?.store_id_fk || null;
+
+    if (gestorStoreIdFk) {
+      query += ` WHERE (store_id_fk = $1 OR id = $2)`;
+      params.push(gestorStoreIdFk, auth.sub);
+    } else if (gestorStore) {
+      query += ` WHERE (UPPER(TRIM(store_name)) = UPPER(TRIM($1)) OR UPPER(TRIM(unit)) = UPPER(TRIM($1)) OR id = $2)`;
+      params.push(gestorStore, auth.sub);
+    } else {
+      // Gestor sem loja definida — retorna só ele mesmo
+      query += ` WHERE id = $1`;
+      params.push(auth.sub);
+    }
+  }
+
+  query += ' ORDER BY created_at DESC';
+
+  const { rows } = await pool.query(query, params);
   return send(res, 200, rows);
 }
 
