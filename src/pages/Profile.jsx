@@ -480,12 +480,16 @@ export default function Profile() {
         .then(r => r.json())
         .then(u => {
           if (u.id) {
+            const SYSTEM_ROLES = ['aluno', 'gestor', 'professor', 'admin', 'franqueado', 'loja'];
+            const cargoReal = SYSTEM_ROLES.includes(u.position) ? '' : (u.position || '');
             updateUserData(prev => ({ ...prev,
-              pronoun: u.pronoun || prev.pronoun || '',
-              role: u.position || prev.role || '',
-              time: u.company_time || prev.time || '',
-              bio: u.bio || prev.bio || '',
-              skills: u.skills || prev.skills || [],
+              pronoun:    u.pronoun      || prev.pronoun    || '',
+              role:       cargoReal      || prev.role       || '',
+              unit:       u.store_name   || u.unit          || prev.unit || '',
+              store_name: u.store_name   || prev.store_name || '',
+              time:       u.company_time || prev.time       || '',
+              bio:        u.bio          || prev.bio        || '',
+              skills:     u.skills       || prev.skills     || [],
             }));
             if (u.avatar_url && !u.avatar_url.startsWith('blob:')) updateProfileImage(u.avatar_url);
             if (u.banner_url && !u.banner_url.startsWith('blob:')) setBannerImage(u.banner_url);
@@ -521,6 +525,12 @@ export default function Profile() {
   const [sectors, setSectors]         = useState([]);
   const [jobTitles, setJobTitles]     = useState([]);
 
+  // ── Dados reais para gestor ──────────────────────────────────────────────
+  const [gestorStats, setGestorStats] = useState(null);
+
+  // ── Dados reais para admin ───────────────────────────────────────────────
+  const [adminStats, setAdminStats]   = useState(null);
+
   useEffect(() => {
     Promise.all([
       authFetch('/api/data?resource=sectors').then(r => r.ok ? r.json() : []),
@@ -530,6 +540,58 @@ export default function Profile() {
       if (Array.isArray(j)) setJobTitles(j.map(i => i.name));
     }).catch(() => {});
   }, []);
+
+  // Busca dados reais do gestor (apenas quando for gestor)
+  useEffect(() => {
+    if (userRole !== 'gestor') return;
+    const storeName = userData.store_name || userData.unit || null;
+    Promise.all([
+      authFetch('/api/users').then(r => r.ok ? r.json() : []),
+      authFetch('/api/courses').then(r => r.ok ? r.json() : []),
+      authFetch('/api/data?resource=certificates').then(r => r.ok ? r.json() : []),
+    ]).then(([allUsers, allCourses, allCerts]) => {
+      const team = Array.isArray(allUsers) ? allUsers.filter(u =>
+        u.active && u.status === 'approved' &&
+        (u.role === 'aluno' || u.role === 'gestor') &&
+        (storeName ? u.store_name === storeName : true)
+      ) : [];
+      const published = Array.isArray(allCourses) ? allCourses.filter(c => c.published) : [];
+      const certsData = Array.isArray(allCerts) ? allCerts : [];
+      const avgCompletion = team.length > 0
+        ? Math.round(team.reduce((acc, u) => {
+            const done = certsData.filter(c => c.user_id === u.id).length;
+            return acc + (published.length > 0 ? (done / published.length) * 100 : 0);
+          }, 0) / team.length)
+        : 0;
+      setGestorStats({
+        colaboradores: team.length,
+        avgCompletion,
+        storeName: storeName || '—',
+      });
+    }).catch(() => {});
+  }, [userRole, userData.store_name, userData.unit]);
+
+  // Busca dados reais do admin (apenas quando for admin)
+  useEffect(() => {
+    if (userRole !== 'admin') return;
+    Promise.all([
+      authFetch('/api/users').then(r => r.ok ? r.json() : []),
+      authFetch('/api/courses').then(r => r.ok ? r.json() : []),
+    ]).then(([allUsers, allCourses]) => {
+      const users = Array.isArray(allUsers) ? allUsers : [];
+      const courses = Array.isArray(allCourses) ? allCourses : [];
+      const byRole = {};
+      users.forEach(u => { byRole[u.role] = (byRole[u.role] || 0) + 1; });
+      const lojas = new Set(users.filter(u => u.store_name).map(u => u.store_name));
+      setAdminStats({
+        totalAtivos:   users.filter(u => u.active).length,
+        totalLojas:    lojas.size,
+        cursosPublicados: courses.filter(c => c.published).length,
+        byRole,
+        recentUsers:   [...users].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 7),
+      });
+    }).catch(() => {});
+  }, [userRole]);
 
   const openModal = (type) => {
     const base = JSON.parse(JSON.stringify(userData));
@@ -892,54 +954,28 @@ export default function Profile() {
           {/* ══ ROLE: GESTOR ══ */}
           {userRole === 'gestor' && (
             <>
-              {/* Stats */}
+              {/* Stats reais */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
                 <div className="col-span-12 md:col-span-8 bg-white p-10 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 flex justify-around">
-                  {[{ L: 'Lojas gerenciadas', V: '3' }, { L: 'Colaboradores', V: '47' }, { L: 'Conclusão média', V: '71%' }].map(s => (
+                  {[
+                    { L: 'Colaboradores na loja', V: gestorStats?.colaboradores ?? '—' },
+                    { L: 'Conclusão média',        V: gestorStats ? `${gestorStats.avgCompletion}%` : '—' },
+                  ].map(s => (
                     <div key={s.L} className="text-center">
                       <p className="text-5xl font-black text-[#00263B]">{s.V}</p>
                       <p className="text-[10px] font-black text-slate-400 uppercase mt-4 tracking-widest">{s.L}</p>
                     </div>
                   ))}
                 </div>
-                <div className="col-span-12 md:col-span-4 bg-white p-8 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50">
-                  <div className="flex items-center gap-4 mb-3 text-[#00263B]">
-                    <div className="bg-teal-500 p-2.5 rounded-xl text-white shadow-lg"><TrendingUp size={20} /></div>
-                    <p className="text-lg font-black leading-none">+12% este mês</p>
+                <div className="col-span-12 md:col-span-4 bg-white p-8 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 flex flex-col justify-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-teal-500 p-2.5 rounded-xl text-white"><Store size={20} /></div>
+                    <p className="text-sm font-black text-[#00263B] leading-tight">{gestorStats?.storeName || userData.store_name || userData.unit || 'Loja não definida'}</p>
                   </div>
-                  <p className="text-xs text-slate-400">Crescimento no engajamento das lojas gerenciadas.</p>
+                  <button onClick={() => navigate('/gestor')} className="mt-2 text-[#6385B7] text-xs font-black hover:underline uppercase tracking-widest text-left">
+                    Ver painel completo →
+                  </button>
                 </div>
-              </div>
-
-              {/* Lojas sob gestão */}
-              <div className="bg-white p-8 rounded-[32px] shadow-xl border border-slate-50 space-y-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h2 className="text-xl font-black text-[#00263B]">Lojas sob gestão</h2>
-                  <button onClick={() => navigate('/gestor')} className="text-[#6385B7] text-xs font-black hover:underline uppercase tracking-widest">Ver painel</button>
-                </div>
-                {[
-                  { name: 'Eldorado',  city: 'São Paulo', employees: 9,  completion: 82, color: 'bg-emerald-500' },
-                  { name: 'Pinheiros', city: 'São Paulo', employees: 11, completion: 68, color: 'bg-[#4A72B2]' },
-                  { name: 'Moema',     city: 'São Paulo', employees: 8,  completion: 45, color: 'bg-yellow-400' },
-                ].map(store => (
-                  <div key={store.name} className="flex items-center gap-4 py-3 border-t border-slate-50 first:border-0 first:pt-0">
-                    <div className="w-10 h-10 rounded-2xl bg-teal-50 flex items-center justify-center flex-shrink-0">
-                      <Store size={18} className="text-teal-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-[#00263B]">{store.name}</p>
-                      <p className="text-[10px] text-slate-400">{store.city} · {store.employees} colaboradores</p>
-                    </div>
-                    <div className="w-36">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${store.color}`} style={{ width: `${store.completion}%` }} />
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-400 w-8 text-right">{store.completion}%</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
 
               {/* Certificados */}
@@ -977,7 +1013,7 @@ export default function Profile() {
                   <div className="flex items-center gap-3 mb-3">
                     <div className="bg-orange-400 p-2.5 rounded-xl text-white shadow-lg"><Store size={20} /></div>
                     <div>
-                      <p className="text-base font-black text-[#00263B] leading-none">Loja Eldorado</p>
+                      <p className="text-base font-black text-[#00263B] leading-none">{userData.store_name || userData.unit || 'Loja não definida'}</p>
                       <p className="text-[10px] text-emerald-500 font-black mt-1">Ativa</p>
                     </div>
                   </div>
@@ -1050,7 +1086,7 @@ export default function Profile() {
           {/* ══ ROLE: ADMIN ══ */}
           {userRole === 'admin' && (
             <>
-              {/* Visão geral */}
+              {/* Visão geral real */}
               <div className="bg-white p-8 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-black text-[#00263B]">Visão geral da plataforma</h2>
@@ -1058,10 +1094,10 @@ export default function Profile() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
                   {[
-                    { icon: Users,    label: 'Usuários ativos',   value: users.filter(u => u.active).length, color: 'bg-blue-50 text-blue-500' },
-                    { icon: Store,    label: 'Lojas na rede',     value: '8',                                color: 'bg-teal-50 text-teal-500' },
-                    { icon: BookOpen, label: 'Cursos publicados', value: '12',                               color: 'bg-purple-50 text-purple-500' },
-                    { icon: TrendingUp, label: 'Engajamento',     value: '71%',                              color: 'bg-emerald-50 text-emerald-500' },
+                    { icon: Users,      label: 'Usuários ativos',    value: adminStats?.totalAtivos      ?? '—', color: 'bg-blue-50 text-blue-500' },
+                    { icon: Store,      label: 'Lojas na rede',      value: adminStats?.totalLojas       ?? '—', color: 'bg-teal-50 text-teal-500' },
+                    { icon: BookOpen,   label: 'Cursos publicados',  value: adminStats?.cursosPublicados ?? '—', color: 'bg-purple-50 text-purple-500' },
+                    { icon: TrendingUp, label: 'Cadastros totais',   value: adminStats ? (adminStats.totalAtivos + (adminStats.byRole?.aluno || 0)) : '—', color: 'bg-emerald-50 text-emerald-500' },
                   ].map(({ icon: Icon, label, value, color }) => (
                     <div key={label} className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl">
                       <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${color}`}>
@@ -1076,7 +1112,7 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Distribuição por perfil */}
+              {/* Distribuição por perfil real */}
               <div className="bg-white p-8 rounded-[32px] shadow-xl border border-slate-50 space-y-5">
                 <h2 className="text-xl font-black text-[#00263B]">Distribuição por perfil</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -1084,14 +1120,12 @@ export default function Profile() {
                     { role: 'admin',      label: 'Admin',      color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
                     { role: 'professor',  label: 'Professor',  color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },
                     { role: 'gestor',     label: 'Gestor',     color: 'bg-teal-100 text-teal-700',     dot: 'bg-teal-500' },
-                    { role: 'loja',       label: 'Líder Loja', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
-                    { role: 'franqueado', label: 'Franqueado', color: 'bg-cyan-100 text-cyan-700',     dot: 'bg-cyan-500' },
                     { role: 'aluno',      label: 'Aluno',      color: 'bg-slate-100 text-slate-600',   dot: 'bg-slate-400' },
                   ].map(({ role, label, color, dot }) => (
                     <div key={role} className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl ${color}`}>
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
                       <div>
-                        <p className="font-black text-lg leading-none">{users.filter(u => u.systemRole === role).length}</p>
+                        <p className="font-black text-lg leading-none">{adminStats?.byRole?.[role] ?? '—'}</p>
                         <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mt-0.5">{label}</p>
                       </div>
                     </div>
@@ -1099,23 +1133,23 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Usuários recentes */}
+              {/* Usuários recentes reais */}
               <div className="bg-white p-8 rounded-[32px] shadow-xl border border-slate-50 space-y-1">
                 <h2 className="text-xl font-black text-[#00263B] mb-4">Usuários cadastrados</h2>
-                {users.slice(0, 7).map(u => {
-                  const roleColors = { admin: 'bg-purple-100 text-purple-700', professor: 'bg-blue-100 text-blue-700', gestor: 'bg-teal-100 text-teal-700', loja: 'bg-orange-100 text-orange-700', franqueado: 'bg-cyan-100 text-cyan-700', aluno: 'bg-slate-100 text-slate-500' };
-                  const roleLabels = { admin: 'Admin', professor: 'Professor', gestor: 'Gestor', loja: 'Líder', franqueado: 'Franqueado', aluno: 'Aluno' };
+                {(adminStats?.recentUsers || []).map(u => {
+                  const roleColors = { admin: 'bg-purple-100 text-purple-700', professor: 'bg-blue-100 text-blue-700', gestor: 'bg-teal-100 text-teal-700', aluno: 'bg-slate-100 text-slate-500' };
+                  const roleLabels = { admin: 'Admin', professor: 'Professor', gestor: 'Gestor', aluno: 'Aluno' };
                   return (
                     <div key={u.id} className="flex items-center gap-4 py-3 border-t border-slate-50 first:border-0 first:pt-0">
                       <div className="w-9 h-9 rounded-full bg-[#e2eef9] flex items-center justify-center font-black text-[#4A72B2] text-xs flex-shrink-0">
-                        {u.name.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                        {(u.name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-[#00263B] truncate">{u.name}</p>
                         <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
                       </div>
-                      <span className={`text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0 ${roleColors[u.systemRole] || 'bg-slate-100 text-slate-500'}`}>
-                        {roleLabels[u.systemRole] || u.systemRole}
+                      <span className={`text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0 ${roleColors[u.role] || 'bg-slate-100 text-slate-500'}`}>
+                        {roleLabels[u.role] || u.role}
                       </span>
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${u.active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
                         {u.active ? 'Ativo' : 'Inativo'}
@@ -1123,6 +1157,9 @@ export default function Profile() {
                     </div>
                   );
                 })}
+                {!adminStats && (
+                  <p className="text-xs text-slate-400 py-4 text-center">Carregando...</p>
+                )}
                 <div className="pt-4">
                   <button onClick={() => navigate('/admin')} className="w-full py-3 rounded-xl text-xs font-black text-[#4A72B2] bg-[#e2eef9] hover:bg-[#4A72B2] hover:text-white transition-all">
                     Ver todos os usuários no painel →
