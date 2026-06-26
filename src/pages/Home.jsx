@@ -131,22 +131,72 @@ export default function Home() {
   return (
     <div className="max-w-[1200px] mx-auto space-y-16 sm:space-y-20 pb-20">
       {/* Short player modal */}
-      {selectedShort && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
-          onClick={() => setSelectedShort(null)}>
-          <div className="relative w-full max-w-xs" style={{ aspectRatio: '9/16' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedShort(null)}
-              className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-2">
-              ✕ Fechar
-            </button>
-<VideoPlayer url={selectedShort.vimeo_id} className="w-full h-full rounded-[24px]" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[24px]">
-              <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
-              <p className="text-white/50 text-xs mt-1">{selectedShort.instructor}</p>
+      {selectedShort && (() => {
+        const idx  = shortsData.findIndex(s => s.id === selectedShort.id);
+        const prev = idx > 0 ? shortsData[idx - 1] : null;
+        const next = idx < shortsData.length - 1 ? shortsData[idx + 1] : null;
+
+        // Swipe handlers
+        let touchStartY = 0;
+        const onTouchStart = e => { touchStartY = e.touches[0].clientY; };
+        const onTouchEnd   = e => {
+          const diff = touchStartY - e.changedTouches[0].clientY;
+          if (diff > 50 && next) setSelectedShort(next);
+          if (diff < -50 && prev) setSelectedShort(prev);
+        };
+
+        return (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
+            onClick={() => setSelectedShort(null)}>
+
+            {/* Seta anterior */}
+            {prev && (
+              <button
+                onClick={e => { e.stopPropagation(); setSelectedShort(prev); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10">
+                <ChevronLeft size={20} />
+              </button>
+            )}
+
+            {/* Player */}
+            <div
+              className="relative w-full max-w-xs"
+              style={{ height: 'min(calc(100vw * 16/9), calc(100vh - 80px))', maxWidth: 'min(calc((100vh - 80px) * 9/16), 320px)' }}
+              onClick={e => e.stopPropagation()}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            >
+              <button onClick={() => setSelectedShort(null)}
+                className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-2">
+                ✕ Fechar
+              </button>
+              <VideoPlayer url={selectedShort.vimeo_id} className="w-full h-full rounded-[24px]" />
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[24px] pointer-events-none">
+                <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
+                <p className="text-white/50 text-xs mt-1">{selectedShort.instructor}</p>
+              </div>
+              {/* Indicador de posição */}
+              {shortsData.length > 1 && (
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {shortsData.map((s, i) => (
+                    <button key={s.id} onClick={e => { e.stopPropagation(); setSelectedShort(s); }}
+                      className={`rounded-full transition-all ${i === idx ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40'}`} />
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Seta próximo */}
+            {next && (
+              <button
+                onClick={e => { e.stopPropagation(); setSelectedShort(next); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10">
+                <ChevronRight size={20} />
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 0. BANNER HERO */}
       <section style={{ position:'relative', overflow:'hidden', minHeight:'300px', display:'flex', alignItems:'stretch', borderRadius:'32px' }}>
@@ -381,7 +431,8 @@ export default function Home() {
           {/* Mobile: horizontal scroll */}
           <div className="flex md:hidden gap-3 overflow-x-auto pb-4 snap-x snap-mandatory">
             {shortsData.map((item) => (
-              <div key={item.id} className="relative flex-shrink-0 w-36 rounded-[20px] overflow-hidden snap-start" style={{ aspectRatio: '9/16' }}>
+              <button key={item.id} onClick={() => setSelectedShort(item)}
+                className="relative flex-shrink-0 w-36 rounded-[20px] overflow-hidden snap-start cursor-pointer" style={{ aspectRatio: '9/16' }}>
                 <img src={item.thumbnail || item.image} className="absolute inset-0 w-full h-full object-cover" alt={item.caption} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute top-2 left-2">
@@ -390,7 +441,12 @@ export default function Home() {
                 <div className="absolute bottom-0 left-0 right-0 p-3">
                   <p className="text-white text-[10px] font-bold leading-snug line-clamp-2">{item.caption}</p>
                 </div>
-              </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <Play size={16} fill="white" className="text-white translate-x-[1px]" />
+                  </div>
+                </div>
+              </button>
             ))}
           </div>
             </>

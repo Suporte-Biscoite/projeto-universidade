@@ -1,6 +1,6 @@
 // src/components/professor/ShortsView.jsx
 import { useState, useRef, useEffect } from 'react';
-import { Plus, X, Check, Pencil, Trash, Play, Link, Image as ImageIcon, Clapperboard } from 'lucide-react';
+import { Plus, X, Check, Pencil, Trash, Play, Link, Image as ImageIcon, Clapperboard, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProfile } from '../../context/ProfileContext';
 import { authFetch } from '../../utils/authFetch';
 import { Toast, getLoggedId } from './ProfessorHelpers';
@@ -284,24 +284,64 @@ function ShortsView() {
       )}
 
       {/* Player modal */}
-      {selectedShort && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
-          onClick={() => setSelectedShort(null)}>
-          <div className="relative w-full max-w-sm" style={{ aspectRatio: '9/16' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedShort(null)}
-              className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-1">
-              <X size={16} /> Fechar
-            </button>
-            <VideoPlayer
-              url={selectedShort.vimeo_id}
-              className="w-full h-full rounded-[20px]"
-            />
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[20px] pointer-events-none">
-              <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
+      {selectedShort && (() => {
+        const idx  = myShorts.findIndex(s => s.id === selectedShort.id);
+        const prev = idx > 0 ? myShorts[idx - 1] : null;
+        const next = idx < myShorts.length - 1 ? myShorts[idx + 1] : null;
+
+        let touchStartY = 0;
+        const onTouchStart = e => { touchStartY = e.touches[0].clientY; };
+        const onTouchEnd   = e => {
+          const diff = touchStartY - e.changedTouches[0].clientY;
+          if (diff > 50 && next) setSelectedShort(next);
+          if (diff < -50 && prev) setSelectedShort(prev);
+        };
+
+        return (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
+            onClick={() => setSelectedShort(null)}>
+
+            {prev && (
+              <button onClick={e => { e.stopPropagation(); setSelectedShort(prev); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10">
+                <ChevronLeft size={20} />
+              </button>
+            )}
+
+            <div
+              className="relative w-full"
+              style={{ height: 'min(calc(100vw * 16/9), calc(100vh - 80px))', maxWidth: 'min(calc((100vh - 80px) * 9/16), 320px)' }}
+              onClick={e => e.stopPropagation()}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            >
+              <button onClick={() => setSelectedShort(null)}
+                className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-1">
+                <X size={16} /> Fechar
+              </button>
+              <VideoPlayer url={selectedShort.vimeo_id} className="w-full h-full rounded-[20px]" />
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[20px] pointer-events-none">
+                <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
+              </div>
+              {myShorts.length > 1 && (
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {myShorts.map((s, i) => (
+                    <button key={s.id} onClick={e => { e.stopPropagation(); setSelectedShort(s); }}
+                      className={`rounded-full transition-all ${i === idx ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40'}`} />
+                  ))}
+                </div>
+              )}
             </div>
+
+            {next && (
+              <button onClick={e => { e.stopPropagation(); setSelectedShort(next); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10">
+                <ChevronRight size={20} />
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Edit modal */}
       {editingShort && (
