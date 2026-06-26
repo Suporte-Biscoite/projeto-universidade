@@ -28,14 +28,20 @@ const ROLE_PANEL = {
 
 const allCourses = [];
 
-export default function Navbar({ externalOpen, onOpenChange }) {
+export default function Navbar({ externalOpen, onOpenChange, registerCloseNotif }) {
   const [isOpen, setIsOpen] = useState(false);
+
+  // Expõe função para fechar notificações externamente (usada pelo MainLayout quando chat abre)
+  useEffect(() => {
+    registerCloseNotif?.(() => setIsNotifOpen(false));
+  }, [registerCloseNotif]);
 
   // Sincroniza com estado externo do MainLayout
   const dropdownOpen = externalOpen !== undefined ? externalOpen : isOpen;
   const setDropdownOpen = (v) => {
     setIsOpen(v);
     onOpenChange?.(v);
+    if (v) setIsNotifOpen(false); // fecha notificações quando navbar abre
   };
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);

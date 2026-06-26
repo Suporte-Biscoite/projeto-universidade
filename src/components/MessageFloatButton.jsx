@@ -24,7 +24,6 @@ export default function MessageFloatButton({ externalOpen, onOpenChange }) {
   // Sincroniza com estado externo do MainLayout
   const isOpen   = externalOpen !== undefined ? externalOpen : open;
   const setIsOpen = (v) => { setOpen(v); onOpenChange?.(v); };
-
   const hidden = HIDDEN_PATHS.some(p => location.pathname.startsWith(p));
 
   useEffect(() => {

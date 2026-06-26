@@ -723,22 +723,31 @@ export default function Profile() {
             </div>
 
             {/* Contatos */}
-            <div className="flex gap-3 mt-8">
+            <div className="mt-8 space-y-2">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contatos</p>
+                <button onClick={() => openModal('contacts')}
+                  className="text-[9px] font-black text-[#6385B7] hover:text-[#00263B] uppercase tracking-widest flex items-center gap-1 transition-colors">
+                  <Pencil size={10} /> Editar
+                </button>
+              </div>
               {[
-                { Icon: Phone, key: 'phone', href: contacts.phone ? `tel:${contacts.phone}` : null },
-                { Icon: Mail, key: 'email', href: contacts.email ? `mailto:${contacts.email}` : null },
-                { Icon: Linkedin, key: 'linkedin', href: contacts.linkedin || null },
-                { Icon: Globe, key: 'website', href: contacts.website || null },
-              ].map(({ Icon, key, href }) => (
-                href ? (
+                { Icon: Phone,    key: 'phone',    label: 'Telefone', href: contacts.phone    ? `tel:${contacts.phone}` : null,       value: contacts.phone },
+                { Icon: Mail,     key: 'email',    label: 'E-mail',   href: contacts.email    ? `mailto:${contacts.email}` : null,    value: contacts.email },
+                { Icon: Linkedin, key: 'linkedin', label: 'LinkedIn', href: contacts.linkedin || null,                                 value: contacts.linkedin },
+                { Icon: Globe,    key: 'website',  label: 'Site',     href: contacts.website  || null,                                 value: contacts.website },
+              ].map(({ Icon, key, label, href, value }) => (
+                value ? (
                   <a key={key} href={href} target="_blank" rel="noopener noreferrer"
-                    className="p-2.5 bg-[#E2F0FF] text-[#6385B7] rounded-full shadow-sm hover:bg-[#6385B7] hover:text-white transition-all">
-                    <Icon size={18} />
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#E2F0FF] hover:bg-[#6385B7] group transition-all">
+                    <Icon size={14} className="text-[#6385B7] group-hover:text-white flex-shrink-0" />
+                    <span className="text-xs font-bold text-[#00263B] group-hover:text-white truncate">{value}</span>
                   </a>
                 ) : (
                   <button key={key} onClick={() => openModal('contacts')}
-                    className="p-2.5 bg-slate-100 text-slate-300 rounded-full shadow-sm hover:bg-[#E2F0FF] hover:text-[#6385B7] transition-all">
-                    <Icon size={18} />
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-[#E2F0FF] group transition-all w-full text-left">
+                    <Icon size={14} className="text-slate-300 group-hover:text-[#6385B7] flex-shrink-0" />
+                    <span className="text-xs text-slate-300 group-hover:text-[#6385B7]">Adicionar {label}</span>
                   </button>
                 )
               ))}
@@ -851,33 +860,6 @@ export default function Profile() {
                   ))}
                 </div>
               </div>
-
-              {/* Meus Cursos */}
-              <div className="pt-12">
-                <div className="flex justify-between items-end mb-8">
-                  <h2 className="text-4xl font-black text-[#00263B]">Meus Cursos</h2>
-                  <button onClick={() => navigate('/courses')} className="text-[#6385B7] text-xs font-black hover:underline uppercase tracking-widest">Ver todos</button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  {courses.filter(c => c.published).slice(0, 4).map(course => (
-                    <div key={course.id} onClick={() => navigate('/player')} className="bg-white rounded-[24px] overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 group cursor-pointer hover:shadow-lg transition-all">
-                      <div className="h-40 relative overflow-hidden">
-                        <img src={course.thumbnail || DEFAULT_COURSE_IMAGES[course.category] || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={course.title} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                        <span className="absolute bottom-2 left-3 text-[9px] font-black text-white bg-black/40 px-2 py-0.5 rounded-full">{course.format}</span>
-                      </div>
-                      <div className="p-5">
-                        <h3 className="font-black text-[#00263B] text-sm leading-tight mb-1 uppercase">{course.title}</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">{course.instructor}</p>
-                        <div className="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#6385B7] w-0" />
-                        </div>
-                        <p className="text-[9px] text-slate-300 mt-1">{course.duration}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           )}
 
@@ -903,33 +885,6 @@ export default function Profile() {
                   ))}
                 </div>
               </section>
-
-              {/* Meus Cursos */}
-              <div className="pt-4">
-                <div className="flex justify-between items-end mb-8">
-                  <h2 className="text-4xl font-black text-[#00263B]">Meus Cursos</h2>
-                  <button onClick={() => navigate('/courses')} className="text-[#6385B7] text-xs font-black hover:underline uppercase tracking-widest">Ver todos</button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  {courses.filter(c => c.published).slice(0, 4).map(course => (
-                    <div key={course.id} onClick={() => navigate('/player')} className="bg-white rounded-[24px] overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 group cursor-pointer hover:shadow-lg transition-all">
-                      <div className="h-40 relative overflow-hidden">
-                        <img src={course.thumbnail || DEFAULT_COURSE_IMAGES[course.category] || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={course.title} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                        <span className="absolute bottom-2 left-3 text-[9px] font-black text-white bg-black/40 px-2 py-0.5 rounded-full">{course.format}</span>
-                      </div>
-                      <div className="p-5">
-                        <h3 className="font-black text-[#00263B] text-sm leading-tight mb-1 uppercase">{course.title}</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">{course.instructor}</p>
-                        <div className="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#6385B7] w-0" />
-                        </div>
-                        <p className="text-[9px] text-slate-300 mt-1">{course.duration}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           )}
 
@@ -1001,33 +956,6 @@ export default function Profile() {
                   ))}
                 </div>
               </section>
-
-              {/* Meus Cursos */}
-              <div className="pt-2">
-                <div className="flex justify-between items-end mb-8">
-                  <h2 className="text-4xl font-black text-[#00263B]">Meus Cursos</h2>
-                  <button onClick={() => navigate('/courses')} className="text-[#6385B7] text-xs font-black hover:underline uppercase tracking-widest">Ver todos</button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  {courses.filter(c => c.published).slice(0, 4).map(course => (
-                    <div key={course.id} onClick={() => navigate('/player')} className="bg-white rounded-[24px] overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 group cursor-pointer hover:shadow-lg transition-all">
-                      <div className="h-40 relative overflow-hidden">
-                        <img src={course.thumbnail || DEFAULT_COURSE_IMAGES[course.category] || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={course.title} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                        <span className="absolute bottom-2 left-3 text-[9px] font-black text-white bg-black/40 px-2 py-0.5 rounded-full">{course.format}</span>
-                      </div>
-                      <div className="p-5">
-                        <h3 className="font-black text-[#00263B] text-sm leading-tight mb-1 uppercase">{course.title}</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">{course.instructor}</p>
-                        <div className="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-teal-400 w-0" />
-                        </div>
-                        <p className="text-[9px] text-slate-300 mt-1">{course.duration}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           )}
 
