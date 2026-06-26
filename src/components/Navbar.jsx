@@ -363,7 +363,11 @@ export default function Navbar({ externalOpen, onOpenChange }) {
                     );
                   })() : null}
 
-                  {dropdownLinks.map(item => {
+                  {dropdownLinks.filter(item => {
+                    // Configurações só visível para admin, professor e gestor
+                    if (item.id === 'configuracoes' && systemRole === 'aluno') return false;
+                    return true;
+                  }).map(item => {
                     const DropIcon = item.icon;
                     return (
                       <div key={item.id}>

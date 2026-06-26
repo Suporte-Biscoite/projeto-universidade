@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { authFetch } from '../utils/authFetch';
+import { TODAS_LOJAS } from '../utils/stores';
 import {
   Mail, Linkedin, Phone, Globe, Plus, Pencil, Star, Calendar,
   MapPin, Briefcase, ChevronLeft, ChevronRight, X, Save, Trash2,
@@ -795,31 +796,6 @@ export default function Profile() {
           {/* ══ ROLE: ALUNO ══ */}
           {userRole === 'aluno' && (
             <>
-              {/* Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
-                <div className="col-span-12 md:col-span-8 bg-white p-10 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 flex justify-around">
-                  {[{ L: 'Cursos completos', V: '12' }, { L: 'Média desempenho', V: '7.5/10' }, { L: 'Posição ranking', V: '6º' }].map(s => (
-                    <div key={s.L} className="text-center">
-                      <p className="text-5xl font-black text-[#00263B]">{s.V}</p>
-                      <p className="text-[10px] font-black text-slate-400 uppercase mt-4 tracking-widest">{s.L}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="col-span-12 md:col-span-4 bg-white p-8 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50">
-                  <div className="flex items-center gap-4 mb-4 text-[#00263B]">
-                    <div className="bg-[#00263B] p-2.5 rounded-xl text-white shadow-lg"><Calendar size={20} /></div>
-                    <p className="text-lg font-black leading-none">4 dias seguidos</p>
-                  </div>
-                  <div className="flex justify-between mt-6">
-                    {['D', 'S', 'T', 'Q', 'Q', 'S'].map((d, i) => (
-                      <div key={i} className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${i < 4 ? 'bg-[#6385B7] text-white' : 'bg-slate-100 text-slate-300'}`}>
-                        {i < 4 ? '✓' : ''}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
               {/* Certificados */}
               <section className="bg-white p-8 rounded-[32px] shadow-xl border border-slate-50">
                 <div className="flex justify-between items-center mb-8">
@@ -908,31 +884,6 @@ export default function Profile() {
           {/* ══ ROLE: FRANQUEADO ══ */}
           {userRole === 'franqueado' && (
             <>
-              {/* Stats igual ao aluno mas sem educação/experiência */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
-                <div className="col-span-12 md:col-span-8 bg-white p-10 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50 flex justify-around">
-                  {[{ L: 'Cursos completos', V: '12' }, { L: 'Média desempenho', V: '7.5/10' }, { L: 'Posição ranking', V: '6º' }].map(s => (
-                    <div key={s.L} className="text-center">
-                      <p className="text-5xl font-black text-[#00263B]">{s.V}</p>
-                      <p className="text-[10px] font-black text-slate-400 uppercase mt-4 tracking-widest">{s.L}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="col-span-12 md:col-span-4 bg-white p-8 rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-50">
-                  <div className="flex items-center gap-4 mb-4 text-[#00263B]">
-                    <div className="bg-[#00263B] p-2.5 rounded-xl text-white shadow-lg"><Calendar size={20} /></div>
-                    <p className="text-lg font-black leading-none">4 dias seguidos</p>
-                  </div>
-                  <div className="flex justify-between mt-6">
-                    {['D', 'S', 'T', 'Q', 'Q', 'S'].map((d, i) => (
-                      <div key={i} className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${i < 4 ? 'bg-[#6385B7] text-white' : 'bg-slate-100 text-slate-300'}`}>
-                        {i < 4 ? '✓' : ''}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
               {/* Certificados */}
               <section className="bg-white p-8 rounded-[32px] shadow-xl border border-slate-50">
                 <div className="flex justify-between items-center mb-8">
@@ -1254,13 +1205,6 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* ── COMUNICAÇÃO ── */}
-      {(userRole === 'aluno' || userRole === 'franqueado') && (
-        <div className="max-w-7xl mx-auto px-10 mt-8">
-          <ComunicacaoAluno userRole={userRole} />
-        </div>
-      )}
-
       {/* ── MODAL ── */}
       {activeModal && (
         <div className="fixed inset-0 z-[999] bg-[#00263B]/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -1280,7 +1224,7 @@ export default function Profile() {
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 pb-4">
               {activeModal === 'profile' && (
                 <div className="space-y-4">
                   <InputLabel label="Nome" value={tempData.name} onChange={(v) => setTempData({ ...tempData, name: v })} />
@@ -1295,8 +1239,8 @@ export default function Profile() {
                     label="Unidade / Loja"
                     value={tempData.unit}
                     onChange={(v) => setTempData({ ...tempData, unit: v })}
-                    options={sectors}
-                    placeholder="Selecione a unidade"
+                    options={TODAS_LOJAS}
+                    placeholder="Selecione a loja"
                   />
                   <SelectLabel
                     label="Cargo"
@@ -1413,7 +1357,7 @@ export default function Profile() {
               )}
             </div>
 
-            <div className="flex gap-4 mt-12 sticky bottom-0 bg-white pt-4 border-t border-slate-50">
+            <div className="flex gap-4 mt-6 sticky bottom-0 bg-white pt-4 pb-1 border-t border-slate-100 z-10">
               <button onClick={() => setActiveModal(null)} className="flex-1 py-4 font-black text-slate-400 hover:text-slate-600 transition-colors">
                 Cancelar
               </button>
