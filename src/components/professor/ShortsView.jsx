@@ -27,7 +27,7 @@ function VideoPlayer({ url, className = "w-full h-full rounded-[20px]" }) {
     <iframe
       src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1`}
       className={className}
-      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       allowFullScreen
     />
   );
@@ -53,21 +53,18 @@ function VideoPlayer({ url, className = "w-full h-full rounded-[20px]" }) {
 
 function ShortsView() {
   const { profileImage, shorts: cachedShorts, addShort, deleteShort } = useProfile();
-  const [shorts, setShorts] = useState(cachedShorts || []);
-  const [loadingShorts, setLoadingShorts] = useState(cachedShorts?.length === 0);
+  const [shorts, setShorts]               = useState(cachedShorts || []);
+  const [loadingShorts, setLoadingShorts] = useState(true);
 
   useEffect(() => {
-    if (cachedShorts?.length > 0) {
-      setShorts(cachedShorts);
-      setLoadingShorts(false);
-      return;
-    }
+    // Sempre busca do banco para garantir dados frescos
+    // cachedShorts é usado como estado inicial enquanto o fetch não retorna
     authFetch('/api/data?resource=shorts')
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (Array.isArray(data)) setShorts(data); })
       .catch(() => {})
       .finally(() => setLoadingShorts(false));
-  }, [cachedShorts]);
+  }, []);
 
   const handleAddShort = async (data) => {
     const res = await authFetch('/api/data?resource=shorts', {

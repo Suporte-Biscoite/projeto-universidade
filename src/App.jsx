@@ -91,6 +91,13 @@ function PageLoader() {
   );
 }
 
+// ─── Scroll para o topo em toda navegação ────────────────────────────────────
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname]);
+  return null;
+}
+
 // ─── Route transition loading bar ─────────────────────────────────────────────
 function RouteLoadingBar() {
   const location = useLocation();
@@ -165,6 +172,7 @@ function ProtectedRoute({ children, roles }) {
 function AppRoutes() {
   return (
     <>
+      <ScrollToTop />
       <RouteLoadingBar />
       <Suspense fallback={<PageLoader />}>
         <Routes>

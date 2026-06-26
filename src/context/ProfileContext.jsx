@@ -209,7 +209,8 @@ export function ProfileProvider({ children }) {
   );
 
   // ── Reels ─────────────────────────────────────────────────────────────────
-  const [shorts, setShorts] = useState([]);
+  const [shorts, setShorts]           = useState([]);
+  const [shortsLoaded, setShortsLoaded] = useState(false);
 
   // ── Persistência no localStorage ──────────────────────────────────────────
   // ── Busca usuários do banco (para admin) ────────────────────────────────────
@@ -241,7 +242,8 @@ export function ProfileProvider({ children }) {
     authFetch('/api/data?resource=shorts')
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (Array.isArray(data)) setShorts(data); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setShortsLoaded(true));
   }, []);
 
   // ── Busca cursos do banco ao inicializar ─────────────────────────────────────
@@ -824,7 +826,7 @@ export function ProfileProvider({ children }) {
       // Perfis de instrutores
       instructorProfiles, updateInstructorProfile,
       // Reels
-      shorts, addReel: addShort, deleteReel: deleteShort, addShort, deleteShort,
+      shorts, addReel: addShort, deleteReel: deleteShort, addShort, deleteShort, shortsLoaded,
     }}>
       {children}
     </ProfileContext.Provider>

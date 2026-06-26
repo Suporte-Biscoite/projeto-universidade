@@ -55,7 +55,7 @@ function VideoPlayer({ url, className = "w-full h-full rounded-[20px]" }) {
 
 export default function Home() {
   const navigate = useNavigate();
-  const { shorts: shortsData } = useProfile();
+  const { shorts: shortsData, shortsLoaded } = useProfile();
   const [myCourses, setMyCourses]     = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [favorites, setFavorites] = useState([]);
@@ -309,14 +309,22 @@ export default function Home() {
       </section>
 
       {/* 3. REELS */}
-      {shortsData && shortsData.length > 0 && (
+      {(!shortsLoaded || shortsData.length > 0) && (
         <section className="bg-[#f0f7ff] -mx-4 sm:-mx-8 px-4 sm:px-8 py-10 sm:py-16 rounded-[32px] sm:rounded-[48px] space-y-6 sm:space-y-8">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-[#001A26]">Shorts dos instrutores</h2>
             <p className="text-slate-400 text-sm mt-1">Novidades, dicas e avisos em vídeos rápidos</p>
           </div>
-          {/* Desktop: expandable shorts */}
-          <div className="hidden md:flex gap-3 overflow-hidden" style={{ height: '400px' }}>
+          {!shortsLoaded ? (
+            <div className="hidden md:flex gap-3 overflow-hidden" style={{ height: '400px' }}>
+              {[1,2,3,4].map(i => (
+                <div key={i} className="rounded-[24px] bg-slate-200 animate-pulse flex-shrink-0" style={{ width: '120px', height: '100%' }} />
+              ))}
+            </div>
+          ) : (
+            <>
+            {/* Desktop: expandable shorts */}
+            <div className="hidden md:flex gap-3 overflow-hidden" style={{ height: '400px' }}>
             {shortsData.map((item) => {
               const isActive = hoveredShort === item.id;
               return (
@@ -385,6 +393,8 @@ export default function Home() {
               </div>
             ))}
           </div>
+            </>
+          )}
         </section>
       )}
 

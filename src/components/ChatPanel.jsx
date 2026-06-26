@@ -102,7 +102,12 @@ export default function ChatPanel({ currentUserId, compact = false }) {
   const [loading, setLoading]             = useState(true);
   const [sending, setSending]             = useState(false);
   const [showList, setShowList]           = useState(true);
-  // Avatar e nome próprios para exibir imediatamente sem esperar a API
+  // Nova conversa
+  const [showNewConv, setShowNewConv]     = useState(false);
+  const [userSearch, setUserSearch]       = useState('');
+  const [userResults, setUserResults]     = useState([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+
   const ownRaw = sessionStorage.getItem('biscoite_logged_user') || localStorage.getItem('biscoite_logged_user');
   const ownUser = ownRaw ? (() => { try { return JSON.parse(ownRaw); } catch { return {}; } })() : {};
   const ownAvatar = ownUser.avatar_url || null;
@@ -110,6 +115,53 @@ export default function ChatPanel({ currentUserId, compact = false }) {
   const messagesContainerRef              = useRef(null);
   const pollRef                           = useRef(null);
   const lastMsgTime                       = useRef(null);
+
+  // Busca usuários pelo nome para nova conversa
+  useEffect(() => {
+    if (!userSearch.trim() || userSearch.length < 2) { setUserResults([]); return; }
+    const timer = setTimeout(() => {
+      setSearchingUsers(true);
+      authFetch(`/api/users`)
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          const list = Array.isArray(data) ? data : [];
+          setUserResults(
+            list.filter(u =>
+              u.id !== currentUserId &&
+              u.active &&
+              u.name?.toLowerCase().includes(userSearch.toLowerCase())
+            ).slice(0, 8)
+          );
+        })
+        .catch(() => {})
+        .finally(() => setSearchingUsers(false));
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [userSearch, currentUserId]);
+
+  const startConversation = async (targetUser) => {
+    // Se o usuário logado for aluno, o target deve ser professor e vice-versa
+    const body = ownUser.role === 'aluno' || ownUser.role === 'gestor'
+      ? { professorId: targetUser.id }
+      : { professorId: currentUserId, studentId: targetUser.id };
+
+    const res = await authFetch('/api/data?resource=conversations', {
+      method: 'POST',
+      body: JSON.stringify({ professorId: targetUser.id }),
+    });
+    if (res.ok) {
+      const conv = await res.json();
+      // Recarrega lista de conversas
+      authFetch('/api/data?resource=conversations')
+        .then(r => r.ok ? r.json() : [])
+        .then(data => { if (Array.isArray(data)) setConversations(data); });
+      setSelectedConv(conv);
+      setShowNewConv(false);
+      setUserSearch('');
+      setUserResults([]);
+      setShowList(false);
+    }
+  };
 
   // Carrega conversas
   useEffect(() => {
@@ -220,15 +272,63 @@ export default function ChatPanel({ currentUserId, compact = false }) {
         <div className="px-4 py-4 border-b border-slate-50">
           <div className="flex items-center justify-between mb-3">
             <p className="font-black text-[#001A26] text-sm">Mensagens</p>
-            {totalUnread > 0 && (
-              <span className="bg-[#4A72B2] text-white text-[9px] font-black px-2 py-0.5 rounded-full">{totalUnread}</span>
-            )}
+            <div className="flex items-center gap-2">
+              {totalUnread > 0 && (
+                <span className="bg-[#4A72B2] text-white text-[9px] font-black px-2 py-0.5 rounded-full">{totalUnread}</span>
+              )}
+              <button
+                onClick={() => { setShowNewConv(p => !p); setUserSearch(''); setUserResults([]); }}
+                title="Nova conversa"
+                className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm font-black transition-colors ${
+                  showNewConv ? 'bg-[#4A72B2] text-white' : 'bg-slate-100 text-slate-500 hover:bg-[#e2eef9] hover:text-[#4A72B2]'
+                }`}
+              >+</button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2">
-            <Search size={13} className="text-slate-300" />
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar..." className="flex-1 text-xs bg-transparent outline-none text-slate-600" />
-          </div>
+
+          {showNewConv ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2 border border-[#4A72B2]/30">
+                <Search size={13} className="text-[#4A72B2] flex-shrink-0" />
+                <input
+                  autoFocus
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  placeholder="Buscar professor ou usuário..."
+                  className="flex-1 text-xs bg-transparent outline-none text-slate-600"
+                />
+                {searchingUsers && <Loader size={11} className="animate-spin text-slate-300 flex-shrink-0" />}
+              </div>
+              {userResults.length > 0 && (
+                <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-md max-h-48 overflow-y-auto">
+                  {userResults.map(u => (
+                    <button key={u.id} onClick={() => startConversation(u)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#e2eef9] transition-colors text-left">
+                      <div className="w-8 h-8 rounded-full bg-[#4A72B2] flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 overflow-hidden">
+                        {u.avatar_url
+                          ? <img src={u.avatar_url} className="w-full h-full object-cover" alt={u.name} />
+                          : (u.name || 'U').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[#001A26] truncate">{u.name}</p>
+                        <p className="text-[10px] text-slate-400 capitalize">{u.role}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {userSearch.length >= 2 && !searchingUsers && userResults.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-2">Nenhum usuário encontrado</p>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2">
+              <Search size={13} className="text-slate-300" />
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar conversa..." className="flex-1 text-xs bg-transparent outline-none text-slate-600" />
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
