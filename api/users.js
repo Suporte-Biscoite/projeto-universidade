@@ -59,7 +59,7 @@ async function getUsers(req, res, auth, id) {
       return send(res, 403, { error: 'Sem permissão' });
 
     const { rows } = await pool.query(
-      `SELECT id, name, email, role, unit, store_id, active, instructor_id,
+      `SELECT id, name, email, role, unit, store_id, store_name, store_type, active, instructor_id,
               avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at
        FROM users WHERE id = $1`,
       [id]
@@ -73,7 +73,7 @@ async function getUsers(req, res, auth, id) {
     return send(res, 403, { error: 'Sem permissão' });
 
   const { rows } = await pool.query(
-    `SELECT id, name, email, role, unit, store_id, active, instructor_id,
+    `SELECT id, name, email, role, unit, store_id, store_name, store_type, active, instructor_id,
             avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at
      FROM users ORDER BY created_at DESC`
   );

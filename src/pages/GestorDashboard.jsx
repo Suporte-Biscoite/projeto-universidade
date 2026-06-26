@@ -74,7 +74,7 @@ export default function GestorDashboard() {
   const { systemRole }  = useProfile();
 
   const loggedUser  = getLoggedUser();
-  const storeName   = loggedUser?.store_name || null;
+  const [storeName, setStoreName] = useState(loggedUser?.store_name || null);
 
   const [activeTab, setActiveTab]         = useState('overview');
   const [search, setSearch]               = useState('');
@@ -88,6 +88,22 @@ export default function GestorDashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      // Busca os dados do próprio usuário para garantir store_name atualizado
+      let currentStore = storeName;
+      if (loggedUser?.id) {
+        const selfRes = await authFetch(`/api/users?id=${loggedUser.id}`);
+        if (selfRes.ok) {
+          const self = await selfRes.json();
+          if (self.store_name) {
+            currentStore = self.store_name;
+            setStoreName(self.store_name);
+            // Atualiza o storage
+            const s = sessionStorage.getItem('biscoite_logged_user') ? sessionStorage : localStorage;
+            const raw = s.getItem('biscoite_logged_user');
+            if (raw) s.setItem('biscoite_logged_user', JSON.stringify({ ...JSON.parse(raw), store_name: self.store_name }));
+          }
+        }
+      }
       // Todos os usuários ativos (admin pode ver todos, gestor filtra por loja)
       const usersRes = await authFetch('/api/users');
       if (!usersRes.ok) return;
@@ -99,7 +115,7 @@ export default function GestorDashboard() {
         u.status === 'approved' &&
         (u.role === 'aluno' || u.role === 'gestor') &&
         u.id !== loggedUser?.id &&
-        (storeName ? (u.store_name === storeName) : true)
+        (currentStore ? (u.store_name === currentStore) : true)
       );
 
       setColaboradores(team);
