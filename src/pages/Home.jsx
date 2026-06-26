@@ -54,6 +54,81 @@ function VideoPlayer({ url, className = "w-full h-full rounded-[20px]" }) {
   );
 }
 
+// ─── Modal de player — Portal para garantir overlay em 100% da viewport ────
+function ShortPlayerModal({ short, shorts, onClose, onSelect }) {
+  const idx  = shorts.findIndex(s => s.id === short.id);
+  const prev = idx > 0 ? shorts[idx - 1] : null;
+  const next = idx < shorts.length - 1 ? shorts[idx + 1] : null;
+
+  const touchStartY = { current: 0 };
+  const onTouchStart = e => { touchStartY.current = e.touches[0].clientY; };
+  const onTouchEnd   = e => {
+    const diff = touchStartY.current - e.changedTouches[0].clientY;
+    if (diff > 50 && next) onSelect(next);
+    if (diff < -50 && prev) onSelect(prev);
+  };
+
+  return createPortal(
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+      onClick={onClose}
+    >
+      {prev && (
+        <button
+          onClick={e => { e.stopPropagation(); onSelect(prev); }}
+          style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}
+          className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all"
+        >
+          <ChevronLeft size={20} />
+        </button>
+      )}
+
+      <div
+        className="relative w-full"
+        style={{ height: 'min(calc(100vw * 16/9), calc(100vh - 80px))', maxWidth: 'min(calc((100vh - 80px) * 9/16), 320px)' }}
+        onClick={e => e.stopPropagation()}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        <button
+          onClick={onClose}
+          style={{ position: 'absolute', top: '-40px', right: 0 }}
+          className="text-white/70 hover:text-white font-bold text-sm flex items-center gap-2"
+        >
+          ✕ Fechar
+        </button>
+        <VideoPlayer url={short.vimeo_id} className="w-full h-full rounded-[24px]" />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', borderRadius: '0 0 24px 24px', pointerEvents: 'none' }}>
+          <p className="text-white font-bold text-sm">{short.caption}</p>
+          <p className="text-white/50 text-xs mt-1">{short.instructor}</p>
+        </div>
+        {shorts.length > 1 && (
+          <div style={{ position: 'absolute', bottom: '-24px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px' }}>
+            {shorts.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={e => { e.stopPropagation(); onSelect(s); }}
+                style={{ borderRadius: '999px', background: 'white', opacity: i === idx ? 1 : 0.4, width: i === idx ? '16px' : '6px', height: '6px', transition: 'all 0.2s' }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {next && (
+        <button
+          onClick={e => { e.stopPropagation(); onSelect(next); }}
+          style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}
+          className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all"
+        >
+          <ChevronRight size={20} />
+        </button>
+      )}
+    </div>,
+    document.body
+  );
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const { shorts: shortsData, shortsLoaded } = useProfile();
@@ -132,120 +207,14 @@ export default function Home() {
   return (
     <div className="max-w-[1200px] mx-auto space-y-16 sm:space-y-20 pb-20">
       {/* Short player modal */}
-      {selectedShort && createPortal((() => {
-        const idx  = shortsData.findIndex(s => s.id === selectedShort.id);
-        const prev = idx > 0 ? shortsData[idx - 1] : null;
-        const next = idx < shortsData.length - 1 ? shortsData[idx + 1] : null;
-
-        let touchStartY = 0;
-        const onTouchStart = e => { touchStartY = e.touches[0].clientY; };
-        const onTouchEnd   = e => {
-          const diff = touchStartY - e.changedTouches[0].clientY;
-          if (diff > 50 && next) setSelectedShort(next);
-          if (diff < -50 && prev) setSelectedShort(prev);
-        };
-
-        return (
-          <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
-            onClick={() => setSelectedShort(null)}>
-
-            {prev && (
-              <button
-                onClick={e => { e.stopPropagation(); setSelectedShort(prev); }}
-                style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}
-                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all">
-                <ChevronLeft size={20} />
-              </button>
-            )}
-
-            <div
-              className="relative w-full"
-              style={{ height: 'min(calc(100vw * 16/9), calc(100vh - 80px))', maxWidth: 'min(calc((100vh - 80px) * 9/16), 320px)' }}
-              onClick={e => e.stopPropagation()}
-              onTouchStart={onTouchStart}
-              onTouchEnd={onTouchEnd}
-            >
-              <button onClick={() => setSelectedShort(null)}
-                style={{ position: 'absolute', top: '-40px', right: 0 }}
-                className="text-white/70 hover:text-white font-bold text-sm flex items-center gap-2">
-                ✕ Fechar
-              </button>
-              <VideoPlayer url={selectedShort.vimeo_id} className="w-full h-full rounded-[24px]" />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', borderRadius: '0 0 24px 24px', pointerEvents: 'none' }}>
-                <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
-                <p className="text-white/50 text-xs mt-1">{selectedShort.instructor}</p>
-              </div>
-              {shortsData.length > 1 && (
-                <div style={{ position: 'absolute', bottom: '-24px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px' }}>
-                  {shortsData.map((s, i) => (
-                    <button key={s.id} onClick={e => { e.stopPropagation(); setSelectedShort(s); }}
-                      style={{ borderRadius: '999px', background: 'white', opacity: i === idx ? 1 : 0.4, width: i === idx ? '16px' : '6px', height: '6px', transition: 'all 0.2s' }} />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {next && (
-              <button
-                onClick={e => { e.stopPropagation(); setSelectedShort(next); }}
-                style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}
-                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all">
-                <ChevronRight size={20} />
-              </button>
-            )}
-          </div>
-        );
-      })(), document.body)}
-
-            {/* Seta anterior */}
-            {prev && (
-              <button
-                onClick={e => { e.stopPropagation(); setSelectedShort(prev); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10">
-                <ChevronLeft size={20} />
-              </button>
-            )}
-
-            {/* Player */}
-            <div
-              className="relative w-full max-w-xs"
-              style={{ height: 'min(calc(100vw * 16/9), calc(100vh - 80px))', maxWidth: 'min(calc((100vh - 80px) * 9/16), 320px)' }}
-              onClick={e => e.stopPropagation()}
-              onTouchStart={onTouchStart}
-              onTouchEnd={onTouchEnd}
-            >
-              <button onClick={() => setSelectedShort(null)}
-                className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-2">
-                ✕ Fechar
-              </button>
-              <VideoPlayer url={selectedShort.vimeo_id} className="w-full h-full rounded-[24px]" />
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[24px] pointer-events-none">
-                <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
-                <p className="text-white/50 text-xs mt-1">{selectedShort.instructor}</p>
-              </div>
-              {/* Indicador de posição */}
-              {shortsData.length > 1 && (
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5">
-                  {shortsData.map((s, i) => (
-                    <button key={s.id} onClick={e => { e.stopPropagation(); setSelectedShort(s); }}
-                      className={`rounded-full transition-all ${i === idx ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40'}`} />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Seta próximo */}
-            {next && (
-              <button
-                onClick={e => { e.stopPropagation(); setSelectedShort(next); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10">
-                <ChevronRight size={20} />
-              </button>
-            )}
-          </div>
-        );
-      })()}
+      {selectedShort && (
+        <ShortPlayerModal
+          short={selectedShort}
+          shorts={shortsData}
+          onClose={() => setSelectedShort(null)}
+          onSelect={setSelectedShort}
+        />
+      )}
 
       {/* 0. BANNER HERO */}
       <section style={{ position:'relative', overflow:'hidden', minHeight:'300px', display:'flex', alignItems:'stretch', borderRadius:'32px' }}>
