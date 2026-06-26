@@ -15,11 +15,15 @@ function getStoredUserId() {
 
 const HIDDEN_PATHS = ['/professor', '/gestor', '/admin', '/login', '/registrar', '/mensagens'];
 
-export default function MessageFloatButton() {
+export default function MessageFloatButton({ externalOpen, onOpenChange }) {
   const [unread, setUnread]     = useState(0);
   const [open, setOpen]         = useState(false);
-  const [userId]                = useState(() => getStoredUserId()); // síncrono
+  const [userId]                = useState(() => getStoredUserId());
   const location                = useLocation();
+
+  // Sincroniza com estado externo do MainLayout
+  const isOpen   = externalOpen !== undefined ? externalOpen : open;
+  const setIsOpen = (v) => { setOpen(v); onOpenChange?.(v); };
 
   const hidden = HIDDEN_PATHS.some(p => location.pathname.startsWith(p));
 
@@ -46,10 +50,10 @@ export default function MessageFloatButton() {
 
   return (
     <>
-      {open && (
+      {isOpen && (
         <>
           {/* Overlay mobile */}
-          <div className="fixed inset-0 z-[199] bg-black/20 sm:hidden" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-[199] bg-black/20 sm:hidden" onClick={() => setIsOpen(false)} />
           {/* Popup */}
           <div
             className="fixed z-[200] shadow-2xl rounded-[24px] overflow-hidden border border-slate-200 bg-white"
@@ -68,17 +72,17 @@ export default function MessageFloatButton() {
       )}
 
       <button
-        onClick={() => setOpen(p => !p)}
+        onClick={() => setIsOpen(!isOpen)}
         className={`fixed bottom-6 right-6 z-[200] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
-          open ? 'bg-slate-700' : 'bg-[#001A26] hover:bg-[#4A72B2]'
+          isOpen ? 'bg-slate-700' : 'bg-[#001A26] hover:bg-[#4A72B2]'
         }`}
         aria-label="Mensagens"
       >
-        {open
+        {isOpen
           ? <X size={22} className="text-white" />
           : <MessageCircle size={22} className="text-white" />
         }
-        {!open && unread > 0 && (
+        {!isOpen && unread > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 shadow-md">
             {unread > 9 ? '9+' : unread}
           </span>

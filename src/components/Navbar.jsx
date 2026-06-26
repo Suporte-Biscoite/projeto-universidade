@@ -28,8 +28,15 @@ const ROLE_PANEL = {
 
 const allCourses = [];
 
-export default function Navbar() {
+export default function Navbar({ externalOpen, onOpenChange }) {
   const [isOpen, setIsOpen] = useState(false);
+
+  // Sincroniza com estado externo do MainLayout
+  const dropdownOpen = externalOpen !== undefined ? externalOpen : isOpen;
+  const setDropdownOpen = (v) => {
+    setIsOpen(v);
+    onOpenChange?.(v);
+  };
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -117,7 +124,7 @@ export default function Navbar() {
   }, [isSearchOpen]);
 
   useEffect(() => {
-    setIsOpen(false);
+    setDropdownOpen(false);
     setIsMobileMenuOpen(false);
     setIsSearchOpen(false);
     setIsNotifOpen(false);
@@ -152,7 +159,7 @@ export default function Navbar() {
           {/* SEARCH */}
           <div className="relative">
             <button
-              onClick={() => { setIsSearchOpen(!isSearchOpen); setIsNotifOpen(false); setIsOpen(false); }}
+              onClick={() => { setIsSearchOpen(!isSearchOpen); setIsNotifOpen(false); setDropdownOpen(false); }}
               className={`p-2 rounded-xl transition-all ${isSearchOpen ? 'bg-[#e2eef9] text-[#4A72B2]' : 'text-slate-400 hover:text-[#00263B] hover:bg-slate-50'}`}
             >
               <Search size={20} />
@@ -226,7 +233,7 @@ export default function Navbar() {
                 const opening = !isNotifOpen;
                 setIsNotifOpen(opening);
                 setIsSearchOpen(false);
-                setIsOpen(false);
+                setDropdownOpen(false);
                 if (opening) {
                   if (notifCloseTimer.current) clearTimeout(notifCloseTimer.current);
                   notifCloseTimer.current = setTimeout(() => setIsNotifOpen(false), 8000);
@@ -288,7 +295,7 @@ export default function Navbar() {
 
           {/* PROFILE (desktop) */}
           <div className="relative hidden md:flex items-center gap-3 cursor-pointer">
-            <div className="text-right" onClick={() => setIsOpen(!isOpen)}>
+            <div className="text-right" onClick={() => setDropdownOpen(!dropdownOpen)}>
               <p className="text-sm font-black text-[#00263B] leading-none uppercase">{userData.name.split(' ')[0]}</p>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 opacity-80">{ROLE_LABEL[systemRole] || systemRole}</p>
             </div>
@@ -299,14 +306,14 @@ export default function Navbar() {
               </div>
             </div>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-            <div onClick={() => setIsOpen(!isOpen)}>
-              {isOpen ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+            <div onClick={() => setDropdownOpen(!dropdownOpen)}>
+              {dropdownOpen ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
             </div>
-            {isOpen && (
+            {dropdownOpen && (
               <>
-                <div className="fixed inset-0 z-[-1]" onClick={() => setIsOpen(false)} />
+                <div className="fixed inset-0 z-[-1]" onClick={() => setDropdownOpen(false)} />
                 <div className="absolute right-0 top-14 w-72 bg-[#F2F2F2] rounded-2xl shadow-2xl border border-white/20 overflow-hidden py-2">
-                  <Link to="/profile" className="flex items-center gap-3 px-5 py-3.5 text-[#00263B] font-bold text-sm hover:bg-white/60 transition-colors" onClick={() => setIsOpen(false)}>
+                  <Link to="/profile" className="flex items-center gap-3 px-5 py-3.5 text-[#00263B] font-bold text-sm hover:bg-white/60 transition-colors" onClick={() => setDropdownOpen(false)}>
                     <div className="w-7 h-7 rounded-lg bg-white/60 flex items-center justify-center"><Pencil size={13} /></div> Minha conta
                   </Link>
 
@@ -324,7 +331,7 @@ export default function Navbar() {
                                 key={panel.path}
                                 to={panel.path}
                                 className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[#00263B] font-bold text-xs hover:bg-white/60 transition-colors"
-                                onClick={() => setIsOpen(false)}
+                                onClick={() => setDropdownOpen(false)}
                               >
                                 <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${panel.color}`}>
                                   <PanelIcon size={12} />
@@ -345,7 +352,7 @@ export default function Navbar() {
                         <Link
                           to={panel.path}
                           className="flex items-center gap-3 px-5 py-3.5 text-[#00263B] font-bold text-sm hover:bg-white/60 transition-colors"
-                          onClick={() => setIsOpen(false)}
+                          onClick={() => setDropdownOpen(false)}
                         >
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${panel.color}`}>
                             <PanelIcon size={13} />
@@ -361,7 +368,7 @@ export default function Navbar() {
                     return (
                       <div key={item.id}>
                         <div className="mx-5 h-[1px] bg-slate-200/50"></div>
-                        <Link to={item.path} className="flex items-center gap-3 px-5 py-3.5 text-[#00263B] font-bold text-sm hover:bg-white/60 transition-colors" onClick={() => setIsOpen(false)}>
+                        <Link to={item.path} className="flex items-center gap-3 px-5 py-3.5 text-[#00263B] font-bold text-sm hover:bg-white/60 transition-colors" onClick={() => setDropdownOpen(false)}>
                           <div className="w-7 h-7 rounded-lg bg-white/60 flex items-center justify-center">
                             <DropIcon size={13} />
                           </div>

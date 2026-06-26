@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { authFetch } from '../utils/authFetch';
 import {
   Mail, Linkedin, Phone, Globe, Plus, Pencil, Star, Calendar,
@@ -60,7 +60,71 @@ function InputLabel({ label, value, onChange, placeholder }) {
   );
 }
 
-// ─── SUBCOMPONENTE: Gráfico circular de progresso ──────────────────────────
+function SelectLabel({ label, value, onChange, options = [], placeholder = 'Selecione...' }) {
+  return (
+    <div className="w-full text-left">
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">
+        {label}
+      </label>
+      <select
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        className="w-full bg-white border border-slate-200 px-5 py-3 rounded-2xl font-bold text-[#00263B] outline-none focus:border-[#6385B7] transition-all appearance-none cursor-pointer"
+      >
+        <option value="">{placeholder}</option>
+        {options.map(o => (
+          <option key={typeof o === 'string' ? o : o.value} value={typeof o === 'string' ? o : o.value}>
+            {typeof o === 'string' ? o : o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// Calcula tempo de empresa em anos/meses a partir de uma data de admissão
+function CompanyTimeLabel({ value, onChange }) {
+  const [mode, setMode] = useState('text'); // 'text' | 'date'
+  const [admDate, setAdmDate] = useState('');
+
+  const calcFromDate = (dateStr) => {
+    if (!dateStr) return;
+    const adm  = new Date(dateStr);
+    const now  = new Date();
+    let years  = now.getFullYear() - adm.getFullYear();
+    let months = now.getMonth() - adm.getMonth();
+    if (months < 0) { years--; months += 12; }
+    const parts = [];
+    if (years > 0)  parts.push(`${years} ano${years > 1 ? 's' : ''}`);
+    if (months > 0) parts.push(`${months} mês${months > 1 ? 'es' : ''}`);
+    onChange(parts.join(' e ') || 'menos de 1 mês');
+  };
+
+  return (
+    <div className="w-full text-left">
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+          Tempo de Empresa
+        </label>
+        <button type="button" onClick={() => setMode(m => m === 'text' ? 'date' : 'text')}
+          className="text-[9px] font-black text-[#6385B7] hover:text-[#00263B] uppercase tracking-widest transition-colors">
+          {mode === 'text' ? '← calcular pela data' : '← digitar manualmente'}
+        </button>
+      </div>
+      {mode === 'text' ? (
+        <input type="text" value={value || ''} onChange={e => onChange(e.target.value)}
+          placeholder="Ex: 2 anos e 3 meses"
+          className="w-full bg-white border border-slate-200 px-5 py-3 rounded-2xl font-bold text-[#00263B] outline-none focus:border-[#6385B7] transition-all" />
+      ) : (
+        <div className="flex gap-2 items-center">
+          <input type="date" value={admDate} onChange={e => { setAdmDate(e.target.value); calcFromDate(e.target.value); }}
+            className="flex-1 bg-white border border-slate-200 px-5 py-3 rounded-2xl font-bold text-[#00263B] outline-none focus:border-[#6385B7] transition-all" />
+          {value && <span className="text-xs font-bold text-emerald-600 whitespace-nowrap">{value}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
 function CircularProgress({ value = 78, size = 100, stroke = 8 }) {
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -451,8 +515,20 @@ export default function Profile() {
 
 
   const [activeModal, setActiveModal] = useState(null);
-  const [tempData, setTempData] = useState(null);
-  const [newSkill, setNewSkill] = useState('');
+  const [tempData, setTempData]       = useState(null);
+  const [newSkill, setNewSkill]       = useState('');
+  const [sectors, setSectors]         = useState([]);
+  const [jobTitles, setJobTitles]     = useState([]);
+
+  useEffect(() => {
+    Promise.all([
+      authFetch('/api/data?resource=sectors').then(r => r.ok ? r.json() : []),
+      authFetch('/api/data?resource=job_titles').then(r => r.ok ? r.json() : []),
+    ]).then(([s, j]) => {
+      if (Array.isArray(s)) setSectors(s.map(i => i.name));
+      if (Array.isArray(j)) setJobTitles(j.map(i => i.name));
+    }).catch(() => {});
+  }, []);
 
   const openModal = (type) => {
     const base = JSON.parse(JSON.stringify(userData));
@@ -465,7 +541,6 @@ export default function Profile() {
 
   const handleSave = async () => {
     updateUserData(prev => ({ ...prev, ...tempData }));
-    // Salva no banco os campos que temos colunas
     await saveProfileToApi({
       name:         tempData.name,
       unit:         tempData.unit,
@@ -474,6 +549,7 @@ export default function Profile() {
       company_time: tempData.time,
       bio:          tempData.bio,
       skills:       tempData.skills,
+      contacts:     tempData.contacts,
     });
     setActiveModal(null);
   };
@@ -1208,13 +1284,34 @@ export default function Profile() {
               {activeModal === 'profile' && (
                 <div className="space-y-4">
                   <InputLabel label="Nome" value={tempData.name} onChange={(v) => setTempData({ ...tempData, name: v })} />
-                  <InputLabel label="Pronome" value={tempData.pronoun} onChange={(v) => setTempData({ ...tempData, pronoun: v })} />
-                  <InputLabel label="Unidade / Loja" value={tempData.unit} onChange={(v) => setTempData({ ...tempData, unit: v })} />
-                  <InputLabel label="Cargo" value={tempData.role} onChange={(v) => setTempData({ ...tempData, role: v })} />
-                  <InputLabel label="Tempo de Empresa" value={tempData.time} onChange={(v) => setTempData({ ...tempData, time: v })} />
+                  <SelectLabel
+                    label="Pronome"
+                    value={tempData.pronoun}
+                    onChange={(v) => setTempData({ ...tempData, pronoun: v })}
+                    options={['ele/dele', 'ela/dela', 'elu/delu', 'ele/ela', 'outros']}
+                    placeholder="Selecione seu pronome"
+                  />
+                  <SelectLabel
+                    label="Unidade / Loja"
+                    value={tempData.unit}
+                    onChange={(v) => setTempData({ ...tempData, unit: v })}
+                    options={sectors}
+                    placeholder="Selecione a unidade"
+                  />
+                  <SelectLabel
+                    label="Cargo"
+                    value={tempData.role}
+                    onChange={(v) => setTempData({ ...tempData, role: v })}
+                    options={jobTitles}
+                    placeholder="Selecione o cargo"
+                  />
+                  <CompanyTimeLabel
+                    value={tempData.time}
+                    onChange={(v) => setTempData({ ...tempData, time: v })}
+                  />
 
                   {/* Banner */}
-                  <div className="w-full text-left">
+                  <div className="w-full text-left pt-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">
                       Imagem do Banner
                     </label>
