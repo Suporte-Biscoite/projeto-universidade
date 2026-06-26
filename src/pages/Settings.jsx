@@ -7,6 +7,7 @@ import {
   Loader, Search,
 } from 'lucide-react';
 import { useProfile, STORES } from '../context/ProfileContext';
+import { TODAS_LOJAS } from '../utils/stores';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 const ROLE_LABELS = {
@@ -141,11 +142,21 @@ function MinhaContaTab({ userData, onUpdate, onUpdateImage, profileImage }) {
   const [saved, setSaved]     = useState(false);
   const [error, setError]     = useState('');
 
+  // Sincroniza o form quando userData.unit é atualizado externamente
+  // (ex: usuário salvou a loja no modal de Editar Perfil)
+  useEffect(() => {
+    setForm(prev => ({
+      ...prev,
+      name: userData.name || prev.name,
+      unit: userData.unit || prev.unit,
+    }));
+  }, [userData.unit, userData.name]);
+
   const handleSaveProfile = async () => {
     if (!form.name.trim()) { setError('Nome é obrigatório'); return; }
     setSaving(true); setError('');
     try {
-      await onUpdate({ name: form.name.trim(), unit: form.unit.trim() });
+      await onUpdate({ name: form.name.trim(), unit: form.unit, store_name: form.unit });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch { setError('Erro ao salvar. Tente novamente.'); }
     finally { setSaving(false); }
@@ -201,9 +212,22 @@ function MinhaContaTab({ userData, onUpdate, onUpdateImage, profileImage }) {
               className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#4A72B2]" />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-500 mb-1 block">Unidade</label>
-            <input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#4A72B2]" />
+            <label className="text-xs font-bold text-slate-500 mb-1 block">Unidade / Loja</label>
+            <select
+              value={form.unit}
+              onChange={e => setForm(p => ({ ...p, unit: e.target.value }))}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#4A72B2] bg-white appearance-none"
+            >
+              <option value="">Selecione a loja...</option>
+              {TODAS_LOJAS.map(loja => (
+                <option key={loja} value={loja}>{loja}</option>
+              ))}
+            </select>
+            {form.unit && !TODAS_LOJAS.includes(form.unit) && (
+              <p className="text-[10px] text-amber-500 mt-1">
+                Valor atual: "{form.unit}" — selecione a loja correta acima para atualizar.
+              </p>
+            )}
           </div>
         </div>
         {error && <p className="text-xs text-red-500">{error}</p>}

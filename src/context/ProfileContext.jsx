@@ -120,15 +120,18 @@ export function ProfileProvider({ children }) {
       const raw = sessionStorage.getItem('biscoite_logged_user')
                || localStorage.getItem('biscoite_logged_user');
       const logged = raw ? JSON.parse(raw) : null;
+      const SYSTEM_ROLES = ['aluno', 'gestor', 'professor', 'admin', 'franqueado', 'loja'];
+      const cargoReal = SYSTEM_ROLES.includes(logged.position) ? '' : (logged.position || '');
       if (logged) {
         return {
-          name:    logged.name         || 'Usuário',
-          unit:    logged.unit         || logged.store_name || '',
-          role:     '',  // sempre carregado do banco via fetchFreshData
-          time:     logged.company_time || '',
-          pronoun:  logged.pronoun      || '',
-          bio:      logged.bio          || '',
-          contacts: logged.contacts     || { phone: '', email: '', linkedin: '', website: '' },
+          name:       logged.name         || 'Usuário',
+          unit:       logged.store_name   || logged.unit || '',
+          store_name: logged.store_name   || '',
+          role:       cargoReal,
+          time:       logged.company_time || '',
+          pronoun:    logged.pronoun      || '',
+          bio:        logged.bio          || '',
+          contacts:   logged.contacts     || { phone: '', email: '', linkedin: '', website: '' },
           avatar_url:  logged.avatar_url  || null,
           banner_url:  logged.banner_url  || null,
           certificates: INITIAL_CERTIFICATES,
@@ -313,15 +316,21 @@ export function ProfileProvider({ children }) {
         const user = await res.json();
 
         // Atualiza estado imediatamente com dados do banco
+        // position guarda: cargo real (ex: 'Analista') OU requested_role (ex: 'gestor') antes de ser aprovado
+        // Se position for um role do sistema, ignora — cargo deve ser um título real
+        const SYSTEM_ROLES = ['aluno', 'gestor', 'professor', 'admin', 'franqueado', 'loja'];
+        const cargoReal = SYSTEM_ROLES.includes(user.position) ? '' : (user.position || '');
+
         setUserData(prev => ({
           ...prev,
-          name:     user.name         || prev.name,
-          unit:     user.unit         || user.store_name || prev.unit,
-          pronoun:  user.pronoun      || prev.pronoun || '',
-          role:     user.position     || '',
-          time:     user.company_time || prev.time    || '',
-          bio:      user.bio          || prev.bio     || '',
-          contacts: user.contacts     || prev.contacts || { phone: '', email: '', linkedin: '', website: '' },
+          name:       user.name         || prev.name,
+          unit:       user.store_name   || user.unit || prev.unit,
+          store_name: user.store_name   || prev.store_name || '',
+          pronoun:    user.pronoun      || prev.pronoun || '',
+          role:       cargoReal,
+          time:       user.company_time || prev.time    || '',
+          bio:        user.bio          || prev.bio     || '',
+          contacts:   user.contacts     || prev.contacts || { phone: '', email: '', linkedin: '', website: '' },
         }));
         if (user.avatar_url && !user.avatar_url.startsWith('blob:')) {
           setProfileImage(user.avatar_url);
@@ -402,6 +411,7 @@ export function ProfileProvider({ children }) {
           body: JSON.stringify({
             name:         newData.name,
             unit:         newData.unit,
+            store_name:   newData.store_name ?? newData.unit, // sincroniza sempre
             pronoun:      newData.pronoun,
             position:     newData.role,
             company_time: newData.time,
@@ -417,8 +427,9 @@ export function ProfileProvider({ children }) {
           // Re-sincroniza estado com dados do banco
           setUserData(prev => ({
             ...prev,
-            name: updated_user.name || prev.name,
-            unit: updated_user.unit || prev.unit,
+            name:       updated_user.name       || prev.name,
+            unit:       updated_user.store_name || updated_user.unit || prev.unit,
+            store_name: updated_user.store_name || prev.store_name || '',
           }));
         }
       }
