@@ -156,7 +156,8 @@ function ShortsView() {
   const handleSubmit = () => {
     if (!caption.trim()) return;
     const finalThumb = previewThumb || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=400';
-    handleAddShort({ caption, tag, thumbnail: finalThumb, vimeoId: vimeoId || null });
+    // Salva a URL completa do vídeo — pode ser YouTube ou Vimeo
+    handleAddShort({ caption, tag, thumbnail: finalThumb, vimeoId: videoUrl.trim() || null });
     setShowForm(false);
     setCaption(''); setTag('Dica'); setVideoUrl(''); setVideoFile(null); setThumbnail(''); setThumbFile(null);
     setToast('Short publicado com sucesso!');
@@ -249,21 +250,20 @@ function ShortsView() {
 
               {/* Vídeo */}
               <div>
-                <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Vídeo Vimeo (opcional)</p>
+                <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Vídeo — YouTube ou Vimeo (opcional)</p>
                 <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-slate-200 focus-within:border-[#4A72B2]">
                   <Link size={14} className="text-slate-400 flex-shrink-0" />
                   <input
                     type="text"
                     value={videoUrl}
                     onChange={e => setVideoUrl(e.target.value)}
-                    placeholder="https://vimeo.com/123456789"
+                    placeholder="https://vimeo.com/123456789 ou https://youtu.be/..."
                     className="flex-1 text-sm outline-none text-slate-700 bg-transparent"
                   />
-                  {vimeoId && <span className="text-[10px] text-emerald-500 font-bold whitespace-nowrap">✓ válido</span>}
+                  {(vimeoId || videoUrl.match(/youtu/)) && (
+                    <span className="text-[10px] text-emerald-500 font-bold whitespace-nowrap">✓ válido</span>
+                  )}
                 </div>
-                {vimeoId && (
-                  <p className="text-[10px] text-slate-400 mt-1 pl-1">ID detectado: {vimeoId}</p>
-                )}
               </div>
             </div>
 
@@ -292,19 +292,11 @@ function ShortsView() {
               className="absolute -top-10 right-0 text-white/70 hover:text-white font-bold text-sm flex items-center gap-1">
               <X size={16} /> Fechar
             </button>
-            {selectedShort.vimeo_id ? (
-              <iframe
-                src={`https://player.vimeo.com/video/${selectedShort.vimeo_id}?autoplay=1&title=0&byline=0`}
-                className="w-full h-full rounded-[20px]"
-                allow="autoplay; fullscreen"
-              />
-            ) : (
-              <div className="w-full h-full rounded-[20px] bg-slate-800 flex flex-col items-center justify-center gap-3 text-white/50">
-                <Play size={40} />
-                <p className="text-sm">Nenhum vídeo configurado</p>
-              </div>
-            )}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[20px]">
+            <VideoPlayer
+              url={selectedShort.vimeo_id}
+              className="w-full h-full rounded-[20px]"
+            />
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-[20px] pointer-events-none">
               <p className="text-white font-bold text-sm">{selectedShort.caption}</p>
             </div>
           </div>
@@ -336,9 +328,9 @@ function ShortsView() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link Vimeo</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vídeo — YouTube ou Vimeo</label>
               <input value={editForm.vimeo_id} onChange={e => setEditForm(p => ({ ...p, vimeo_id: e.target.value }))}
-                placeholder="Ex: https://vimeo.com/123456789"
+                placeholder="https://vimeo.com/123456789 ou https://youtu.be/..."
                 className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm outline-none focus:border-[#4A72B2]" />
             </div>
             <div className="flex gap-3">
