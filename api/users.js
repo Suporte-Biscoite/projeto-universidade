@@ -60,7 +60,8 @@ async function getUsers(req, res, auth, id) {
 
     const { rows } = await pool.query(
       `SELECT id, name, email, role, unit, store_id, store_name, store_type, store_id_fk, active, instructor_id,
-              avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at
+              avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts,
+              certificates, education, experience, created_at
        FROM users WHERE id = $1`,
       [id]
     );
@@ -74,7 +75,8 @@ async function getUsers(req, res, auth, id) {
 
   const { rows } = await pool.query(
     `SELECT id, name, email, role, unit, store_id, store_name, store_type, store_id_fk, active, instructor_id,
-            avatar_url, banner_url, pronoun, position, company_time, skills, bio, created_at
+            avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts,
+            certificates, education, experience, created_at
      FROM users ORDER BY created_at DESC`
   );
   return send(res, 200, rows);
@@ -116,6 +118,7 @@ async function updateUser(req, res, auth, id) {
     name, email, password, role, unit, store_id, store_name, store_type, active,
     avatar_url, banner_url, pronoun, position, company_time,
     bio, skills, instructor_id, contacts,
+    certificates, education, experience,
   } = req.body ?? {};
 
   const updates = [];
@@ -142,6 +145,9 @@ async function updateUser(req, res, auth, id) {
   if (skills !== undefined)       { updates.push(`skills = $${i++}`);       values.push(skills); }
   if (instructor_id !== undefined){ updates.push(`instructor_id = $${i++}`);values.push(instructor_id); }
   if (contacts !== undefined)     { updates.push(`contacts = $${i++}`);     values.push(JSON.stringify(contacts)); }
+  if (certificates !== undefined) { updates.push(`certificates = $${i++}`); values.push(JSON.stringify(certificates)); }
+  if (education !== undefined)    { updates.push(`education = $${i++}`);    values.push(JSON.stringify(education)); }
+  if (experience !== undefined)   { updates.push(`experience = $${i++}`);   values.push(JSON.stringify(experience)); }
 
   // Só admin muda role e active
   if (auth.role === 'admin') {
@@ -164,7 +170,8 @@ async function updateUser(req, res, auth, id) {
     `UPDATE users SET ${updates.join(', ')}, updated_at = now()
      WHERE id = $${i}
      RETURNING id, name, email, role, unit, store_id, store_name, store_type, store_id_fk, active, instructor_id,
-               avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts`,
+               avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts,
+               certificates, education, experience`,
     values
   );
   if (!rows.length) return send(res, 404, { error: 'Usuário não encontrado' });

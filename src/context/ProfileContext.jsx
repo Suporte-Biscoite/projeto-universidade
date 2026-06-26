@@ -124,19 +124,19 @@ export function ProfileProvider({ children }) {
       const cargoReal = SYSTEM_ROLES.includes(logged.position) ? '' : (logged.position || '');
       if (logged) {
         return {
-          name:       logged.name         || 'Usuário',
-          unit:       logged.store_name   || logged.unit || '',
-          store_name: logged.store_name   || '',
-          role:       cargoReal,
-          time:       logged.company_time || '',
-          pronoun:    logged.pronoun      || '',
-          bio:        logged.bio          || '',
-          contacts:   logged.contacts     || { phone: '', email: '', linkedin: '', website: '' },
-          avatar_url:  logged.avatar_url  || null,
-          banner_url:  logged.banner_url  || null,
-          certificates: INITIAL_CERTIFICATES,
-          education: [],
-          experience: [],
+          name:         logged.name         || 'Usuário',
+          unit:         logged.store_name   || logged.unit || '',
+          store_name:   logged.store_name   || '',
+          role:         cargoReal,
+          time:         logged.company_time || '',
+          pronoun:      logged.pronoun      || '',
+          bio:          logged.bio          || '',
+          contacts:     logged.contacts     || { phone: '', email: '', linkedin: '', website: '' },
+          avatar_url:   logged.avatar_url   || null,
+          banner_url:   logged.banner_url   || null,
+          certificates: logged.certificates || [],
+          education:    logged.education    || [],
+          experience:   logged.experience   || [],
         };
       }
     } catch {}
@@ -323,14 +323,17 @@ export function ProfileProvider({ children }) {
 
         setUserData(prev => ({
           ...prev,
-          name:       user.name         || prev.name,
-          unit:       user.store_name   || user.unit || prev.unit,
-          store_name: user.store_name   || prev.store_name || '',
-          pronoun:    user.pronoun      || prev.pronoun || '',
-          role:       cargoReal,
-          time:       user.company_time || prev.time    || '',
-          bio:        user.bio          || prev.bio     || '',
-          contacts:   user.contacts     || prev.contacts || { phone: '', email: '', linkedin: '', website: '' },
+          name:         user.name         || prev.name,
+          unit:         user.store_name   || user.unit || prev.unit,
+          store_name:   user.store_name   || prev.store_name || '',
+          pronoun:      user.pronoun      || prev.pronoun || '',
+          role:         cargoReal,
+          time:         user.company_time || prev.time    || '',
+          bio:          user.bio          || prev.bio     || '',
+          contacts:     user.contacts     || prev.contacts || { phone: '', email: '', linkedin: '', website: '' },
+          certificates: user.certificates || prev.certificates || [],
+          education:    user.education    || prev.education    || [],
+          experience:   user.experience   || prev.experience   || [],
         }));
         if (user.avatar_url && !user.avatar_url.startsWith('blob:')) {
           setProfileImage(user.avatar_url);

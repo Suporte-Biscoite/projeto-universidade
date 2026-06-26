@@ -482,13 +482,16 @@ export default function Profile() {
             const SYSTEM_ROLES = ['aluno', 'gestor', 'professor', 'admin', 'franqueado', 'loja'];
             const cargoReal = SYSTEM_ROLES.includes(u.position) ? '' : (u.position || '');
             updateUserData(prev => ({ ...prev,
-              pronoun:    u.pronoun      || prev.pronoun    || '',
-              role:       cargoReal      || prev.role       || '',
-              unit:       u.store_name   || u.unit          || prev.unit || '',
-              store_name: u.store_name   || prev.store_name || '',
-              time:       u.company_time || prev.time       || '',
-              bio:        u.bio          || prev.bio        || '',
-              skills:     u.skills       || prev.skills     || [],
+              pronoun:      u.pronoun      || prev.pronoun    || '',
+              role:         cargoReal      || prev.role       || '',
+              unit:         u.store_name   || u.unit          || prev.unit || '',
+              store_name:   u.store_name   || prev.store_name || '',
+              time:         u.company_time || prev.time       || '',
+              bio:          u.bio          || prev.bio        || '',
+              skills:       u.skills       || prev.skills     || [],
+              certificates: u.certificates || prev.certificates || [],
+              education:    u.education    || prev.education    || [],
+              experience:   u.experience   || prev.experience   || [],
             }));
             if (u.avatar_url && !u.avatar_url.startsWith('blob:')) updateProfileImage(u.avatar_url);
             if (u.banner_url && !u.banner_url.startsWith('blob:')) setBannerImage(u.banner_url);
@@ -612,13 +615,16 @@ export default function Profile() {
     await saveProfileToApi({
       name:         tempData.name,
       unit:         tempData.unit,
-      store_name:   tempData.unit,   // sincroniza store_name com unit (campo de loja)
+      store_name:   tempData.unit,
       pronoun:      tempData.pronoun,
       position:     tempData.role,
       company_time: tempData.time,
       bio:          tempData.bio,
       skills:       tempData.skills,
       contacts:     tempData.contacts,
+      certificates: tempData.certificates,
+      education:    tempData.education,
+      experience:   tempData.experience,
     });
     setActiveModal(null);
   };
