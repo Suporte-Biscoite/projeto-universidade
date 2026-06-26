@@ -157,7 +157,16 @@ export default function Login() {
         body: JSON.stringify({ email: safeEmail, password }),
       });
 
-      const data = await response.json();
+      // Lê o body como texto primeiro — evita crash se a API retornar HTML (erro 500)
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('[Login] resposta não-JSON da API:', text.slice(0, 300));
+        setFormError('Erro interno no servidor. Tente novamente em instantes.');
+        return;
+      }
 
       if (!response.ok) {
         const { count, lockedUntil } = AttemptsManager.register();
@@ -202,7 +211,9 @@ export default function Login() {
       setTimeout(() => navigate(data.redirect), 800);
 
     } catch (err) {
-      setFormError('Erro de conexão. Verifique sua rede e tente novamente.');
+      // Tenta extrair mensagem real — ajuda a diagnosticar erros de API
+      console.error('[Login] erro:', err);
+      setFormError('Erro inesperado. Tente novamente ou contate o suporte.');
     } finally {
       setIsLoading(false);
     }

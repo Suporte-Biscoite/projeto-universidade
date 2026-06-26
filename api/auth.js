@@ -93,6 +93,9 @@ async function login(req, res) {
   const user = rows[0];
   if (!user) return send(res, 401, { error: 'Email ou senha incorretos' });
 
+  if (!user.password_hash)
+    return send(res, 401, { error: 'Email ou senha incorretos' });
+
   if (!user.active)
     return send(res, 403, { error: 'Conta desativada. Fale com o administrador.' });
 
