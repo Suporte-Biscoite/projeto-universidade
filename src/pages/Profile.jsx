@@ -545,6 +545,7 @@ export default function Profile() {
     await saveProfileToApi({
       name:         tempData.name,
       unit:         tempData.unit,
+      store_name:   tempData.unit,   // sincroniza store_name com unit (campo de loja)
       pronoun:      tempData.pronoun,
       position:     tempData.role,
       company_time: tempData.time,

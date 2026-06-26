@@ -74,7 +74,7 @@ export default function GestorDashboard() {
   const { systemRole }  = useProfile();
 
   const loggedUser  = getLoggedUser();
-  const storeName   = loggedUser?.store_name || loggedUser?.unit || null;
+  const storeName   = loggedUser?.store_name || null;
 
   const [activeTab, setActiveTab]         = useState('overview');
   const [search, setSearch]               = useState('');
@@ -99,7 +99,7 @@ export default function GestorDashboard() {
         u.status === 'approved' &&
         (u.role === 'aluno' || u.role === 'gestor') &&
         u.id !== loggedUser?.id &&
-        (storeName ? (u.store_name === storeName || u.unit === storeName) : true)
+        (storeName ? (u.store_name === storeName) : true)
       );
 
       setColaboradores(team);

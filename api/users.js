@@ -113,7 +113,7 @@ async function updateUser(req, res, auth, id) {
     return send(res, 403, { error: 'Sem permissão' });
 
   const {
-    name, email, password, role, unit, store_id, active,
+    name, email, password, role, unit, store_id, store_name, store_type, active,
     avatar_url, banner_url, pronoun, position, company_time,
     bio, skills, instructor_id, contacts,
   } = req.body ?? {};
@@ -126,6 +126,8 @@ async function updateUser(req, res, auth, id) {
   if (email)      { updates.push(`email = $${i++}`);      values.push(email.toLowerCase().trim()); }
   if (unit)       { updates.push(`unit = $${i++}`);       values.push(unit); }
   if (store_id !== undefined)     { updates.push(`store_id = $${i++}`);     values.push(store_id); }
+  if (store_name !== undefined)   { updates.push(`store_name = $${i++}`);   values.push(store_name); }
+  if (store_type !== undefined)   { updates.push(`store_type = $${i++}`);   values.push(store_type); }
   if (avatar_url !== undefined)   { updates.push(`avatar_url = $${i++}`);   values.push(avatar_url); }
   if (banner_url !== undefined)   { updates.push(`banner_url = $${i++}`);   values.push(banner_url); }
   if (pronoun !== undefined)      { updates.push(`pronoun = $${i++}`);      values.push(pronoun); }
@@ -156,7 +158,7 @@ async function updateUser(req, res, auth, id) {
   const { rows } = await pool.query(
     `UPDATE users SET ${updates.join(', ')}, updated_at = now()
      WHERE id = $${i}
-     RETURNING id, name, email, role, unit, store_id, active, instructor_id,
+     RETURNING id, name, email, role, unit, store_id, store_name, store_type, active, instructor_id,
                avatar_url, banner_url, pronoun, position, company_time, skills, bio, contacts`,
     values
   );
