@@ -193,10 +193,21 @@ export default function Login() {
 
       // Salva tokens e dados do usuário
       const storage = rememberMe ? localStorage : sessionStorage;
+
+      // Limpa chaves antigas antes de salvar para liberar espaço
+      ['biscoite_auth','biscoite_access_token','biscoite_refresh_token','biscoite_logged_user',
+       'biscoite_courses','biscoite_modules','biscoite_users','biscoite_system_role',
+       'biscoite_config','biscoite_cert_templates','biscoite_issued_certs',
+      ].forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k); });
+
+      // Salva apenas os campos essenciais no storage — campos grandes (jsonb arrays)
+      // ficam no banco e são carregados pelo ProfileContext via API
+      const { certificates, education, experience, bio, skills, ...compactUser } = data.user;
+
       storage.setItem('biscoite_auth', '1');
       storage.setItem('biscoite_access_token', data.accessToken);
       storage.setItem('biscoite_refresh_token', data.refreshToken);
-      storage.setItem('biscoite_logged_user', JSON.stringify(data.user));
+      storage.setItem('biscoite_logged_user', JSON.stringify(compactUser));
 
       // Atualiza o role e dados no contexto imediatamente
       setSystemRole(data.user.role);

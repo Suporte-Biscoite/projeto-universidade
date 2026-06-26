@@ -252,7 +252,11 @@ export function ProfileProvider({ children }) {
   // ── Busca cursos do banco ao inicializar ─────────────────────────────────────
   useEffect(() => {
     // Remove chaves stale que não devem mais ser fonte de verdade
-    ['biscoite_courses', 'biscoite_modules', 'biscoite_users', 'biscoite_system_role'].forEach(k => {
+    [
+      'biscoite_courses', 'biscoite_modules', 'biscoite_users', 'biscoite_system_role',
+      'biscoite_config', 'biscoite_cert_templates', 'biscoite_issued_certs',
+      'biscoite_instructor_profiles', 'biscoite_announcements', 'biscoite_conversations',
+    ].forEach(k => {
       localStorage.removeItem(k);
       sessionStorage.removeItem(k);
     });

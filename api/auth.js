@@ -130,7 +130,7 @@ async function login(req, res) {
     aluno:     '/',
   };
 
-  const { password_hash: _, ...safeUser } = user;
+  const { password_hash: _, certificates: _c, education: _e, experience: _ex, bio: _b, skills: _s, ...safeUser } = user;
   return send(res, 200, {
     accessToken,
     refreshToken,
