@@ -32,14 +32,14 @@ function HelpModal({ onClose }) {
     <LegalModal title="Central de Ajuda" onClose={onClose}>
       <p className="text-slate-500 text-xs">Precisa de suporte? Entre em contato conosco pelos canais abaixo:</p>
       <div className="space-y-3">
-        <a href="mailto:academy@biscoite.com.br"
+        <a href="mailto:universidade@biscoite.com.br"
           className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl hover:bg-[#e2eef9] transition-colors group">
           <div className="w-10 h-10 bg-[#4A72B2]/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-[#4A72B2]/20">
             <Mail size={18} className="text-[#4A72B2]" />
           </div>
           <div>
             <p className="font-bold text-[#001A26] text-sm">E-mail</p>
-            <p className="text-slate-400 text-xs">academy@biscoite.com.br</p>
+            <p className="text-slate-400 text-xs">universidade@biscoite.com.br</p>
           </div>
         </a>
         <a href="https://biscoite.com.br" target="_blank" rel="noreferrer"
@@ -116,7 +116,7 @@ export default function Footer() {
           <h3 className="font-black text-[#001A26] mt-2">6. Segurança</h3>
           <p>Utilizamos criptografia, autenticação JWT e infraestrutura segura (AWS Aurora, Vercel) para proteger seus dados.</p>
           <h3 className="font-black text-[#001A26] mt-2">7. Contato</h3>
-          <p>Dúvidas sobre privacidade: <strong>academy@biscoite.com.br</strong></p>
+          <p>Dúvidas sobre privacidade: <strong>universidade@biscoite.com.br</strong></p>
         </LegalModal>
       )}
       {modal === 'terms' && (
@@ -136,7 +136,7 @@ export default function Footer() {
           <h3 className="font-black text-[#001A26] mt-2">6. Atualizações</h3>
           <p>Estes termos podem ser atualizados a qualquer momento. O uso continuado da plataforma implica aceite das novas condições.</p>
           <h3 className="font-black text-[#001A26] mt-2">7. Contato</h3>
-          <p>Dúvidas: <strong>academy@biscoite.com.br</strong></p>
+          <p>Dúvidas: <strong>universidade@biscoite.com.br</strong></p>
         </LegalModal>
       )}
 
