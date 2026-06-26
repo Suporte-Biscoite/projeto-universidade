@@ -161,7 +161,8 @@ function ProtectedRoute({ children, roles }) {
   }
   if (roles) {
     const user = getLoggedUser();
-    if (!user || !roles.includes(user.systemRole || user.role)) {
+    const userRole = user?.role || user?.systemRole;
+    if (!user || !roles.includes(userRole)) {
       return <Navigate to="/" replace />;
     }
   }
