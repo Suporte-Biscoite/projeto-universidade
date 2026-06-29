@@ -145,9 +145,8 @@ export default async function handler(req, res) {
 
     // ── REELS ──────────────────────────────────────────────────────────────────
     if (resource === 'shorts') {
-      if (!auth) return send(res, 401, { error: 'Não autorizado' });
-
       if (req.method === 'GET') {
+        // GET é público — não requer autenticação para exibir shorts na Home
         const { rows } = await pool.query(
           `SELECT r.id, r.caption, r.tag, r.thumbnail_url, r.vimeo_id,
                   r.views, r.created_at, r.instructor_id,
@@ -164,6 +163,9 @@ export default async function handler(req, res) {
           youtube_id: extractYouTubeId(r.vimeo_id || ''),
         })));
       }
+
+      // Métodos de escrita exigem autenticação
+      if (!auth) return send(res, 401, { error: 'Não autorizado' });
 
       if (req.method === 'PUT') {
         if (!auth) return send(res, 401, { error: 'Não autorizado' });

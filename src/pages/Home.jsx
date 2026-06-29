@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { ChevronRight, Play, Clock, LayoutDashboard, Store, ShoppingBag, BarChart3, Megaphone, Brain, Tent, Building2, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CourseCard from '../components/CourseCard';
-import { useProfile } from '../context/ProfileContext';
 import { authFetch } from '../utils/authFetch';
 
 const categories = [
@@ -131,7 +130,19 @@ function ShortPlayerModal({ short, shorts, onClose, onSelect }) {
 
 export default function Home() {
   const navigate = useNavigate();
-  const { shorts: shortsData, shortsLoaded } = useProfile();
+
+  // Shorts: fetch direto e público — não depende do ProfileContext nem de auth
+  // Isso elimina a espera de toda a cadeia de inicialização do contexto
+  const [shortsData, setShortsData]   = useState([]);
+  const [shortsLoaded, setShortsLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/data?resource=shorts')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setShortsData(data); })
+      .catch(() => {})
+      .finally(() => setShortsLoaded(true));
+  }, []);
   const [myCourses, setMyCourses]     = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [favorites, setFavorites] = useState([]);

@@ -211,8 +211,8 @@ export function ProfileProvider({ children }) {
     () => loadFromStorage('biscoite_instructor_profiles', INITIAL_INSTRUCTOR_PROFILES)
   );
 
-  // ── Reels ─────────────────────────────────────────────────────────────────
-  const [shorts, setShorts]           = useState([]);
+  // ── Shorts: carregados diretamente na Home e no ShortsView (não precisa de contexto) ──
+  const [shorts, setShorts]             = useState([]);
   const [shortsLoaded, setShortsLoaded] = useState(false);
 
   // ── Persistência no localStorage ──────────────────────────────────────────
@@ -233,20 +233,6 @@ export function ProfileProvider({ children }) {
         if (list.length > 0) setUsers(list);
       })
       .catch(() => {});
-  }, []);
-
-  // ── Busca reels do banco ao inicializar ──────────────────────────────────────
-  useEffect(() => {
-    const isAuth = sessionStorage.getItem('biscoite_auth') || localStorage.getItem('biscoite_auth');
-    if (!isAuth) return;
-    // Remove reels antigos do localStorage
-    localStorage.removeItem('biscoite_reels');
-    sessionStorage.removeItem('biscoite_reels');
-    authFetch('/api/data?resource=shorts')
-      .then(r => r.ok ? r.json() : [])
-      .then(data => { if (Array.isArray(data)) setShorts(data); })
-      .catch(() => {})
-      .finally(() => setShortsLoaded(true));
   }, []);
 
   // ── Busca cursos do banco ao inicializar ─────────────────────────────────────
